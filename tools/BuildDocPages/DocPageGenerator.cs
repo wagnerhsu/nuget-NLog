@@ -15,16 +15,32 @@ namespace BuildDocPages
         {
         }
 
+        /// <summary>
+        /// .API file
+        /// </summary>
         public string InputFile { get; set; }
 
+        /// <summary>
+        /// XSL files
+        /// </summary>
         public string Stylesheet { get; set; }
 
         public string OutputDirectory { get; set; }
 
+        /// <summary>
+        /// dir with dir "examples"
+        /// </summary>
         public string BaseDirectory { get; set; }
 
+        /// <summary>
+        /// File ext without .
+        /// </summary>
         public string FileSuffix { get; set; }
 
+        /// <summary>
+        /// web: only current page
+        /// web2: one file for all targets (including index)
+        /// </summary>
         public string Mode { get; set; }
 
         private XElement inputDocument;
@@ -62,9 +78,8 @@ namespace BuildDocPages
 
         private void GenerateSinglePage(string kind, string kindName, string name, string slug, string title)
         {
-            string filename = Path.Combine(this.OutputDirectory, slug + "." + this.FileSuffix);
-
-            Dictionary<string, XElement> inputXml = new Dictionary<string, XElement>();
+            var slug2 = slug.Replace("_", "-");
+            string filename = Path.Combine(this.OutputDirectory, slug2 + "." + this.FileSuffix);
 
             var type = inputDocument.Elements("type").Where(c => c.Attribute("kind").Value == kind && c.Attribute("name").Value == name).Single();
 
@@ -104,7 +119,7 @@ namespace BuildDocPages
 
         private void InsertExamples(XElement type)
         {
-            foreach (var code in type.Descendants("code").Where(c=>c.Attribute("source") != null))
+            foreach (var code in type.Descendants("code").Where(c => c.Attribute("source") != null))
             {
                 string fullName = Path.Combine(this.BaseDirectory, code.Attribute("source").Value);
                 if (File.Exists(fullName))
@@ -141,6 +156,7 @@ namespace BuildDocPages
 
         private string SyntaxHighlighting(string content, string language)
         {
+            //  return string.Format("```{0}\n{1}\n```", language, content);
             if (language == "XML")
             {
                 return content.Replace("<", "&lt;").Replace(">", "&gt;");

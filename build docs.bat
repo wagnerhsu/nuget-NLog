@@ -1,0 +1,1 @@
+build\bin\tools\BuildDocPages.exe "build\bin\release\.NET Framework 4.5\API\NLog.api" tools\WebsiteFiles\markdown.xsl "build\docs2" "" md web

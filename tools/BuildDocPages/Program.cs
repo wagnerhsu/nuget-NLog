@@ -36,7 +36,7 @@ namespace BuildDocPages
 
         private static void Usage()
         {
-            Console.WriteLine("Usage: BuildDocPages nlog.api output_directory base_directory_for_sources file_suffix mode");
+            Console.WriteLine("Usage: BuildDocPages nlog.api stylesheet output_directory base_directory_for_sources file_suffix mode");
         }
     }
 }
