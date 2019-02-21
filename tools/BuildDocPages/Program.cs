@@ -13,6 +13,7 @@ namespace BuildDocPages
             {
                 if (args.Length != 6)
                 {
+                    Console.WriteLine("Need 6 args, got {0}", args.Length);
                     Usage();
                     return 1;
                 }
