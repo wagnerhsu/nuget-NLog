@@ -152,17 +152,10 @@
     <ul>
       <xsl:for-each select="/types/type[@kind='layout']">
         <xsl:sort select="@title" order="ascending" />
-        <li>
-          <a>
-            <xsl:attribute name="href">
-              <xsl:apply-templates select="." mode="typeLink" />
-            </xsl:attribute>
-            <xsl:value-of select="@title"/>
-          </a>
+          <xsl:text>* </xsl:text>  <xsl:value-of select="@title"/>
           <xsl:apply-templates select="supported-in" mode="float" />
           <xsl:text> - </xsl:text>
           <xsl:apply-templates select="doc/summary" />
-        </li>
       </xsl:for-each>
     </ul>
   </xsl:template>
@@ -201,20 +194,18 @@
       <xsl:text>Supported in </xsl:text><xsl:apply-templates select="supported-in" />
     -->
    
-##Configuration Syntax
-```xml
+## Configuration Syntax
 <xsl:apply-templates select="." mode="usage-example" />
-```
 Read more about using the [Configuration File](Configuration-file).
     <xsl:if test="property">
-##Parameters
+## Parameters
         <xsl:call-template name="property-grouping">
           <xsl:with-param name="list" select="property" />
         </xsl:call-template>
      </xsl:if>
     <xsl:if test="doc/remarks">
-##Remarks
-        <xsl:apply-templates select="doc/remarks" />
+## Remarks
+<xsl:apply-templates select="doc/remarks" />
     </xsl:if>
   </xsl:template>
 
@@ -222,8 +213,7 @@ Read more about using the [Configuration File](Configuration-file).
     <xsl:param name="list" />
     <xsl:variable name="group-identifier" select="$list[1]/@category"/>
     <xsl:variable name="group" select="$list[@category = $group-identifier]"/>
-<!-- TODO space after ### -->
-###<xsl:value-of select="$group-identifier" />
+### <xsl:value-of select="$group-identifier" />
     
       <xsl:apply-templates select="$group" />
 
@@ -235,40 +225,35 @@ Read more about using the [Configuration File](Configuration-file).
   </xsl:template>
 
   <xsl:template match="type[@kind='layout-renderer']" mode="usage-example">
-    <div class="usage-example">
-      <xsl:variable name="spacing" select="substring('                     ',1,string-length(@name)+2)" />
+
+<xsl:text>
+```xml
+</xsl:text>
+   <xsl:variable name="spacing" select="substring('                     ',1,string-length(@name)+2)" />
       <xsl:text>${</xsl:text><xsl:value-of select="@name"/>
       <xsl:variable name="lineBreaks" select="count(property) > 3" />
       <xsl:for-each select="property">
-        <xsl:if test="$lineBreaks and (position() mod 3) = 1 and position() != 1"><br/>
-          <xsl:value-of select="$spacing"/>
-        </xsl:if><span>
-        <xsl:if test="@required='1'">
-          <xsl:attribute name="class">requiredparameter</xsl:attribute>
-        </xsl:if>
-        <xsl:text>:</xsl:text><xsl:call-template name="property-link" />=<span class="typeplaceholder"><xsl:value-of select="@type"/></span>
-      </span>
+     <xsl:text>:</xsl:text>  <xsl:value-of select="@camelName" />=<xsl:value-of select="@type"/>
       </xsl:for-each><xsl:text>}</xsl:text>
-    </div>
-
+  <xsl:text>
+```
+  </xsl:text>
 	<xsl:variable name="ambientPropertyName" select="@ambientProperty" />
 	<xsl:if test="$ambientPropertyName != ''">
-	<p>or by using ambient property to modify output of other layout renderer:</p>
-    <div class="usage-example">
-      <xsl:variable name="spacing" select="substring('                     ',1,string-length(@name)+2)" />
+Or by using ambient property to modify output of other layout renderer:
+  <xsl:text>
+```xml
+</xsl:text>
+     
       <xsl:text>${other</xsl:text>
-      <xsl:variable name="lineBreaks" select="count(property) > 3" />
       <xsl:for-each select="property">
 	  	<xsl:if test="@name=$ambientPropertyName">
-        <span>
-        <xsl:if test="@required='1'">
-          <xsl:attribute name="class">requiredparameter</xsl:attribute>
-        </xsl:if>
-        <xsl:text>:</xsl:text><xsl:call-template name="property-link" />=<span class="typeplaceholder"><xsl:value-of select="@type"/></span>
-      </span>
+         <xsl:value-of select="@camelName" /><xsl:text>:</xsl:text><xsl:value-of select="@type"/>
 	  </xsl:if>
       </xsl:for-each><xsl:text>}</xsl:text>
-    </div>
+  <xsl:text>
+```
+  </xsl:text>
 	</xsl:if>
   </xsl:template>
   
@@ -276,7 +261,9 @@ Read more about using the [Configuration File](Configuration-file).
     <xsl:variable name="isWrapper" select="@iswrapper = '1'" />
     <xsl:variable name="isCompound" select="@iscompound = '1'" />
    
-   
+<xsl:text>
+```xml
+</xsl:text>   
 <targets>
       <xsl:text disable-output-escaping="yes">  
   &lt;target </xsl:text>
@@ -298,7 +285,7 @@ Read more about using the [Configuration File](Configuration-file).
           <xsl:text> </xsl:text>
             <xsl:value-of select="@camelName"/>
      
-          <!-- <xsl:call-template name="property-link" /> -->
+          <!--<xsl:value-of select="@camelName"  /> -->
           <xsl:text>="</xsl:text>
             <xsl:value-of select="@type"/>
           <xsl:text>"</xsl:text>
@@ -329,16 +316,16 @@ Read more about using the [Configuration File](Configuration-file).
         <xsl:variable name="spacing2" select="substring('                     ',1,string-length(@name)-2)" />
         <xsl:for-each select="elementType/property[not(@type='Collection')]">
           <xsl:if test="$lineBreaks and (position() mod 3) = 1 and position() != 1">
-            <br/>
+
             <xsl:value-of select="$spacing2"/>
           </xsl:if>
           <xsl:text> </xsl:text>
-          <xsl:call-template name="property-link" /><xsl:text>="</xsl:text><span class="typeplaceholder">
+         <xsl:value-of select="@camelName"  /><xsl:text>="</xsl:text>
             <xsl:value-of select="@type"/>
-          </span><xsl:text>"</xsl:text>
+          <xsl:text>"</xsl:text>
         </xsl:for-each>
         <xsl:text>/&gt;</xsl:text>
-        <span class="comment">&lt;!-- repeated --&gt;</span><br/>
+        <span class="comment">&lt;!-- repeated --&gt;</span>
       </xsl:for-each>
 
       <xsl:choose>
@@ -351,15 +338,22 @@ Read more about using the [Configuration File](Configuration-file).
           </xsl:text>
         </xsl:otherwise>
       </xsl:choose>
-
+      
 </targets>
-    
+<xsl:text>
+```
+</xsl:text>
+
   </xsl:template>
 
   <xsl:template match="type[@kind='filter']" mode="usage-example">
-    <div class="usage-example">
-      <xsl:text>&lt;rules&gt;</xsl:text><br/>
-      <xsl:text>  &lt;logger ... &gt;</xsl:text><br/>
+<xsl:text>
+```xml
+</xsl:text>
+      <xsl:text>&lt;rules&gt;
+      </xsl:text>
+      <xsl:text>  &lt;logger ... &gt;
+      </xsl:text>
       <xsl:text>    &lt;</xsl:text><xsl:value-of select="@name"/>
       <xsl:for-each select="property[not(@type='Collection') and not(@type='Target')]">
         <span>
@@ -367,83 +361,89 @@ Read more about using the [Configuration File](Configuration-file).
             <xsl:attribute name="class">requiredparameter</xsl:attribute>
           </xsl:if>
           <xsl:text> </xsl:text>
-          <xsl:call-template name="property-link" />
-          <xsl:text>="</xsl:text><span class="typeplaceholder">
+         <xsl:value-of select="@camelName"  />
+          <xsl:text>="</xsl:text>
             <xsl:value-of select="@type"/>
-          </span><xsl:text>"</xsl:text>
+          <xsl:text>"</xsl:text>
         </span>
       </xsl:for-each>
 
-      <xsl:text>/&gt;</xsl:text><br/>
-      <xsl:text>  &lt;/logger&gt;</xsl:text><br/>
+      <xsl:text>/&gt;
+      </xsl:text>
+      <xsl:text>  &lt;/logger&gt;
+      </xsl:text>
       <xsl:text>&lt;/rules&gt;</xsl:text>
-    </div>
+<xsl:text>
+```
+</xsl:text>
   </xsl:template>
 
   <xsl:template match="type[@kind='layout']" mode="usage-example">
-    <div class="usage-example">
-      <xsl:text>&lt;targets&gt;</xsl:text><br/>
-      <xsl:text>  &lt;target&gt;</xsl:text><br/>
-      <xsl:text>    &lt;layout xsi:type="</xsl:text><xsl:value-of select="@name"/><xsl:text>"&gt;</xsl:text>
+<xsl:text>
+```xml
+</xsl:text>
+      <xsl:text  disable-output-escaping="yes">&lt;targets&gt;
+      </xsl:text>
+      <xsl:text  disable-output-escaping="yes">  &lt;target&gt;
+      </xsl:text>
+      <xsl:text  disable-output-escaping="yes">    &lt;layout xsi:type="</xsl:text><xsl:value-of select="@camelName"/><xsl:text  disable-output-escaping="yes">"&gt;</xsl:text>
       <xsl:for-each select="property[@type!='Collection']">
         <xsl:variable name="lastCategory" select="preceding-sibling::property[1]/@category" />
         <xsl:if test="$lastCategory != @category or position() = 1">
-          <br/>
-          <xsl:text>      &lt;!-- </xsl:text><xsl:value-of select="@category" /><xsl:text> --&gt;</xsl:text><br/>
+          
+          <xsl:text  disable-output-escaping="yes">      &lt;!-- </xsl:text><xsl:value-of select="@category" /><xsl:text  disable-output-escaping="yes"> --&gt;
+          </xsl:text>
         </xsl:if>
-        <span>
-          <xsl:if test="@required='1'">
+          <!-- <xsl:if test="@required='1'">
             <xsl:attribute name="class">requiredparameter</xsl:attribute>
-          </xsl:if>
-          <xsl:text>      &lt;</xsl:text><xsl:call-template name="property-link" />
+          </xsl:if> -->
+          <xsl:text  disable-output-escaping="yes">      &lt;</xsl:text><xsl:value-of select="@camelName"  />
           <xsl:if test="@type='Layout'">
-            <xsl:text> xsi:type="layoutType"</xsl:text>
+            <xsl:text  disable-output-escaping="yes"> xsi:type="layoutType"</xsl:text>
           </xsl:if>
-          <xsl:text>&gt;</xsl:text><span class="typeplaceholder">
+          <xsl:text  disable-output-escaping="yes">&gt;</xsl:text>
             <xsl:value-of select="@type"/>
-          </span><xsl:text>&lt;/</xsl:text><xsl:call-template name="property-link" /><xsl:text>&gt;</xsl:text>
-          <br/>
-        </span>
+          <xsl:text  disable-output-escaping="yes">&lt;/</xsl:text><xsl:value-of select="@camelName"  /><xsl:text  disable-output-escaping="yes">&gt;
+          </xsl:text>
       </xsl:for-each>
       
       <xsl:for-each select="property[@type='Collection']">
-        <xsl:text>      &lt;</xsl:text><xsl:value-of select="elementType/@elementTag"/>
+        <xsl:text  disable-output-escaping="yes">      &lt;</xsl:text><xsl:value-of select="elementType/@elementTag"/>
         <xsl:for-each select="elementType/property[not(@type='Collection')]">
-          <xsl:text> </xsl:text>
-          <xsl:call-template name="property-link" />="<span class="typeplaceholder">
-            <xsl:value-of select="@type"/>
-          </span><xsl:text>"</xsl:text>
+          <xsl:text> </xsl:text><xsl:value-of select="@camelName"/>="<xsl:value-of select="@type"/><xsl:text>"</xsl:text>
         </xsl:for-each>
-        <xsl:text>/&gt; </xsl:text><span class="comment"><xsl:text>&lt;!-- repeated --&gt;</xsl:text>
-        </span>
-        <br/>
+        <xsl:text disable-output-escaping="yes">/&gt; </xsl:text><xsl:text disable-output-escaping="yes">&lt;!-- repeated --&gt;
+        </xsl:text>
+        
       </xsl:for-each>
 
-      <br/>
-      <xsl:text>    &lt;/layout&gt;</xsl:text><br/>
-      <xsl:text>  &lt;/target&gt;</xsl:text><br/>
-      <xsl:text>&lt;/targets&gt;</xsl:text></div>
+      
+      <xsl:text  disable-output-escaping="yes">    &lt;/layout&gt;
+      </xsl:text>
+      <xsl:text  disable-output-escaping="yes">  &lt;/target&gt;
+      </xsl:text>
+      <xsl:text  disable-output-escaping="yes">&lt;/targets&gt;
+      </xsl:text>
+<xsl:text>
+```
+</xsl:text>
+
   </xsl:template>
 
   <xsl:template name="property-link">
-    <a href="#{../@name}_{@camelName}">
-      <xsl:attribute name="title">
         <xsl:value-of select="doc/summary" />
         <xsl:if test="@defaultValue">
           <xsl:text> Default value is </xsl:text>
           <xsl:value-of select="@defaultValue"/>
           <xsl:text>.</xsl:text>
         </xsl:if>
-      </xsl:attribute>
       <xsl:value-of select="@camelName" />
-    </a>
   </xsl:template>
 
   <xsl:template match="property">
    
-   <!-- todo change to bullit list (* _) -->
 <xsl:text>
-_</xsl:text><xsl:value-of select="@camelName"/>
+* _</xsl:text><xsl:value-of select="@camelName"/>
    
       <xsl:text>_ - </xsl:text><xsl:apply-templates select="doc/summary" />
         
@@ -463,17 +463,17 @@ _</xsl:text><xsl:value-of select="@camelName"/>
       </xsl:if>
 
       <xsl:if test="@type='Collection'">
-        <br/>
-        <xsl:text> Each collection item is represented by </xsl:text><code>
-          <xsl:text>&lt;</xsl:text><xsl:value-of select="elementType/@elementTag"/><xsl:text> /&gt;</xsl:text>
-        </code><xsl:text> element with the following attributes:</xsl:text>
+        
+        <xsl:text> Each collection item is represented by </xsl:text>`
+          <xsl:text  disable-output-escaping="yes">&lt;</xsl:text><xsl:value-of select="elementType/@elementTag"/><xsl:text  disable-output-escaping="yes"> /&gt;</xsl:text>
+        `<xsl:text> element with the following attributes:</xsl:text>
         <ul class="parameters">
           <xsl:apply-templates select="elementType/property" />
         </ul>
       </xsl:if>
 
       <xsl:if test="@type='Enum'">
-        <br/>
+       
         <xsl:text>Possible values:</xsl:text>
          <xsl:apply-templates select="enum">
             <xsl:sort select="@name"/>
@@ -481,13 +481,11 @@ _</xsl:text><xsl:value-of select="@camelName"/>
       </xsl:if>
 
       <xsl:if test="doc/remarks">
-        <div class="remarks">
           <xsl:apply-templates select="doc/remarks" />
-        </div>
       </xsl:if>
 
       <xsl:if test="doc/example">
-        ##Examples2
+        ## Examples2
         <xsl:apply-templates select="doc/example" />
       </xsl:if>
 
