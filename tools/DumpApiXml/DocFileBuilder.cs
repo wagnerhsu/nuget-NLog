@@ -18,6 +18,8 @@
             { typeof(bool).FullName, "Boolean" },
             { typeof(char).FullName, "Char" },
             { typeof(byte).FullName, "Byte" },
+            { typeof(ISet<string>).FullName, "String list (semicolon separated)" },
+            { typeof(ISet<int>).FullName, "Integer list (semicolon separated)" },
             { typeof(CultureInfo).FullName, "Culture" },
             { typeof(Encoding).FullName, "Encoding" },
             { "NLog.Layouts.Layout", "Layout" },
