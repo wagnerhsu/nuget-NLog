@@ -589,5 +589,185 @@ namespace NLog.UnitTests.Config
             c.LoggingRules[0].EnableLoggingForLevel(LogLevel.Debug);
             c.LoggingRules[0].DisableLoggingForLevel(LogLevel.Debug);
         }
+
+        [Theory]
+        [InlineData("Off")]
+        [InlineData("")]
+        [InlineData((string)null)]
+        [InlineData("Trace")]
+        [InlineData("Debug")]
+        [InlineData("Info")]
+        [InlineData("Warn")]
+        [InlineData("Error")]
+        [InlineData(" error")]
+        [InlineData("Fatal")]
+        [InlineData("Wrong")]
+        public void LoggingRule_LevelLayout_ParseLevel(string levelVariable)
+        {
+            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            <nlog>"
+                + (levelVariable != null ? $"<variable name='var_level' value='{levelVariable}'/>" : "") +
+                @"<targets>
+                    <target name='d1' type='Debug' layout='${message}' />
+                </targets>
+                <rules>
+                    <logger name='*' level='${var:var_level}' writeTo='d1' />
+                </rules>
+            </nlog>");
+
+            LogManager.Configuration = c;
+            Logger b = LogManager.GetLogger(nameof(LoggingRule_LevelLayout_ParseLevel));
+
+            LogLevel expectedLogLevel = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelVariable.Trim());
+
+            for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+            {
+                if (LogLevel.FromOrdinal(i) == expectedLogLevel)
+                    Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                else
+                    Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+            }
+
+            expectedLogLevel = LogLevel.Fatal;
+            LogManager.Configuration.Variables["var_level"] = expectedLogLevel.ToString();
+            LogManager.ReconfigExistingLoggers();
+
+            for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+            {
+                if (LogLevel.FromOrdinal(i) == expectedLogLevel)
+                    Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                else
+                    Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+            }
+        }
+
+        [Theory]
+        [InlineData("Off")]
+        [InlineData("")]
+        [InlineData((string)null)]
+        [InlineData("Trace")]
+        [InlineData("Debug")]
+        [InlineData("Info")]
+        [InlineData("Warn")]
+        [InlineData("Error")]
+        [InlineData(" error")]
+        [InlineData("Fatal")]
+        [InlineData("Wrong")]
+        public void LoggingRule_LevelsLayout_ParseLevel(string levelVariable)
+        {
+            for (int maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
+            {
+                string levelsVariable = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
+
+                LogLevel expectedLevel1 = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelsVariable) || levelsVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelsVariable.Trim());
+                LogLevel expectedLevel2 = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelVariable.Trim());
+
+                if (levelsVariable != levelVariable && !string.IsNullOrEmpty(levelVariable))
+                {
+                    levelsVariable = levelVariable + ", " + levelsVariable;
+                }
+
+                LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+                <nlog>"
+                    + (levelsVariable != null ? $"<variable name='var_levels' value='{levelsVariable}'/>" : "") +
+                    @"<targets>
+                        <target name='d1' type='Debug' layout='${message}' />
+                    </targets>
+                    <rules>
+                        <logger name='*' levels='${var:var_levels}' writeTo='d1' />
+                    </rules>
+                </nlog>");
+
+                LogManager.Configuration = c;
+                Logger b = LogManager.GetLogger(nameof(LoggingRule_LevelsLayout_ParseLevel));
+
+                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                {
+                    if (LogLevel.FromOrdinal(i) == expectedLevel1)
+                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                    else if (LogLevel.FromOrdinal(i) == expectedLevel2)
+                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                    else
+                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                }
+
+                var expectedLogLevel = LogLevel.Fatal;
+                LogManager.Configuration.Variables["var_levels"] = expectedLogLevel.ToString();
+                LogManager.ReconfigExistingLoggers();
+
+                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                {
+                    if (LogLevel.FromOrdinal(i) == expectedLogLevel)
+                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                    else
+                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                }
+            }
+        }
+
+        [Theory]
+        [InlineData("Off")]
+        [InlineData("")]
+        [InlineData((string)null)]
+        [InlineData("Trace")]
+        [InlineData("Debug")]
+        [InlineData("Info")]
+        [InlineData("Warn")]
+        [InlineData("Error")]
+        [InlineData(" error")]
+        [InlineData("Fatal")]
+        [InlineData("Wrong")]
+        public void LoggingRule_MinMaxLayout_ParseLevel(string levelVariable)
+        {
+            for (int maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
+            {
+                string maxLevel = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
+                LogLevel expectedMaxLevel = maxLevel == "Wrong" ? LogLevel.MinLevel : 
+                    (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(maxLevel) ? LogLevel.MaxLevel : LogLevel.FromString(maxLevel.Trim()));
+                LogLevel expectedMinLevel = levelVariable == "Wrong" ? LogLevel.MaxLevel :
+                    (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) ? LogLevel.MinLevel : LogLevel.FromString(levelVariable.Trim()));
+                if (string.IsNullOrEmpty(maxLevel) && string.IsNullOrEmpty(levelVariable))
+                {
+                    expectedMinLevel = LogLevel.Off;
+                    expectedMaxLevel = LogLevel.Off;
+                }
+
+                LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+                <nlog>"
+                    + (levelVariable != null ? $"<variable name='var_minlevel' value='{levelVariable}'/>" : "")
+                    + (maxLevel != null ? $"<variable name='var_maxlevel' value='{maxLevel}'/>" : "") +
+                    @"<targets>
+                        <target name='d1' type='Debug' layout='${message}' />
+                    </targets>
+                    <rules>
+                        <logger name='*' minlevel='${var:var_minlevel}' maxlevel='${var:var_maxlevel}' writeTo='d1' />
+                    </rules>
+                </nlog>");
+
+                LogManager.Configuration = c;
+                Logger b = LogManager.GetLogger(nameof(LoggingRule_MinMaxLayout_ParseLevel));
+
+                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                {
+                    if (expectedMinLevel.Ordinal <= i && i <= expectedMaxLevel.Ordinal)
+                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                    else
+                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                }
+
+                expectedMinLevel = expectedMaxLevel = LogLevel.Fatal;
+                LogManager.Configuration.Variables["var_minlevel"] = expectedMinLevel.ToString();
+                LogManager.Configuration.Variables["var_maxlevel"] = expectedMaxLevel.ToString();
+                LogManager.ReconfigExistingLoggers();
+
+                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                {
+                    if (LogLevel.FromOrdinal(i) == expectedMinLevel)
+                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                    else
+                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                }
+            }
+        }
     }
 }
