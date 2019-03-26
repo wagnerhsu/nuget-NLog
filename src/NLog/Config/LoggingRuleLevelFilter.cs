@@ -57,7 +57,7 @@ namespace NLog.Config
     /// </summary>
     class LoggingRuleLevelFilter : ILoggingRuleLevelFilter
     {
-        public static readonly LoggingRuleLevelFilter Off = new LoggingRuleLevelFilter();
+        public static readonly ILoggingRuleLevelFilter Off = new LoggingRuleLevelFilter();
         public bool[] LogLevels { get; }
 
         public LoggingRuleLevelFilter(bool[] logLevels = null)
