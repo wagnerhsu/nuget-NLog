@@ -45,11 +45,11 @@ namespace NLog.Config
         /// Level enabled flags for each LogLevel ordinal
         /// </summary>
         bool[] LogLevels { get; }
+
         /// <summary>
-        /// Reconfigure existing level configuration with the specified config
+        /// Converts the filter into a simple <see cref="LoggingRuleLevelFilter"/>
         /// </summary>
-        /// <returns>New filter</returns>
-        ILoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable);
+        LoggingRuleLevelFilter GetSimpleFilterForUpdate();
     }
 
     /// <summary>
@@ -70,18 +70,19 @@ namespace NLog.Config
             }
         }
 
-        public ILoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable)
+        public LoggingRuleLevelFilter GetSimpleFilterForUpdate()
         {
             if (!ReferenceEquals(LogLevels, Off.LogLevels))
-            {
-                // Modify directly when not the default Off-filter
-                for (int i = minLevel.Ordinal; i <= maxLevel.Ordinal; ++i)
-                    LogLevels[i] = enable;
                 return this;
-            }
+            else
+                return new LoggingRuleLevelFilter();
+        }
 
-            // Create new fresh filter and modify filter levels
-            return new LoggingRuleLevelFilter().SetLoggingLevels(minLevel, maxLevel, enable);
+        public LoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable)
+        {
+            for (int i = minLevel.Ordinal; i <= maxLevel.Ordinal; ++i)
+                LogLevels[i] = enable;
+            return this;
         }
     }
 
@@ -104,9 +105,9 @@ namespace NLog.Config
             _activeFilter = new KeyValuePair<string, bool[]>(string.Empty, LoggingRuleLevelFilter.Off.LogLevels);
         }
 
-        public ILoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable)
+        public LoggingRuleLevelFilter GetSimpleFilterForUpdate()
         {
-            return new LoggingRuleLevelFilter(LogLevels).SetLoggingLevels(minLevel, maxLevel, enable);
+            return new LoggingRuleLevelFilter(LogLevels);
         }
 
         private bool[] GenerateLogLevels()
@@ -196,9 +197,9 @@ namespace NLog.Config
             _activeFilter = new KeyValuePair<MinMaxLevels, bool[]>(new MinMaxLevels(string.Empty, string.Empty), LoggingRuleLevelFilter.Off.LogLevels);
         }
 
-        public ILoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable)
+        public LoggingRuleLevelFilter GetSimpleFilterForUpdate()
         {
-            return new LoggingRuleLevelFilter(LogLevels).SetLoggingLevels(minLevel, maxLevel, enable);
+            return new LoggingRuleLevelFilter(LogLevels);
         }
 
         private bool[] GenerateLogLevels()

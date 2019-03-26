@@ -198,7 +198,7 @@ namespace NLog.Config
                 return;
             }
 
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(level, level, true);
+            _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(level, level, true);
         }
 
         /// <summary>
@@ -208,7 +208,7 @@ namespace NLog.Config
         /// <param name="maxLevel">Maximum log level needed to trigger this rule.</param>
         public void EnableLoggingForLevels(LogLevel minLevel, LogLevel maxLevel)
         {
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(minLevel, maxLevel, true);
+            _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(minLevel, maxLevel, true);
         }
 
         internal void EnableLoggingForLevels(NLog.Layouts.SimpleLayout simpleLayout)
@@ -232,7 +232,7 @@ namespace NLog.Config
                 return;
             }
 
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(level, level, false);
+            _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(level, level, false);
         }
 
         /// <summary>
@@ -242,7 +242,7 @@ namespace NLog.Config
         /// <param name="maxLevel">Maximum log level to de disabled.</param>
         public void DisableLoggingForLevels(LogLevel minLevel, LogLevel maxLevel)
         {
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(minLevel, maxLevel, false);
+            _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(minLevel, maxLevel, false);
         }
 
         /// <summary>
@@ -252,8 +252,7 @@ namespace NLog.Config
         /// <param name="maxLevel">Maximum log level needed to trigger this rule.</param>
         public void SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel)
         {
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(LogLevel.MinLevel, LogLevel.MaxLevel, false);
-            _logLevelFilter = _logLevelFilter.SetLoggingLevels(minLevel, maxLevel, true);
+            _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(LogLevel.MinLevel, LogLevel.MaxLevel, false).SetLoggingLevels(minLevel, maxLevel, true);
         }
 
         /// <summary>
