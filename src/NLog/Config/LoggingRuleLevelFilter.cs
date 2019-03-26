@@ -74,11 +74,13 @@ namespace NLog.Config
         {
             if (!ReferenceEquals(LogLevels, Off.LogLevels))
             {
+                // Modify directly when not the default Off-filter
                 for (int i = minLevel.Ordinal; i <= maxLevel.Ordinal; ++i)
                     LogLevels[i] = enable;
                 return this;
             }
 
+            // Create new fresh filter and modify filter levels
             return new LoggingRuleLevelFilter().SetLoggingLevels(minLevel, maxLevel, enable);
         }
     }
