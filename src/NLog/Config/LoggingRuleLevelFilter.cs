@@ -118,26 +118,7 @@ namespace NLog.Config
             {
                 if (levelFilter.IndexOf(',') >= 0)
                 {
-                    var levels = levelFilter.Split(_levelFilerSplitter, StringSplitOptions.RemoveEmptyEntries);
-                    bool[] logLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
-                    foreach (var level in levels)
-                    {
-                        try
-                        {
-                            if (StringHelpers.IsNullOrWhiteSpace(level))
-                                continue;
-
-                            var logLevel = LogLevel.FromString(level.Trim());
-                            if (logLevel == LogLevel.Off)
-                                continue;
-
-                            logLevels[logLevel.Ordinal] = true;
-                        }
-                        catch (ArgumentException ex)
-                        {
-                            InternalLogger.Warn(ex, "Logging rule {0} with filter `{1}` has invalid level filter: {2}", _loggingRule.RuleName, _loggingRule.LoggerNamePattern, levelFilter);
-                        }
-                    }
+                    bool[] logLevels = ParseLevels(levelFilter);
                     _activeFilter = activeFilter = new KeyValuePair<string, bool[]>(levelFilter, logLevels);
                 }
                 else
@@ -164,6 +145,32 @@ namespace NLog.Config
             }
 
             return activeFilter.Value;
+        }
+
+        private bool[] ParseLevels(string levelFilter)
+        {
+            var levels = levelFilter.Split(_levelFilerSplitter, StringSplitOptions.RemoveEmptyEntries);
+            bool[] logLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
+            foreach (var level in levels)
+            {
+                try
+                {
+                    if (StringHelpers.IsNullOrWhiteSpace(level))
+                        continue;
+
+                    var logLevel = LogLevel.FromString(level.Trim());
+                    if (logLevel == LogLevel.Off)
+                        continue;
+
+                    logLevels[logLevel.Ordinal] = true;
+                }
+                catch (ArgumentException ex)
+                {
+                    InternalLogger.Warn(ex, "Logging rule {0} with filter `{1}` has invalid level filter: {2}", _loggingRule.RuleName, _loggingRule.LoggerNamePattern, levelFilter);
+                }
+            }
+
+            return logLevels;
         }
     }
 
@@ -202,25 +209,32 @@ namespace NLog.Config
             var activeFilter = _activeFilter;
             if (!activeFilter.Key.Equals(new MinMaxLevels(minLevelFilter, maxLevelFilter)))
             {
-                LogLevel minLevel = ParseLogLevel(minLevelFilter, LogLevel.MinLevel) ?? LogLevel.MaxLevel;
-                LogLevel maxLevel = ParseLogLevel(maxLevelFilter, LogLevel.MaxLevel) ?? LogLevel.MinLevel;
-
-                bool[] logLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
-                for (int i = minLevel.Ordinal; i <= Math.Min(logLevels.Length - 1, maxLevel.Ordinal); ++i)
-                {
-                    logLevels[i] = true;
-                }
+                bool[] logLevels = ParseLevelRange(minLevelFilter, maxLevelFilter);
                 _activeFilter = activeFilter = new KeyValuePair<MinMaxLevels, bool[]>(new MinMaxLevels(minLevelFilter, maxLevelFilter), logLevels);
             }
             return activeFilter.Value;
         }
 
-        LogLevel ParseLogLevel(string logLevel, LogLevel defaultLevel)
+        private bool[] ParseLevelRange(string minLevelFilter, string maxLevelFilter)
+        {
+            LogLevel minLevel = ParseLogLevel(minLevelFilter, LogLevel.MinLevel) ?? LogLevel.MaxLevel;
+            LogLevel maxLevel = ParseLogLevel(maxLevelFilter, LogLevel.MaxLevel) ?? LogLevel.MinLevel;
+
+            bool[] logLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
+            for (int i = minLevel.Ordinal; i <= logLevels.Length - 1 && i <= maxLevel.Ordinal; ++i)
+            {
+                logLevels[i] = true;
+            }
+
+            return logLevels;
+        }
+
+        LogLevel ParseLogLevel(string logLevel, LogLevel levelIfEmpty)
         {
             try
             {
                 if (string.IsNullOrEmpty(logLevel))
-                    return defaultLevel;
+                    return levelIfEmpty;
 
                 return LogLevel.FromString(logLevel.Trim());
             }

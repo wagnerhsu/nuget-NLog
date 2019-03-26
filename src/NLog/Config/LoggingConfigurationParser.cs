@@ -685,16 +685,14 @@ namespace NLog.Config
                 enableLevels = ExpandSimpleVariables(enableLevels);
                 if (enableLevels.IndexOf('{') >= 0)
                 {
-                    SimpleLayout simpleLayout = new SimpleLayout(enableLevels, _configurationItemFactory);
-                    simpleLayout.Initialize(this);
+                    SimpleLayout simpleLayout = ParseLevelLayout(enableLevels);
                     rule.EnableLoggingForLevels(simpleLayout);
                 }
                 else
                 {
                     if (enableLevels.IndexOf(',') >= 0)
                     {
-                        string[] tokens = enableLevels.Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-                        var logLevels = tokens.Where(t => !StringHelpers.IsNullOrWhiteSpace(t)).Select(LogLevelFromString);
+                        IEnumerable<LogLevel> logLevels = ParseLevels(enableLevels);
                         foreach (var logLevel in logLevels)
                             rule.EnableLoggingForLevel(logLevel);
                     }
@@ -710,10 +708,8 @@ namespace NLog.Config
                 maxLevel = maxLevel != null ? ExpandSimpleVariables(maxLevel) : maxLevel;
                 if (minLevel?.IndexOf('{') >= 0 || maxLevel?.IndexOf('{') >= 0)
                 {
-                    SimpleLayout minLevelLayout = !StringHelpers.IsNullOrWhiteSpace(minLevel) ? new SimpleLayout(minLevel, _configurationItemFactory) : null;
-                    SimpleLayout maxLevelLayout = !StringHelpers.IsNullOrWhiteSpace(maxLevel) ? new SimpleLayout(maxLevel, _configurationItemFactory) : null;
-                    minLevelLayout?.Initialize(this);
-                    maxLevelLayout?.Initialize(this);
+                    SimpleLayout minLevelLayout = ParseLevelLayout(minLevel);
+                    SimpleLayout maxLevelLayout = ParseLevelLayout(maxLevel);
                     rule.EnableLoggingForRange(minLevelLayout, maxLevelLayout);
                 }
                 else
@@ -723,6 +719,20 @@ namespace NLog.Config
                     rule.SetLoggingLevels(minLogLevel, maxLogLevel);
                 }
             }
+        }
+
+        private SimpleLayout ParseLevelLayout(string levelLayout)
+        {
+            SimpleLayout simpleLayout = !StringHelpers.IsNullOrWhiteSpace(levelLayout) ? new SimpleLayout(levelLayout, _configurationItemFactory) : null;
+            simpleLayout?.Initialize(this);
+            return simpleLayout;
+        }
+
+        private IEnumerable<LogLevel> ParseLevels(string enableLevels)
+        {
+            string[] tokens = enableLevels.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            var logLevels = tokens.Where(t => !StringHelpers.IsNullOrWhiteSpace(t)).Select(LogLevelFromString);
+            return logLevels;
         }
 
         private void ParseLoggingRuleTargets(string writeTargets, LoggingRule rule)
