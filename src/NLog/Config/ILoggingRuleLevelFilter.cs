@@ -33,39 +33,16 @@
 
 namespace NLog.Config
 {
-    using System;
-
-    /// <summary>
-    /// Default filtering with static level config
-    /// </summary>
-    class LoggingRuleLevelFilter : ILoggingRuleLevelFilter
+    internal interface ILoggingRuleLevelFilter
     {
-        public static readonly ILoggingRuleLevelFilter Off = new LoggingRuleLevelFilter();
-        public bool[] LogLevels { get; }
+        /// <summary>
+        /// Level enabled flags for each LogLevel ordinal
+        /// </summary>
+        bool[] LogLevels { get; }
 
-        public LoggingRuleLevelFilter(bool[] logLevels = null)
-        {
-            LogLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
-            if (logLevels != null)
-            {
-                for (int i = 0; i < Math.Min(logLevels.Length, LogLevels.Length); ++i)
-                    LogLevels[i] = logLevels[i];
-            }
-        }
-
-        public LoggingRuleLevelFilter GetSimpleFilterForUpdate()
-        {
-            if (!ReferenceEquals(LogLevels, Off.LogLevels))
-                return this;
-            else
-                return new LoggingRuleLevelFilter();
-        }
-
-        public LoggingRuleLevelFilter SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel, bool enable)
-        {
-            for (int i = minLevel.Ordinal; i <= maxLevel.Ordinal; ++i)
-                LogLevels[i] = enable;
-            return this;
-        }
+        /// <summary>
+        /// Converts the filter into a simple <see cref="LoggingRuleLevelFilter"/>
+        /// </summary>
+        LoggingRuleLevelFilter GetSimpleFilterForUpdate();
     }
 }
