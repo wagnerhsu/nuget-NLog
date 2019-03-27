@@ -31,6 +31,8 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
+using System.Collections.Generic;
+
 namespace NLog.UnitTests.Config
 {
     using System.IO;
@@ -218,7 +220,7 @@ namespace NLog.UnitTests.Config
                 </rules>
             </nlog>");
 
-            LogFactory factory = new LogFactory(c);
+            var factory = new LogFactory(c);
             var loggerConfig = factory.GetConfigurationForLogger("AAA", c);
             var targets = loggerConfig.GetTargetsForLevel(LogLevel.Warn);
             Assert.Equal("d1", targets.Target.Name);
@@ -470,14 +472,14 @@ namespace NLog.UnitTests.Config
             </nlog>");
 
             LogManager.Configuration = c;
-            Logger a = LogManager.GetLogger("a");
+            var a = LogManager.GetLogger("a");
             Assert.False(a.IsDebugEnabled);
             Assert.True(a.IsInfoEnabled);
             a.Info("testInfo");
             a.Debug("suppressedDebug");
             AssertDebugLastMessage("d1", "testInfo");
 
-            Logger b = LogManager.GetLogger("b");
+            var b = LogManager.GetLogger("b");
             b.Debug("testDebug");
             AssertDebugLastMessage("d1", "testDebug");
         }
@@ -485,7 +487,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void UnusedTargetsShouldBeLoggedToInternalLogger()
         {
-            string tempFileName = Path.GetTempFileName();
+            var tempFileName = Path.GetTempFileName();
 
             try
             {
@@ -521,7 +523,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void UnusedTargetsShouldBeLoggedToInternalLogger_PermitWrapped()
         {
-            string tempFileName = Path.GetTempFileName();
+            var tempFileName = Path.GetTempFileName();
 
             try
             {
@@ -544,7 +546,7 @@ namespace NLog.UnitTests.Config
                     </rules>
                 </nlog>");
 
-                
+
                 AssertFileNotContains(tempFileName, "Unused target detected. Add a rule for this target to the configuration. TargetName: d2", Encoding.UTF8);
 
                 AssertFileNotContains(tempFileName, "Unused target detected. Add a rule for this target to the configuration. TargetName: d3", Encoding.UTF8);
@@ -581,7 +583,7 @@ namespace NLog.UnitTests.Config
             </nlog>");
 
             LogManager.Configuration = c;
-            Logger a = LogManager.GetLogger("a");
+            var a = LogManager.GetLogger("a");
 
             Assert.True(c.LoggingRules.Count == 2, "All rules should have been loaded.");
             Assert.False(c.LoggingRules[0].IsLoggingEnabledForLevel(LogLevel.Off), "Log level Off should always return false.");
@@ -591,20 +593,10 @@ namespace NLog.UnitTests.Config
         }
 
         [Theory]
-        [InlineData("Off")]
-        [InlineData("")]
-        [InlineData((string)null)]
-        [InlineData("Trace")]
-        [InlineData("Debug")]
-        [InlineData("Info")]
-        [InlineData("Warn")]
-        [InlineData("Error")]
-        [InlineData(" error")]
-        [InlineData("Fatal")]
-        [InlineData("Wrong")]
+        [MemberData(nameof(LogLevelTestCases))]
         public void LoggingRule_LevelLayout_ParseLevel(string levelVariable)
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration config = XmlLoggingConfiguration.CreateFromXmlString(@"
             <nlog>"
                 + (levelVariable != null ? $"<variable name='var_level' value='{levelVariable}'/>" : "") +
                 @"<targets>
@@ -615,52 +607,31 @@ namespace NLog.UnitTests.Config
                 </rules>
             </nlog>");
 
-            LogManager.Configuration = c;
-            Logger b = LogManager.GetLogger(nameof(LoggingRule_LevelLayout_ParseLevel));
+            LogManager.Configuration = config;
+            var logger = LogManager.GetLogger(nameof(LoggingRule_LevelLayout_ParseLevel));
 
-            LogLevel expectedLogLevel = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelVariable.Trim());
+            var expectedLogLevel = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelVariable.Trim());
 
-            for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
-            {
-                if (LogLevel.FromOrdinal(i) == expectedLogLevel)
-                    Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                else
-                    Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
-            }
+            AssertLogLevel(logger, expectedLogLevel);
 
             expectedLogLevel = LogLevel.Fatal;
             LogManager.Configuration.Variables["var_level"] = expectedLogLevel.ToString();
             LogManager.ReconfigExistingLoggers();
 
-            for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
-            {
-                if (LogLevel.FromOrdinal(i) == expectedLogLevel)
-                    Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                else
-                    Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
-            }
+            AssertLogLevel(logger, expectedLogLevel);
+
         }
 
         [Theory]
-        [InlineData("Off")]
-        [InlineData("")]
-        [InlineData((string)null)]
-        [InlineData("Trace")]
-        [InlineData("Debug")]
-        [InlineData("Info")]
-        [InlineData("Warn")]
-        [InlineData("Error")]
-        [InlineData(" error")]
-        [InlineData("Fatal")]
-        [InlineData("Wrong")]
+        [MemberData(nameof(LogLevelTestCases))]
         public void LoggingRule_LevelsLayout_ParseLevel(string levelVariable)
         {
-            for (int maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
+            for (var maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
             {
-                string levelsVariable = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
+                var levelsVariable = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
 
-                LogLevel expectedLevel1 = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelsVariable) || levelsVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelsVariable.Trim());
-                LogLevel expectedLevel2 = (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong") ? LogLevel.Off : LogLevel.FromString(levelVariable.Trim());
+                var expectedLevel1 = CreateLogLevel(levelsVariable);
+                var expectedLevel2 = CreateLogLevel(levelVariable);
 
                 if (levelsVariable != levelVariable && !string.IsNullOrEmpty(levelVariable))
                 {
@@ -679,60 +650,42 @@ namespace NLog.UnitTests.Config
                 </nlog>");
 
                 LogManager.Configuration = c;
-                Logger b = LogManager.GetLogger(nameof(LoggingRule_LevelsLayout_ParseLevel));
+                var logger = LogManager.GetLogger(nameof(LoggingRule_LevelsLayout_ParseLevel));
 
-                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                for (var i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
                 {
                     if (LogLevel.FromOrdinal(i) == expectedLevel1)
-                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                        Assert.True(logger.IsEnabled(LogLevel.FromOrdinal(i)));
                     else if (LogLevel.FromOrdinal(i) == expectedLevel2)
-                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                        Assert.True(logger.IsEnabled(LogLevel.FromOrdinal(i)));
                     else
-                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                        Assert.False(logger.IsEnabled(LogLevel.FromOrdinal(i)));
                 }
 
                 var expectedLogLevel = LogLevel.Fatal;
                 LogManager.Configuration.Variables["var_levels"] = expectedLogLevel.ToString();
                 LogManager.ReconfigExistingLoggers();
 
-                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
-                {
-                    if (LogLevel.FromOrdinal(i) == expectedLogLevel)
-                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                    else
-                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                }
+                AssertLogLevel(logger, expectedLogLevel);
             }
         }
 
         [Theory]
-        [InlineData("Off")]
-        [InlineData("")]
-        [InlineData((string)null)]
-        [InlineData("Trace")]
-        [InlineData("Debug")]
-        [InlineData("Info")]
-        [InlineData("Warn")]
-        [InlineData("Error")]
-        [InlineData(" error")]
-        [InlineData("Fatal")]
-        [InlineData("Wrong")]
+        [MemberData(nameof(LogLevelTestCases))]
         public void LoggingRule_MinMaxLayout_ParseLevel(string levelVariable)
         {
-            for (int maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
+            for (var maxOrdinal = LogLevel.MinLevel.Ordinal - 1; maxOrdinal <= LogLevel.MaxLevel.Ordinal; ++maxOrdinal)
             {
-                string maxLevel = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
-                LogLevel expectedMaxLevel = maxLevel == "Wrong" ? LogLevel.MinLevel : 
-                    (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(maxLevel) ? LogLevel.MaxLevel : LogLevel.FromString(maxLevel.Trim()));
-                LogLevel expectedMinLevel = levelVariable == "Wrong" ? LogLevel.MaxLevel :
-                    (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) ? LogLevel.MinLevel : LogLevel.FromString(levelVariable.Trim()));
+                var maxLevel = (maxOrdinal == LogLevel.MinLevel.Ordinal - 1) ? levelVariable : LogLevel.FromOrdinal(maxOrdinal).ToString();
+                var expectedMaxLevel = CreateLogLevel(maxLevel, LogLevel.MinLevel, LogLevel.MaxLevel);
+                var expectedMinLevel = CreateLogLevel(levelVariable, LogLevel.MaxLevel, LogLevel.MinLevel);
                 if (string.IsNullOrEmpty(maxLevel) && string.IsNullOrEmpty(levelVariable))
                 {
                     expectedMinLevel = LogLevel.Off;
                     expectedMaxLevel = LogLevel.Off;
                 }
 
-                LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LoggingConfiguration config = XmlLoggingConfiguration.CreateFromXmlString(@"
                 <nlog>"
                     + (levelVariable != null ? $"<variable name='var_minlevel' value='{levelVariable}'/>" : "")
                     + (maxLevel != null ? $"<variable name='var_maxlevel' value='{maxLevel}'/>" : "") +
@@ -744,15 +697,15 @@ namespace NLog.UnitTests.Config
                     </rules>
                 </nlog>");
 
-                LogManager.Configuration = c;
-                Logger b = LogManager.GetLogger(nameof(LoggingRule_MinMaxLayout_ParseLevel));
+                LogManager.Configuration = config;
+                var logger = LogManager.GetLogger(nameof(LoggingRule_MinMaxLayout_ParseLevel));
 
-                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+                for (var i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
                 {
                     if (expectedMinLevel.Ordinal <= i && i <= expectedMaxLevel.Ordinal)
-                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                        Assert.True(logger.IsEnabled(LogLevel.FromOrdinal(i)));
                     else
-                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
+                        Assert.False(logger.IsEnabled(LogLevel.FromOrdinal(i)));
                 }
 
                 expectedMinLevel = expectedMaxLevel = LogLevel.Fatal;
@@ -760,13 +713,63 @@ namespace NLog.UnitTests.Config
                 LogManager.Configuration.Variables["var_maxlevel"] = expectedMaxLevel.ToString();
                 LogManager.ReconfigExistingLoggers();
 
-                for (int i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
-                {
-                    if (LogLevel.FromOrdinal(i) == expectedMinLevel)
-                        Assert.True(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                    else
-                        Assert.False(b.IsEnabled(LogLevel.FromOrdinal(i)));
-                }
+                AssertLogLevel(logger, expectedMinLevel);
+            }
+
+
+        }
+
+
+
+        public static IEnumerable<object[]> LogLevelTestCases()
+        {
+            yield return new object[] { "Off" };
+            yield return new object[] { "" };
+            yield return new object[] { (string)null };
+            yield return new object[] { "Trace" };
+            yield return new object[] { "Debug" };
+            yield return new object[] { "Info" };
+            yield return new object[] { "Warn" };
+            yield return new object[] { "Error" };
+            yield return new object[] { " error" };
+            yield return new object[] { "Fatal" };
+            yield return new object[] { "Wrong" };
+        }
+
+        private static LogLevel CreateLogLevel(string levelVariable)
+        {
+            if (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(levelVariable) || levelVariable == "Wrong")
+            {
+                return LogLevel.Off;
+            }
+
+            return LogLevel.FromString(levelVariable.Trim());
+        }
+
+        private static LogLevel CreateLogLevel(string text, LogLevel levelIfWrong, LogLevel levelOnEmpty)
+        {
+            if (text == "Wrong")
+            {
+                return levelIfWrong;
+            }
+
+            if (NLog.Internal.StringHelpers.IsNullOrWhiteSpace(text))
+            {
+                return levelOnEmpty;
+            }
+
+            return LogLevel.FromString(text.Trim());
+        }
+
+
+        private static void AssertLogLevel(ILogger logger, LogLevel expectedLogLevel)
+        {
+            for (var i = LogLevel.MinLevel.Ordinal; i <= LogLevel.MaxLevel.Ordinal; ++i)
+            {
+                if (LogLevel.FromOrdinal(i) == expectedLogLevel)
+                    Assert.True(logger.IsEnabled(LogLevel.FromOrdinal(i)));
+                else
+                    Assert.False(logger.IsEnabled(LogLevel.FromOrdinal(i)));
             }
         }
     }
