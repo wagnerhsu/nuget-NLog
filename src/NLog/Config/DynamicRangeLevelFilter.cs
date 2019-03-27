@@ -41,11 +41,11 @@ namespace NLog.Config
     /// <summary>
     /// Dynamic filtering with a minlevel and maxlevel range
     /// </summary>
-    class DynamicRangeLevelFilter : ILoggingRuleLevelFilter
+    internal class DynamicRangeLevelFilter : ILoggingRuleLevelFilter
     {
-        readonly LoggingRule _loggingRule;
-        readonly SimpleLayout _minLevel;
-        readonly SimpleLayout _maxLevel;
+        private readonly LoggingRule _loggingRule;
+        private readonly SimpleLayout _minLevel;
+        private readonly SimpleLayout _maxLevel;
         private KeyValuePair<MinMaxLevels, bool[]> _activeFilter;
 
         public bool[] LogLevels => GenerateLogLevels();
@@ -81,19 +81,21 @@ namespace NLog.Config
 
         private bool[] ParseLevelRange(string minLevelFilter, string maxLevelFilter)
         {
-            LogLevel minLevel = ParseLogLevel(minLevelFilter, LogLevel.MinLevel) ?? LogLevel.MaxLevel;
-            LogLevel maxLevel = ParseLogLevel(maxLevelFilter, LogLevel.MaxLevel) ?? LogLevel.MinLevel;
+            LogLevel minLevel = ParseLogLevel(minLevelFilter, LogLevel.MinLevel);
+            LogLevel maxLevel = ParseLogLevel(maxLevelFilter, LogLevel.MaxLevel);
 
             bool[] logLevels = new bool[LogLevel.MaxLevel.Ordinal + 1];
-            for (int i = minLevel.Ordinal; i <= logLevels.Length - 1 && i <= maxLevel.Ordinal; ++i)
+            if (minLevel != null && maxLevel != null)
             {
-                logLevels[i] = true;
+                for (int i = minLevel.Ordinal; i <= logLevels.Length - 1 && i <= maxLevel.Ordinal; ++i)
+                {
+                    logLevels[i] = true;
+                }
             }
-
             return logLevels;
         }
 
-        LogLevel ParseLogLevel(string logLevel, LogLevel levelIfEmpty)
+        private LogLevel ParseLogLevel(string logLevel, LogLevel levelIfEmpty)
         {
             try
             {
@@ -109,10 +111,10 @@ namespace NLog.Config
             }
         }
 
-        struct MinMaxLevels : IEquatable<MinMaxLevels>
+        private struct MinMaxLevels : IEquatable<MinMaxLevels>
         {
-            readonly string MinLevel;
-            readonly string MaxLevel;
+            private readonly string MinLevel;
+            private readonly string MaxLevel;
 
             public MinMaxLevels(string minLevel, string maxLevel)
             {

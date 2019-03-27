@@ -42,11 +42,11 @@ namespace NLog.Config
     /// <summary>
     /// Dynamic filtering with a positive list of enabled levels
     /// </summary>
-    class DynamicLogLevelFilter : ILoggingRuleLevelFilter
+    internal class DynamicLogLevelFilter : ILoggingRuleLevelFilter
     {
         private static readonly char[] _levelFilerSplitter = { ',' };
-        readonly LoggingRule _loggingRule;
-        readonly SimpleLayout _levelFilter;
+        private readonly LoggingRule _loggingRule;
+        private readonly SimpleLayout _levelFilter;
         private KeyValuePair<string, bool[]> _activeFilter;
 
         public bool[] LogLevels => GenerateLogLevels();
