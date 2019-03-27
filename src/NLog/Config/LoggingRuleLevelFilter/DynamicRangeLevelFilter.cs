@@ -41,11 +41,11 @@ namespace NLog.Config
     /// <summary>
     /// Dynamic filtering with a minlevel and maxlevel range
     /// </summary>
-    class DynamicRangeLevelFilter : ILoggingRuleLevelFilter
+    internal class DynamicRangeLevelFilter : ILoggingRuleLevelFilter
     {
-        readonly LoggingRule _loggingRule;
-        readonly SimpleLayout _minLevel;
-        readonly SimpleLayout _maxLevel;
+        private readonly LoggingRule _loggingRule;
+        private readonly SimpleLayout _minLevel;
+        private readonly SimpleLayout _maxLevel;
         private KeyValuePair<MinMaxLevels, bool[]> _activeFilter;
 
         public bool[] LogLevels => GenerateLogLevels();
@@ -93,7 +93,7 @@ namespace NLog.Config
             return logLevels;
         }
 
-        LogLevel ParseLogLevel(string logLevel, LogLevel levelIfEmpty)
+        private LogLevel ParseLogLevel(string logLevel, LogLevel levelIfEmpty)
         {
             try
             {
@@ -109,10 +109,10 @@ namespace NLog.Config
             }
         }
 
-        struct MinMaxLevels : IEquatable<MinMaxLevels>
+        private struct MinMaxLevels : IEquatable<MinMaxLevels>
         {
-            readonly string MinLevel;
-            readonly string MaxLevel;
+            private readonly string MinLevel;
+            private readonly string MaxLevel;
 
             public MinMaxLevels(string minLevel, string maxLevel)
             {

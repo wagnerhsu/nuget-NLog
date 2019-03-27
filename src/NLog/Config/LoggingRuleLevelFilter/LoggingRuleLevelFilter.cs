@@ -38,7 +38,7 @@ namespace NLog.Config
     /// <summary>
     /// Default filtering with static level config
     /// </summary>
-    class LoggingRuleLevelFilter : ILoggingRuleLevelFilter
+    internal class LoggingRuleLevelFilter : ILoggingRuleLevelFilter
     {
         public static readonly ILoggingRuleLevelFilter Off = new LoggingRuleLevelFilter();
         public bool[] LogLevels { get; }
