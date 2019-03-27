@@ -65,7 +65,13 @@ namespace NLog
         {
             lock (_dict)
             {
-                GetWritableDict(_dictReadOnly != null && !_dict.ContainsKey(item))[item] = value;
+                if (_dictReadOnly != null && !_dict.ContainsKey(item))
+                {
+                    var newDict = CloneDictionary();
+                    SetWritableDictionary(newDict);
+                }
+
+                _dict[item] = value;
             }
         }
 
@@ -130,7 +136,13 @@ namespace NLog
         {
             lock (_dict)
             {
-                GetWritableDict(_dictReadOnly != null && _dict.ContainsKey(item)).Remove(item);
+                if (_dictReadOnly != null && _dict.ContainsKey(item))
+                {
+                    var newDict = CloneDictionary();
+                    SetWritableDictionary(newDict);
+                }
+
+                _dict.Remove(item);
             }
         }
 
@@ -141,7 +153,13 @@ namespace NLog
         {
             lock (_dict)
             {
-                GetWritableDict(_dictReadOnly != null && _dict.Count > 0, false).Clear();
+                if (_dictReadOnly != null && _dict.Count > 0)
+                {
+                    var newDict = new Dictionary<string, object>(0);
+                    SetWritableDictionary(newDict);
+                }
+
+                _dict.Clear();
             }
         }
 
@@ -158,21 +176,19 @@ namespace NLog
             return readOnly;
         }
 
-        private static Dictionary<string, object> GetWritableDict(bool mustCreateNew, bool clone = true)
+        private static void SetWritableDictionary(Dictionary<string, object> newDict)
         {
-            if (mustCreateNew)
-            {
-                var newDict = new Dictionary<string, object>(clone ? _dict.Count + 1 : 0);
-                if (clone)
-                {
-                    // Less allocation with enumerator than Dictionary-constructor
-                    foreach (var item in _dict)
-                        newDict[item.Key] = item.Value;
-                }
-                _dict = newDict;
-                _dictReadOnly = null;
-            }
-            return _dict;
+            _dict = newDict;
+            _dictReadOnly = null;
+        }
+
+        private static Dictionary<string, object> CloneDictionary()
+        {
+            var newDict = new Dictionary<string, object>(_dict.Count + 1);
+            // Less allocation with enumerator than Dictionary-constructor
+            foreach (var item in _dict)
+                newDict[item.Key] = item.Value;
+            return newDict;
         }
     }
 }
