@@ -38,13 +38,15 @@ namespace NLog
     using NLog.Config;
     using NLog.Internal;
 
+    using StringObjectDictionary = System.Collections.Generic.Dictionary<string, object>;
+
     /// <summary>
     /// Global Diagnostics Context - a dictionary structure to hold per-application-instance values.
     /// </summary>
     public static class GlobalDiagnosticsContext
     {
-        private static Dictionary<string, object> _dict = new Dictionary<string, object>();
-        private static Dictionary<string, object> _dictReadOnly;  // Reset cache on change
+        private static StringObjectDictionary _dict = new StringObjectDictionary();
+        private static StringObjectDictionary _dictReadOnly;  // Reset cache on change
 
         /// <summary>
         /// Sets the Global Diagnostics Context item to the specified value.
@@ -148,7 +150,7 @@ namespace NLog
             }
         }
 
-        private static Dictionary<string, object> GetReadOnlyDict()
+        private static StringObjectDictionary GetReadOnlyDict()
         {
             var readOnly = _dictReadOnly;
             if (readOnly == null)
@@ -161,20 +163,20 @@ namespace NLog
             return readOnly;
         }
 
-        private static Dictionary<string, object> GetWritableDict(bool requireCopyOnWrite, bool clearDictionary = false)
+        private static StringObjectDictionary GetWritableDict(bool requireCopyOnWrite, bool clearDictionary = false)
         {
             if (requireCopyOnWrite)
             {
-                Dictionary<string, object> newDict = CopyDictionaryOnWrite(clearDictionary);
+                var newDict = CopyDictionaryOnWrite(clearDictionary);
                 _dict = newDict;
                 _dictReadOnly = null;
             }
             return _dict;
         }
 
-        private static Dictionary<string, object> CopyDictionaryOnWrite(bool clearDictionary)
+        private static StringObjectDictionary CopyDictionaryOnWrite(bool clearDictionary)
         {
-            var newDict = new Dictionary<string, object>(clearDictionary ? 0 : _dict.Count + 1);
+            var newDict = new StringObjectDictionary(clearDictionary ? 0 : _dict.Count + 1);
             if (!clearDictionary)
             {
                 // Less allocation with enumerator than Dictionary-constructor
