@@ -52,7 +52,7 @@ namespace NLog.Internal
         /// Win32ThreadIDHelper depending on runtime environment.
         /// </summary>
         /// <value>The instance.</value>
-        public static ProcessIDHelper Instance => _threadIDHelper ?? (_threadIDHelper = CreateInstance());
+        public static ProcessIDHelper Instance => _threadIDHelper ?? (_threadIDHelper = Create());
 
         /// <summary>
         /// Gets current process ID.
@@ -72,7 +72,7 @@ namespace NLog.Internal
         /// <summary>
         /// Initializes the ThreadIDHelper class.
         /// </summary>
-        private static ProcessIDHelper CreateInstance()
+        private static ProcessIDHelper Create()
         {
 #if !SILVERLIGHT && !__IOS__ && !__ANDROID__ && !NETSTANDARD
             if (PlatformDetector.IsWin32)
