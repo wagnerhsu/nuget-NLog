@@ -255,11 +255,11 @@ namespace NLog.Config
                     string processDirectory = PathHelpers.TrimDirectorySeparators(Path.GetDirectoryName(processFilePath));
                     if (!string.IsNullOrEmpty(entryAssemblyLocation) && !string.Equals(entryAssemblyLocation, processDirectory, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Handle dotnet-process loading NetCore-assembly, or IIS-process loading website
+                        // Handle dotnet-process loading .NET Core-assembly, or IIS-process loading website
                         string assemblyFileName = Path.GetFileName(System.Reflection.Assembly.GetEntryAssembly().Location);
                         if (!string.IsNullOrEmpty(assemblyFileName))
                             yield return Path.Combine(entryAssemblyLocation, assemblyFileName + ".nlog");
-                        // Handle unpublished NetCore Application
+                        // Handle unpublished .NET Core Application
                         assemblyFileName = Path.GetFileNameWithoutExtension(assemblyFileName);
                         if (!string.IsNullOrEmpty(assemblyFileName))
                             yield return Path.Combine(entryAssemblyLocation, assemblyFileName + ".exe.nlog");
