@@ -55,7 +55,7 @@ namespace NLog.Config
         private readonly IFile _file;
 
         public LoggingConfigurationFileLoader()
-            :this(DefaultFileWrapper)
+            : this(DefaultFileWrapper)
         {
         }
 
@@ -190,7 +190,7 @@ namespace NLog.Config
             }
             return xmlConfig;
         }
-        
+
         /// <inheritdoc/>
         public IEnumerable<string> GetDefaultCandidateConfigFilePaths()
         {
@@ -202,9 +202,17 @@ namespace NLog.Config
         /// </summary>
         public IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName)
         {
+            return GetDefaultCandidateConfigFilePaths(fileName, LogFactory.CurrentAppDomain);
+        }
+
+        /// <summary>
+        /// Get default file paths (including filename) for possible NLog config files. 
+        /// </summary>
+        internal IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName, IAppDomain currentAppDomain)
+        {
             // NLog.config from application directory
             string nlogConfigFile = fileName ?? "NLog.config";
-            string baseDirectory = PathHelpers.TrimDirectorySeparators(LogFactory.CurrentAppDomain?.BaseDirectory);
+            string baseDirectory = PathHelpers.TrimDirectorySeparators(currentAppDomain?.BaseDirectory);
             if (!string.IsNullOrEmpty(baseDirectory))
                 yield return Path.Combine(baseDirectory, nlogConfigFile);
 
@@ -236,7 +244,7 @@ namespace NLog.Config
             if (fileName == null)
             {
                 // Current config file with .config renamed to .nlog
-                string configurationFile = LogFactory.CurrentAppDomain?.ConfigurationFile;
+                string configurationFile = currentAppDomain?.ConfigurationFile;
                 if (!StringHelpers.IsNullOrWhiteSpace(configurationFile))
                 {
                     yield return Path.ChangeExtension(configurationFile, ".nlog");
@@ -272,7 +280,7 @@ namespace NLog.Config
 #endif
             }
 
-            IEnumerable<string> privateBinPaths = LogFactory.CurrentAppDomain.PrivateBinPath;
+            IEnumerable<string> privateBinPaths = currentAppDomain.PrivateBinPath;
             if (privateBinPaths != null)
             {
                 foreach (var privatePath in privateBinPaths)
