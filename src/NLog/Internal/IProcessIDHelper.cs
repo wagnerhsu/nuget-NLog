@@ -35,6 +35,7 @@ namespace NLog.Internal
 {
     internal interface IProcessIDHelper
     {
+#if !SILVERLIGHT && !NETSTANDARD1_3
         /// <summary>
         /// Gets current process ID.
         /// </summary>
@@ -49,5 +50,6 @@ namespace NLog.Internal
         /// Gets current process name (excluding filename extension, if any).
         /// </summary>
         string CurrentProcessBaseName { get; }
+#endif
     }
 }

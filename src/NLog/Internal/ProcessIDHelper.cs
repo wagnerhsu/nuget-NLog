@@ -31,7 +31,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if !SILVERLIGHT && !NETSTANDARD1_3
+
 
 namespace NLog.Internal
 {
@@ -44,17 +44,23 @@ namespace NLog.Internal
     {
         private static IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
 
-        private const string UnknownProcessName = "<unknown>";
-
-        private static ProcessIDHelper _threadIDHelper;
-        private string _currentProcessBaseName;
+        private static IProcessIDHelper _threadIDHelper;
 
         /// <summary>
         /// Gets the singleton instance of PortableThreadIDHelper or
         /// Win32ThreadIDHelper depending on runtime environment.
         /// </summary>
         /// <value>The instance.</value>
-        public static ProcessIDHelper Instance => _threadIDHelper ?? (_threadIDHelper = Create());
+        public static IProcessIDHelper Instance => _threadIDHelper ?? (_threadIDHelper = Create());
+
+#if !SILVERLIGHT && !NETSTANDARD1_3
+
+        private const string UnknownProcessName = "<unknown>";
+
+
+        private string _currentProcessBaseName;
+
+
 
         /// <summary>
         /// Gets current process ID.
@@ -71,6 +77,8 @@ namespace NLog.Internal
         /// </summary>
         public string CurrentProcessBaseName => _currentProcessBaseName ?? (_currentProcessBaseName = string.IsNullOrEmpty(CurrentProcessFilePath) ? UnknownProcessName : Path.GetFileNameWithoutExtension(CurrentProcessFilePath));
 
+#endif
+
         /// <summary>
         /// Initializes the ThreadIDHelper class.
         /// </summary>
@@ -83,11 +91,15 @@ namespace NLog.Internal
             }
             else
 #endif
+#if !SILVERLIGHT && !NETSTANDARD1_3
             {
                 return new PortableProcessIDHelper();
             }
-        }
-    }
-}
-
+#else
+            return null;
 #endif
+        }
+
+    }
+
+}
