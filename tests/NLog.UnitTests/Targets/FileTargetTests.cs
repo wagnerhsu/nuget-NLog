@@ -188,7 +188,7 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void SimpleFileTestInRoot()
         {
-            if (NLog.Internal.PlatformDetector.IsWin32)
+            if (NLog.Internal.PlatformDetector.Instance.IsWin32)
             {
                 var dirPath = "C:\\";
                 var directoryInfo = new DirectoryInfo(dirPath);

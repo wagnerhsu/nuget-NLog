@@ -42,16 +42,16 @@ namespace NLog.UnitTests.Internal
         public void IsMonoTest()
         {
 #if MONO
-            Assert.True(PlatformDetector.IsMono);
+            Assert.True(PlatformDetector.Instance.IsMono);
 #elif NET3_5 || NET4_0 || NET4_5
-            Assert.False(PlatformDetector.IsMono);
+            Assert.False(PlatformDetector.Instance.IsMono);
 #endif
         }
 
         [Fact]
         public void GetCurrentOSTest()
         {
-            var actual = PlatformDetector.CurrentOS;
+            var actual = PlatformDetector.Instance.CurrentOS;
             Assert.NotEqual(RuntimeOS.Unknown, actual);
         }
     }
