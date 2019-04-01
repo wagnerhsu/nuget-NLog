@@ -51,6 +51,8 @@ namespace NLog.Internal.FileAppenders
         private readonly Random _random = new Random();
 #pragma warning restore S2245   // Make sure that using this pseudorandom number generator is safe here
 
+        protected IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="BaseFileAppender" /> class.
         /// </summary>

@@ -46,35 +46,42 @@ namespace NLog.Internal
     /// <summary>
     /// Detects the platform the NLog is running on.
     /// </summary>
-    internal static class PlatformDetector
+    internal class PlatformDetector : IPlatformDetector
     {
-        private static RuntimeOS currentOS = GetCurrentRuntimeOS();
+        private static RuntimeOS _currentOS = GetCurrentRuntimeOS();
+
+        internal static IPlatformDetector Instance { get; } = new PlatformDetector();
+
+        private PlatformDetector()
+        {
+
+        }
 
         /// <summary>
         /// Gets the current runtime OS.
         /// </summary>
-        public static RuntimeOS CurrentOS => currentOS;
+        public RuntimeOS CurrentOS => _currentOS;
 
         /// <summary>
         /// Gets a value indicating whether current OS is Win32-based (desktop or mobile).
         /// </summary>
-        public static bool IsWin32 => currentOS == RuntimeOS.Windows || currentOS == RuntimeOS.WindowsNT;
+        public bool IsWin32 => _currentOS == RuntimeOS.Windows || _currentOS == RuntimeOS.WindowsNT;
 
         /// <summary>
         /// Gets a value indicating whether current OS is Unix-based.
         /// </summary>
-        public static bool IsUnix => currentOS == RuntimeOS.Linux || currentOS == RuntimeOS.MacOSX;
+        public bool IsUnix => _currentOS == RuntimeOS.Linux || _currentOS == RuntimeOS.MacOSX;
 
         /// <summary>
         /// Gets a value indicating whether current runtime is Mono-based
         /// </summary>
-        public static bool IsMono => _isMono ?? (_isMono = Type.GetType("Mono.Runtime") != null).Value;
+        public bool IsMono => _isMono ?? (_isMono = Type.GetType("Mono.Runtime") != null).Value;
         private static bool? _isMono;
 
         /// <summary>
         /// Gets a value indicating whether current runtime supports use of mutex
         /// </summary>
-        public static bool SupportsSharableMutex
+        public bool SupportsSharableMutex
         {
             get
             {

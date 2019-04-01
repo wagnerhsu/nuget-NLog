@@ -63,6 +63,8 @@ namespace NLog.Targets
     [Target("File")]
     public class FileTarget : TargetWithLayoutHeaderAndFooter, ICreateFileParameters
     {
+        private IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         /// <summary>
         /// Default clean up period of the initilized files. When a file exceeds the clean up period is removed from the list.
         /// </summary>

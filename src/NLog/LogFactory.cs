@@ -55,6 +55,8 @@ namespace NLog
     {
         private static readonly TimeSpan DefaultFlushTimeout = TimeSpan.FromSeconds(15);
 
+        private IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         private static IAppDomain currentAppDomain;
 
         /// <remarks>

@@ -48,6 +48,8 @@ namespace NLog.Internal.NetworkSenders
         private static bool? EnableKeepAliveSuccessful;
 #endif
 
+        private static IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         private readonly Queue<SocketAsyncEventArgs> _pendingRequests = new Queue<SocketAsyncEventArgs>();
 
         private ISocket _socket;

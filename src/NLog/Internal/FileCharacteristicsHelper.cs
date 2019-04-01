@@ -41,6 +41,8 @@ namespace NLog.Internal
     /// </summary>
     internal abstract class FileCharacteristicsHelper
     {
+        protected static IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         /// <summary>
         /// Initializes static members of the FileCharacteristicsHelper class.
         /// </summary>

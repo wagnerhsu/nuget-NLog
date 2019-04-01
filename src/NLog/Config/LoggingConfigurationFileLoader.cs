@@ -202,13 +202,13 @@ namespace NLog.Config
         /// </summary>
         public IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName)
         {
-            return GetDefaultCandidateConfigFilePaths(fileName, LogFactory.CurrentAppDomain);
+            return GetDefaultCandidateConfigFilePaths(fileName, LogFactory.CurrentAppDomain, PlatformDetector.Instance);
         }
 
         /// <summary>
         /// Get default file paths (including filename) for possible NLog config files. 
         /// </summary>
-        internal IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName, IAppDomain currentAppDomain)
+        internal IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName, IAppDomain currentAppDomain, IPlatformDetector platformDetector)
         {
             // NLog.config from application directory
             string nlogConfigFile = fileName ?? "NLog.config";
@@ -217,7 +217,7 @@ namespace NLog.Config
                 yield return Path.Combine(baseDirectory, nlogConfigFile);
 
             string nLogConfigFileLowerCase = nlogConfigFile.ToLower();
-            bool platformFileSystemCaseInsensitive = nlogConfigFile == nLogConfigFileLowerCase || PlatformDetector.IsWin32;
+            bool platformFileSystemCaseInsensitive = nlogConfigFile == nLogConfigFileLowerCase || platformDetector.IsWin32;
             if (!platformFileSystemCaseInsensitive && !string.IsNullOrEmpty(baseDirectory))
                 yield return Path.Combine(baseDirectory, nLogConfigFileLowerCase);
 

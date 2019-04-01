@@ -35,11 +35,14 @@ using System;
 using System.IO;
 using System.Text;
 using NLog.Common;
+using NLog.Internal;
 
 namespace NLog.Targets
 {
     internal static class ConsoleTargetHelper
     {
+        private static IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
+
         public static bool IsConsoleAvailable(out string reason)
         {
             reason = string.Empty;
@@ -48,7 +51,7 @@ namespace NLog.Targets
             {
                 if (!Environment.UserInteractive)
                 {
-                    if (Internal.PlatformDetector.IsMono && Console.In is StreamReader)
+                    if (PlatformDetector.IsMono && Console.In is StreamReader)
                         return true;    // Extra bonus check for Mono, that doesn't support Environment.UserInteractive
 
                     reason = "Environment.UserInteractive = False";
