@@ -202,13 +202,14 @@ namespace NLog.Config
         /// </summary>
         public IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName)
         {
-            return GetDefaultCandidateConfigFilePaths(fileName, LogFactory.CurrentAppDomain, PlatformDetector.Instance);
+            return GetDefaultCandidateConfigFilePaths(fileName, LogFactory.CurrentAppDomain, PlatformDetector.Instance, ProcessIDHelper.Instance, AssemblyInfo.Instance);
         }
 
         /// <summary>
         /// Get default file paths (including filename) for possible NLog config files. 
         /// </summary>
-        internal IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName, IAppDomain currentAppDomain, IPlatformDetector platformDetector)
+        internal IEnumerable<string> GetDefaultCandidateConfigFilePaths(string fileName, IAppDomain currentAppDomain, IPlatformDetector platformDetector,
+            IProcessIDHelper processIDHelper, IAssemblyInfo assemblyInfo)
         {
             // NLog.config from application directory
             string nlogConfigFile = fileName ?? "NLog.config";
@@ -222,7 +223,7 @@ namespace NLog.Config
                 yield return Path.Combine(baseDirectory, nLogConfigFileLowerCase);
 
 #if !SILVERLIGHT && !NETSTANDARD1_3
-            var entryAssemblyLocation = PathHelpers.TrimDirectorySeparators(AssemblyHelpers.GetAssemblyFileLocation(System.Reflection.Assembly.GetEntryAssembly()));
+            var entryAssemblyLocation = PathHelpers.TrimDirectorySeparators(assemblyInfo.GetEntryAssemblyLocation());
             if (!string.IsNullOrEmpty(entryAssemblyLocation))
             {
                 if (!string.Equals(entryAssemblyLocation, baseDirectory, StringComparison.OrdinalIgnoreCase))
@@ -259,12 +260,12 @@ namespace NLog.Config
 #if NETSTANDARD && !NETSTANDARD1_3
                 else
                 {
-                    string processFilePath = ProcessIDHelper.Instance.CurrentProcessFilePath;
+                    string processFilePath = processIDHelper.CurrentProcessFilePath;
                     string processDirectory = PathHelpers.TrimDirectorySeparators(Path.GetDirectoryName(processFilePath));
                     if (!string.IsNullOrEmpty(entryAssemblyLocation) && !string.Equals(entryAssemblyLocation, processDirectory, StringComparison.OrdinalIgnoreCase))
                     {
                         // Handle dotnet-process loading .NET Core-assembly, or IIS-process loading website
-                        string assemblyFileName = Path.GetFileName(System.Reflection.Assembly.GetEntryAssembly().Location);
+                        string assemblyFileName = assemblyInfo.GetEntryAssemblyFileName();
                         if (!string.IsNullOrEmpty(assemblyFileName))
                             yield return Path.Combine(entryAssemblyLocation, assemblyFileName + ".nlog");
                         // Handle unpublished .NET Core Application

@@ -31,63 +31,23 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if !SILVERLIGHT && !NETSTANDARD1_3
-
 namespace NLog.Internal
 {
-    using System.IO;
-
-    /// <summary>
-    /// Returns details about current process and thread in a portable manner.
-    /// </summary>
-    internal abstract class ProcessIDHelper : IProcessIDHelper
+    internal interface IProcessIDHelper
     {
-        private static IPlatformDetector PlatformDetector { get; } = Internal.PlatformDetector.Instance;
-
-        private const string UnknownProcessName = "<unknown>";
-
-        private static ProcessIDHelper _threadIDHelper;
-        private string _currentProcessBaseName;
-
-        /// <summary>
-        /// Gets the singleton instance of PortableThreadIDHelper or
-        /// Win32ThreadIDHelper depending on runtime environment.
-        /// </summary>
-        /// <value>The instance.</value>
-        public static ProcessIDHelper Instance => _threadIDHelper ?? (_threadIDHelper = Create());
-
         /// <summary>
         /// Gets current process ID.
         /// </summary>
-        public abstract int CurrentProcessID { get; }
+        int CurrentProcessID { get; }
 
         /// <summary>
         /// Gets current process absolute file path.
         /// </summary>
-        public abstract string CurrentProcessFilePath { get; }
+        string CurrentProcessFilePath { get; }
 
         /// <summary>
         /// Gets current process name (excluding filename extension, if any).
         /// </summary>
-        public string CurrentProcessBaseName => _currentProcessBaseName ?? (_currentProcessBaseName = string.IsNullOrEmpty(CurrentProcessFilePath) ? UnknownProcessName : Path.GetFileNameWithoutExtension(CurrentProcessFilePath));
-
-        /// <summary>
-        /// Initializes the ThreadIDHelper class.
-        /// </summary>
-        private static ProcessIDHelper Create()
-        {
-#if !SILVERLIGHT && !__IOS__ && !__ANDROID__ && !NETSTANDARD
-            if (PlatformDetector.IsWin32)
-            {
-                return new Win32ProcessIDHelper();
-            }
-            else
-#endif
-            {
-                return new PortableProcessIDHelper();
-            }
-        }
+        string CurrentProcessBaseName { get; }
     }
 }
-
-#endif
