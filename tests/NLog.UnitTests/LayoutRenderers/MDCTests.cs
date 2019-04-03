@@ -42,7 +42,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void MDCTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${mdc:item=myitem} ${message}' /></targets>
                 <rules>
@@ -67,7 +67,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void MDCFormatTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${mdc:item=myitem:format=@} ${message}' /></targets>
                 <rules>

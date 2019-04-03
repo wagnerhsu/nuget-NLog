@@ -292,7 +292,7 @@ namespace NLog.UnitTests.LogReceiverService
 
         private void RealTestLogReciever(bool useOneWayContract, bool binaryEncode)
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString($@"
+            LogManager.Configuration = CreateConfigFromXmlString($@"
           <nlog throwExceptions='true'>
                 <targets>
                    <target type='LogReceiverService'

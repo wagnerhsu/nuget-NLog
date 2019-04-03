@@ -42,7 +42,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LoggerNameTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${logger} ${message}' /></targets>
                 <rules>
@@ -59,7 +59,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LoggerShortNameTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${logger:ShortName=true} ${message}' /></targets>
                 <rules>
@@ -75,7 +75,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LoggerShortNameTest2()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${logger:ShortName=true} ${message}' /></targets>
                 <rules>
@@ -93,7 +93,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LoggerShortNameTest_false()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${logger:ShortName=false} ${message}' /></targets>
                 <rules>

@@ -42,7 +42,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenEqualTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -66,7 +66,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenEqualInsensitiveTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>

@@ -64,7 +64,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void ShortDateTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${shortdate}' /></targets>
                 <rules>

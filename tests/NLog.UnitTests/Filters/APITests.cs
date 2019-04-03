@@ -46,7 +46,7 @@ namespace NLog.UnitTests.Filters
         {
             // this is mostly to make Clover happy
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>

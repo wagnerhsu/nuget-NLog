@@ -50,7 +50,7 @@ namespace NLog.UnitTests.Config
             using (new InternalLoggerScope())
             {
                 var xml = "<nlog></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
 
                 Assert.False(config.AutoReload);
                 Assert.True(config.InitializeSucceeded);
@@ -69,7 +69,7 @@ namespace NLog.UnitTests.Config
             using (new InternalLoggerScope(true))
             {
                 var xml = "<nlog logfile='test.txt' internalLogIncludeTimestamp='false' internalLogToConsole='true' internalLogToConsoleError='true'></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
 
                 Assert.False(config.AutoReload);
                 Assert.True(config.InitializeSucceeded);
@@ -88,21 +88,21 @@ namespace NLog.UnitTests.Config
             using (new InternalLoggerScope(true))
             {
                 var xml = "<nlog internalLogFile='${CurrentDir}test.txt'></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
                 Assert.Contains(System.IO.Directory.GetCurrentDirectory(), InternalLogger.LogFile);
             }
 
             using (new InternalLoggerScope(true))
             {
                 var xml = "<nlog internalLogFile='${BaseDir}test.txt'></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
                 Assert.Contains(AppDomain.CurrentDomain.BaseDirectory, InternalLogger.LogFile);
             }
 
             using (new InternalLoggerScope(true))
             {
                 var xml = "<nlog internalLogFile='${TempDir}test.txt'></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
                 Assert.Contains(System.IO.Path.GetTempPath(), InternalLogger.LogFile);
             }
 
@@ -110,7 +110,7 @@ namespace NLog.UnitTests.Config
             {
                 var userName = Environment.GetEnvironmentVariable("USERNAME") ?? string.Empty;
                 var xml = "<nlog internalLogFile='%USERNAME%_test.txt'></nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
                 if (!string.IsNullOrEmpty(userName))
                     Assert.Contains(userName, InternalLogger.LogFile);
             }
@@ -129,7 +129,7 @@ namespace NLog.UnitTests.Config
         [InlineData("1:0:0:0", 86400)] //1 day
         public void SetTimeSpanFromXmlTest(string interval, int seconds)
         {
-            var config = XmlLoggingConfiguration.CreateFromXmlString($@"
+            var config = CreateConfigFromXmlString($@"
             <nlog throwExceptions='true'>
                 <targets>
                     <wrapper-target name='limiting' type='LimitingWrapper' messagelimit='5'  interval='{interval}'>
@@ -158,7 +158,7 @@ namespace NLog.UnitTests.Config
                     </nlog>";
 
                 // Act
-                XmlLoggingConfiguration.CreateFromXmlString(xml);
+               CreateConfigFromXmlString(xml);
 
                 // Assert
                 Assert.Equal(LogLevel.Error, InternalLogger.LogLevel);
@@ -180,7 +180,7 @@ namespace NLog.UnitTests.Config
                             <logger name='*' minlevel='debug' appendto='debug' />
                          </rules>
                     </nlog>";
-                var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+                var config = CreateConfigFromXmlString(xml);
                 LogManager.Configuration = config;
                 var logger = LogManager.GetLogger("InvalidInternalLogLevel_shouldNotBreakLogging");
 
@@ -205,7 +205,7 @@ namespace NLog.UnitTests.Config
                         <logger name='*' minlevel='debug' appendto='file' />
                     </rules>
                 </nlog>";
-            var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+            var config = CreateConfigFromXmlString(xml);
 
             Assert.Single(config.AllTargets);
             Assert.Equal(System.Text.Encoding.UTF8, (config.AllTargets[0] as NLog.Targets.FileTarget)?.Encoding);
@@ -228,7 +228,7 @@ namespace NLog.UnitTests.Config
                     </rules>
                 </nlog>";
 
-            var config = XmlLoggingConfiguration.CreateFromXmlString(xml);
+            var config = CreateConfigFromXmlString(xml);
             Assert.Single(config.LoggingRules);
             Assert.Single(config.LoggingRules[0].Filters);
         }
@@ -259,7 +259,7 @@ namespace NLog.UnitTests.Config
                 InternalLogger.IncludeTimestamp = false;
 
                 // Act
-                XmlLoggingConfiguration.CreateFromXmlString(xml);
+               CreateConfigFromXmlString(xml);
 
                 // Assert
                 InternalLogger.LogWriter.Flush();

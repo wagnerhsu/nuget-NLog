@@ -81,6 +81,18 @@ namespace NLog.UnitTests
 #endif
         }
 
+        /// <summary>
+        /// Create config from string
+        /// </summary>
+        /// <param name="xml">config</param>
+        /// <param name="logFactory">if null, create new LogFactory</param>
+        /// <returns></returns>
+        protected static XmlLoggingConfiguration CreateConfigFromXmlString(string xml, LogFactory logFactory = null)
+        {
+            logFactory = logFactory ?? new LogFactory();
+            return XmlLoggingConfiguration.CreateFromXmlString(xml, logFactory);
+        }
+
         protected void AssertDebugCounter(string targetName, int val)
         {
             Assert.Equal(val, GetDebugTarget(targetName).Counter);
@@ -487,17 +499,21 @@ namespace NLog.UnitTests
 
         public class NoThrowNLogExceptions : IDisposable
         {
-            private readonly bool throwExceptions;
+            private readonly LogFactory _logFactory;
+            private readonly bool _throwExceptions;
 
-            public NoThrowNLogExceptions()
+            public NoThrowNLogExceptions(LogFactory logFactory = null)
             {
-                throwExceptions = LogManager.ThrowExceptions;
-                LogManager.ThrowExceptions = false;
+                _logFactory = logFactory ?? LogManager.LogFactory;
+
+                _throwExceptions = _logFactory.ThrowExceptions;
+                _logFactory.ThrowExceptions = false;
             }
 
             public void Dispose()
             {
-                LogManager.ThrowExceptions = throwExceptions;
+                // restore 
+                _logFactory.ThrowExceptions = _throwExceptions;
             }
         }
 
@@ -510,10 +526,12 @@ namespace NLog.UnitTests
             private readonly LogLevel globalThreshold;
             private readonly bool throwExceptions;
             private readonly bool? throwConfigExceptions;
+            private LogFactory _logFactory;
 
-            public InternalLoggerScope(bool redirectConsole = false)
+            public InternalLoggerScope(bool redirectConsole = false, LogFactory logFactory = null)
             {
                 InternalLogger.LogLevel = LogLevel.Info;
+
 
                 if (redirectConsole)
                 {
@@ -527,9 +545,11 @@ namespace NLog.UnitTests
                     Console.SetError(ConsoleErrorWriter);
                 }
 
-                globalThreshold = LogManager.GlobalThreshold;
-                throwExceptions = LogManager.ThrowExceptions;
-                throwConfigExceptions = LogManager.ThrowConfigExceptions;
+                _logFactory = logFactory ?? LogManager.LogFactory;
+
+                globalThreshold = _logFactory.GlobalThreshold;
+                throwExceptions = _logFactory.ThrowExceptions;
+                throwConfigExceptions = _logFactory.ThrowConfigExceptions;
             }
 
             public void SetConsoleError(StringWriter consoleErrorWriter)
@@ -562,10 +582,10 @@ namespace NLog.UnitTests
                 if (File.Exists(InternalLogger.LogFile))
                     File.Delete(InternalLogger.LogFile);
 
-                //restore logmanager
-                LogManager.GlobalThreshold = globalThreshold;
-                LogManager.ThrowExceptions = throwExceptions;
-                LogManager.ThrowConfigExceptions = throwConfigExceptions;
+                // Restore 
+                _logFactory.GlobalThreshold = globalThreshold;
+                _logFactory.ThrowExceptions = throwExceptions;
+                _logFactory.ThrowConfigExceptions = throwConfigExceptions;
             }
         }
 

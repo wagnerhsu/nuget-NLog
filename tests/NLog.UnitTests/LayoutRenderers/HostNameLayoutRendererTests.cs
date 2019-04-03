@@ -43,7 +43,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void HostNameTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${hostname} ${message}' /></targets>
                 <rules>

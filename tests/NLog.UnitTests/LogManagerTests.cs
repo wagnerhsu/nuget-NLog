@@ -118,7 +118,7 @@ namespace NLog.UnitTests
         [Fact(Skip="Side effects to other unit tests.")]
         public void GlobalThresholdTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog globalThreshold='Info'>
                     <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                     <rules>
@@ -166,7 +166,7 @@ namespace NLog.UnitTests
             // Disable/Enable logging should affect ALL the loggers.
             ILogger loggerA = LogManager.GetLogger("DisableLoggingTest_UsingStatement_A");
             ILogger loggerB = LogManager.GetLogger("DisableLoggingTest_UsingStatement_B");
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(LoggerConfig);
+            LogManager.Configuration = CreateConfigFromXmlString(LoggerConfig);
 
             // The starting state for logging is enable.
             Assert.True(LogManager.IsLoggingEnabled());
@@ -220,7 +220,7 @@ namespace NLog.UnitTests
             // Disable/Enable logging should affect ALL the loggers.
             ILogger loggerA = LogManager.GetLogger("DisableLoggingTest_WithoutUsingStatement_A");
             ILogger loggerB = LogManager.GetLogger("DisableLoggingTest_WithoutUsingStatement_B");
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(LoggerConfig);
+            LogManager.Configuration = CreateConfigFromXmlString(LoggerConfig);
 
             // The starting state for logging is enable.
             Assert.True(LogManager.IsLoggingEnabled());

@@ -195,7 +195,7 @@ namespace NLog.UnitTests.Targets
 
         internal static void ConsoleRaceCondtionIgnoreInnerTest(string configXml)
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(configXml);
+            LogManager.Configuration = CreateConfigFromXmlString(configXml);
 
             //   Console.Out.Writeline / Console.Error.Writeline could throw 'IndexOutOfRangeException', which is a bug. 
             // See https://stackoverflow.com/questions/33915790/console-out-and-console-error-race-condition-error-in-a-windows-service-written

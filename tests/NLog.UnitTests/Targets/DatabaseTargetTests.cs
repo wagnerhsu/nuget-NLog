@@ -760,7 +760,7 @@ Dispose()
         public void ParameterDbTypePropertyNameTest()
         {
             MockDbConnection.ClearLog();
-            LoggingConfiguration c =  XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='dt' type='Database'>
@@ -1164,7 +1164,7 @@ Dispose()
                 string dbProvider = GetSQLiteDbProvider();
 
                 // Create log with xml config
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog xmlns='http://www.nlog-project.org/schemas/NLog.xsd'
                   xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' throwExceptions='true'>
                 <targets>
@@ -1225,7 +1225,7 @@ Dispose()
                 string dbProvider = GetSQLiteDbProvider();
 
                 // Create log with xml config
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog xmlns='http://www.nlog-project.org/schemas/NLog.xsd'
                   xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' throwExceptions='true'>
                 <targets>
@@ -1345,7 +1345,7 @@ INSERT INTO NLogSqlLiteTestAppNames(Id, Name) VALUES (1, @appName);"">
 #endif
 
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(String.Format(nlogXmlConfig, GetSQLiteDbProvider(), connectionString));
+            LogManager.Configuration = CreateConfigFromXmlString(String.Format(nlogXmlConfig, GetSQLiteDbProvider(), connectionString));
         }
 
         [Fact]
@@ -1458,7 +1458,7 @@ INSERT INTO NLogSqlLiteTestAppNames(Id, Name) VALUES (1, @appName);"">
                 SqlServerTest.CreateDatabase(isAppVeyor);
 
                 var connectionString = SqlServerTest.GetConnectionString(IsAppVeyor());
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog xmlns='http://www.nlog-project.org/schemas/NLog.xsd'
                   xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' throwExceptions='true'>
                 <targets>
@@ -1596,7 +1596,7 @@ INSERT INTO NLogSqlLiteTestAppNames(Id, Name) VALUES (1, @appName);"">
         [InlineData("", false)]
         public void WarningForObsoleteUseTransactions(string property, bool printWarning)
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString($@"
+            LoggingConfiguration c = CreateConfigFromXmlString($@"
             <nlog ThrowExceptions='true' internalLogLevel='Info'>
                 <targets>
                     <target type='database' {property} name='t1' commandtext='fake sql' connectionstring='somewhere' />

@@ -58,7 +58,7 @@ namespace NLog.UnitTests
                 return logEvent.Message;
             };
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug'  >
@@ -95,7 +95,7 @@ namespace NLog.UnitTests
                 "BestApplicationEver"
             });
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug'  >
@@ -131,7 +131,7 @@ namespace NLog.UnitTests
                 "BestApplicationEver"
             });
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug'  >

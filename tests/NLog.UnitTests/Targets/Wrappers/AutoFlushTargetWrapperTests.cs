@@ -190,7 +190,7 @@ namespace NLog.UnitTests.Targets.Wrappers
         [Fact]
         public void AutoFlushConditionConfigurationTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"<nlog>
+            LogManager.Configuration = CreateConfigFromXmlString(@"<nlog>
                     <targets>
                         <target type='AutoFlushWrapper' condition='level >= LogLevel.Debug' name='FlushOnError'>
                     <target name='d2' type='Debug' />

@@ -58,7 +58,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -68,7 +68,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -238,7 +238,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -248,7 +248,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -418,7 +418,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -428,7 +428,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -598,7 +598,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -608,7 +608,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -778,7 +778,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -788,7 +788,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -958,7 +958,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -968,7 +968,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1141,7 +1141,7 @@ namespace NLog.UnitTests
                 {
                     if (enabled == 0)
                     {
-                        LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                        LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1151,7 +1151,7 @@ namespace NLog.UnitTests
                     }
                     else
                     {
-                        LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                        LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1294,7 +1294,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1304,7 +1304,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1468,7 +1468,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1478,7 +1478,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1638,7 +1638,7 @@ namespace NLog.UnitTests
         [Fact]
         public void SwallowTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                     <rules>
@@ -1704,7 +1704,7 @@ namespace NLog.UnitTests
         [Fact]
         public void StringFormatWillNotCauseExceptions()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                     <nlog throwExceptions='true'>
                         <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                         <rules>
@@ -1722,7 +1722,7 @@ namespace NLog.UnitTests
         [Fact]
         public void MultipleLoggersWithSameNameShouldBothReceiveMessages()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets>
                         <target name='first' type='Debug' layout='${message}' />
@@ -1782,7 +1782,7 @@ namespace NLog.UnitTests
         [Fact]
         public void SingleTargetMessageFormatOptimizationTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets>
                         <target name='target1' type='Debug' layout='${logger}|${message}' />
@@ -1962,7 +1962,7 @@ namespace NLog.UnitTests
             {
                 if (enabled == 0)
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -1972,7 +1972,7 @@ namespace NLog.UnitTests
                 }
                 else
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>
@@ -2166,7 +2166,7 @@ namespace NLog.UnitTests
         [Fact]
         public void TestStructuredProperties_json()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug'  >
@@ -2193,7 +2193,7 @@ namespace NLog.UnitTests
         [Fact]
         public void TestStructuredProperties_json_async()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debugbuffer' type='bufferingWrapper'>
@@ -2224,7 +2224,7 @@ namespace NLog.UnitTests
         [Fact]
         public void TestStructuredProperties_json_compound()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug'  >
@@ -2249,7 +2249,7 @@ namespace NLog.UnitTests
         [Fact]
         public void TestOptimizedBlackHoleLogger()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='Debug' layout='${message}' />
@@ -2275,7 +2275,7 @@ namespace NLog.UnitTests
 
         private static XmlLoggingConfiguration CreateSimpleDebugConfig(bool? parseMessageTemplates)
         {
-            return XmlLoggingConfiguration.CreateFromXmlString(@"
+            return CreateConfigFromXmlString(@"
                 <nlog parseMessageTemplates='" + (parseMessageTemplates?.ToString() ?? string.Empty) + @"'>
                     <targets><target name='debug' type='Debug' layout='${logger}|${message}${exception}' /></targets>
                     <rules>

@@ -81,7 +81,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void Test5()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog>
                     <targets>
                         <target name='debug' type='Debug' layout='${rot13:${mdc:A}}' />

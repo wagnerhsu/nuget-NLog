@@ -43,7 +43,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug' type='Debug' layout='${message}' />
@@ -69,7 +69,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedIgnoreDualTargetTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug' type='Debug' layout='${message}' />
@@ -99,7 +99,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedLogAfterTimeoutTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -123,7 +123,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedTimeoutIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -171,7 +171,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedTimeoutLogAfterTimeoutTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -219,7 +219,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedDefaultFilterCountIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -283,7 +283,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedMaxCacheSizeIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -348,7 +348,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedLevelIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -380,7 +380,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedMaxLengthIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -408,7 +408,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedFilterCountPropertyNameIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}${event-properties:item=hits}' /></targets>
                 <rules>
@@ -465,7 +465,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenRepeatedFilterCountAppendFormatIgnoreTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}${event-properties:item=hits}' /></targets>
                 <rules>

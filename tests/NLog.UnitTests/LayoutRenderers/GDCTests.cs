@@ -42,7 +42,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void GDCTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${gdc:item=myitem} ${message}' /></targets>
                 <rules>
@@ -66,7 +66,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void GDCFormatTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${gdc:item=appid:format=@} ${message}' /></targets>
                 <rules>

@@ -101,7 +101,7 @@ namespace NLog.UnitTests.Layouts
 </nlog>
 ";
 
-            var config = XmlLoggingConfiguration.CreateFromXmlString(configXml);
+            var config = CreateConfigFromXmlString(configXml);
 
             Assert.NotNull(config);
             var target = config.FindTargetByName<FileTarget>("compoundFile");

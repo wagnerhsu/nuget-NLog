@@ -111,7 +111,7 @@ namespace NLog.UnitTests.Layouts
         public void AllEventWithFluent_without_callerInformation()
         {
 
-            var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true' >
                     <targets>
                         <target type='Debug'
@@ -152,7 +152,7 @@ namespace NLog.UnitTests.Layouts
 #endif
         public void AllEventWithFluent_with_callerInformation()
         {
-            var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true' >
                     <targets>
                         <target type='Debug'

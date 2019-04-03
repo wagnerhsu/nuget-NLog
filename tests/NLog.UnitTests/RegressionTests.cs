@@ -45,7 +45,7 @@ namespace NLog.UnitTests
         {
             // this would fail because of stack overflow in the 
             // constructor of NLogViewerTarget
-            var config = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var config = CreateConfigFromXmlString(@"
 <nlog>
   <targets>
     <target name='viewer' type='NLogViewer' address='udp://127.0.0.1:9999' />
@@ -87,7 +87,7 @@ namespace NLog.UnitTests
         [Fact]
         public void Bug5965StackOverflow()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
 <nlog xmlns='http://www.nlog-project.org/schemas/NLog.xsd'
       xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'>
   

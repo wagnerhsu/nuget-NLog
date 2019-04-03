@@ -52,7 +52,7 @@ namespace NLog.UnitTests.Layouts
             try
             {
                 tempFile = Path.GetTempFileName();
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                   <target name='f' type='File' fileName='" + tempFile + @"'>
@@ -104,7 +104,7 @@ namespace NLog.UnitTests.Layouts
             try
             {
                 tempFile = Path.GetTempFileName();
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                   <target name='f' type='File' fileName='" + tempFile + @"'>
@@ -153,7 +153,7 @@ namespace NLog.UnitTests.Layouts
             try
             {
                 tempFile = Path.GetTempFileName();
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                   <target name='f' type='File' fileName='" + tempFile + @"'>

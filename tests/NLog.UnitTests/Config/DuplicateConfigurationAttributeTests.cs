@@ -45,7 +45,7 @@ namespace NLog.UnitTests.Config
         {
             using (new NoThrowNLogExceptions())
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
                     <nlog>
                         <targets><target name='debug' type='debug' layout='${message}' /></targets>
                         <rules>
@@ -72,7 +72,7 @@ namespace NLog.UnitTests.Config
             {
                 using (new NoThrowNLogExceptions())
                 {
-                    LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                    LogManager.Configuration = CreateConfigFromXmlString(@"
                     <nlog>
                         <targets><target name='debug' type='debug' layout='${message}' /></targets>
                         <rules>
@@ -95,7 +95,7 @@ namespace NLog.UnitTests.Config
         {
             Assert.Throws<NLogConfigurationException>(() =>
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets><target name='debug' type='debug' layout='${message}' /></targets>
                     <rules>
@@ -110,7 +110,7 @@ namespace NLog.UnitTests.Config
 
             Assert.Throws<NLogConfigurationException>(() =>
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwConfigExceptions='true'>
                     <targets><target name='debug' type='debug' layout='${message}' /></targets>
                     <rules>

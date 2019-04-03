@@ -43,7 +43,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void DefaultCounterTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${counter} ${counter}' /></targets>
                 <rules>
@@ -66,7 +66,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LayoutCounterTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
            
                 <targets><target name='debug' type='Debug' layout='${message} ${counter:sequence=${event-context:item=context1}} ${counter}' /></targets>
@@ -92,7 +92,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void PresetCounterTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${counter:value=1:increment=3} ${counter}' /></targets>
                 <rules>
@@ -115,7 +115,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NamedCounterTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug1' type='Debug' layout='${message} ${counter:sequence=aaa}' />

@@ -179,7 +179,7 @@ namespace NLog.UnitTests.Targets
         {
             Target.Register("contexttarget", typeof(CustomTargetWithContext));
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='contexttarget' includeCallSite='true'>
@@ -206,7 +206,7 @@ namespace NLog.UnitTests.Targets
         {
             Target.Register("contexttarget", typeof(CustomTargetWithContext));
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
@@ -241,7 +241,7 @@ namespace NLog.UnitTests.Targets
         {
             Target.Register("contexttarget", typeof(CustomTargetWithContext));
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
@@ -285,7 +285,7 @@ namespace NLog.UnitTests.Targets
         {
             Target.Register("contexttarget", typeof(CustomTargetWithContext));
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />

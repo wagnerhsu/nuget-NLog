@@ -50,7 +50,7 @@ namespace NLog.UnitTests.Config
         public void DefaultTimeSourceTest()
         {
             Assert.IsType<FastLocalTimeSource>(TimeSource.Current);
-            XmlLoggingConfiguration.CreateFromXmlString("<nlog />");
+           CreateConfigFromXmlString("<nlog />");
             Assert.IsType<FastLocalTimeSource>(TimeSource.Current);
         }
 
@@ -82,7 +82,7 @@ namespace NLog.UnitTests.Config
             where T : TimeSource
         {
             Assert.IsType<FastLocalTimeSource>(TimeSource.Current);
-            XmlLoggingConfiguration.CreateFromXmlString(@"
+           CreateConfigFromXmlString(@"
                 <nlog>
                     <time type='" + type + @"' />
                 </nlog>");

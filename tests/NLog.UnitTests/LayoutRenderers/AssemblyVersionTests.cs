@@ -102,7 +102,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [InlineData(AssemblyVersionType.Informational, AssemblyInformationalVersionTest)]
         public void AssemblyVersionTypeTest(AssemblyVersionType type, string expected)
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message:withException=true}|${assembly-version:type=" + type.ToString().ToLower() + @"}' /></targets>
                 <rules><logger name='*' minlevel='Debug' writeTo='debug' /></rules>
@@ -151,7 +151,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [InlineData(AssemblyVersionType.Informational, "Build.Major", "0.Version 1")]
         public void AssemblyVersionFormatAndTypeTest(AssemblyVersionType type, string format, string expected)
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message:withException=true}|${assembly-version:type=" + type.ToString().ToLower() + @":format=" + format + @"}' /></targets>
                 <rules><logger name='*' minlevel='Debug' writeTo='debug' /></rules>

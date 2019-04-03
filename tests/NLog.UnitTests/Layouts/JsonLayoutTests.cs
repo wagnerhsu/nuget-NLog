@@ -212,7 +212,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void JsonAttributeThreadAgnosticTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets async='true'>
                 <target name='debug' type='Debug'>
@@ -244,7 +244,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void JsonAttributeStackTraceUsageTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >
@@ -395,7 +395,7 @@ namespace NLog.UnitTests.Layouts
 </nlog>
 ";
 
-            var config = XmlLoggingConfiguration.CreateFromXmlString(configXml);
+            var config = CreateConfigFromXmlString(configXml);
 
             Assert.NotNull(config);
             var target = config.FindTargetByName<FileTarget>("jsonFile");
@@ -466,7 +466,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void IncludeMdcJsonProperties()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='asyncDebug' type='AsyncWrapper' timeToSleepBetweenBatches='0'>
@@ -501,7 +501,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void IncludeGdcJsonProperties()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='asyncDebug' type='AsyncWrapper' timeToSleepBetweenBatches='0'>
@@ -536,7 +536,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void IncludeMdlcJsonProperties()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='asyncDebug' type='AsyncWrapper' timeToSleepBetweenBatches='0'>
@@ -574,7 +574,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void IncludeAllJsonPropertiesXml()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >
@@ -605,7 +605,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void SerializeObjectRecursionSingle()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >
@@ -649,7 +649,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void SerializeObjectRecursionZero()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >
@@ -693,7 +693,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void EncodesInvalidCharacters()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >
@@ -721,7 +721,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void EncodesInvalidDoubles()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
             <targets>
                 <target name='debug' type='Debug'  >

@@ -57,7 +57,7 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void MaxMessageLengthShouldBe16384_WhenNotSpecifyAnyOption()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog ThrowExceptions='true'>
                 <targets>
                     <target type='EventLog' name='eventLog1' layout='${message}' />
@@ -76,7 +76,7 @@ namespace NLog.UnitTests.Targets
         public void MaxMessageLengthShouldBeAsSpecifiedOption()
         {
             const int expectedMaxMessageLength = 1000;
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString($@"
+            LoggingConfiguration c = CreateConfigFromXmlString($@"
             <nlog ThrowExceptions='true'>
                 <targets>
                     <target type='EventLog' name='eventLog1' layout='${{message}}' maxmessagelength='{
@@ -111,7 +111,7 @@ namespace NLog.UnitTests.Targets
                     </rules>
             </nlog>";
 
-            NLogConfigurationException ex = Assert.Throws<NLogConfigurationException>(() => XmlLoggingConfiguration.CreateFromXmlString(configrationText));
+            NLogConfigurationException ex = Assert.Throws<NLogConfigurationException>(() =>CreateConfigFromXmlString(configrationText));
             Assert.Equal("MaxMessageLength cannot be zero or negative.", ex.InnerException.InnerException.Message);
         }
 
@@ -131,7 +131,7 @@ namespace NLog.UnitTests.Targets
                 </rules>
             </nlog>";
 
-            NLogConfigurationException ex = Assert.Throws<NLogConfigurationException>(() => XmlLoggingConfiguration.CreateFromXmlString(configrationText));
+            NLogConfigurationException ex = Assert.Throws<NLogConfigurationException>(() =>CreateConfigFromXmlString(configrationText));
             Assert.Equal("MaxKilobytes must be a multiple of 64, and between 64 and 4194240", ex.InnerException.InnerException.Message);
         }
 
@@ -168,7 +168,7 @@ namespace NLog.UnitTests.Targets
                       <logger name='*' writeTo='eventLog1' />
                 </rules>
             </nlog>";
-            LoggingConfiguration configuration = XmlLoggingConfiguration.CreateFromXmlString(configrationText);
+            LoggingConfiguration configuration = CreateConfigFromXmlString(configrationText);
 
             var eventLog1 = configuration.FindTargetByName<EventLogTarget>("eventLog1");
             Assert.Equal(expectedMaxKilobytes, eventLog1.MaxKilobytes);

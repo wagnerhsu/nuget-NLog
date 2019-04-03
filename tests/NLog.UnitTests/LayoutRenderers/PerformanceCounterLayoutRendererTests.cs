@@ -43,7 +43,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void PerformanceCounterLayoutRendererTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${performancecounter:category=Process:counter=Working Set:format=F0}' /></targets>
                 <rules>

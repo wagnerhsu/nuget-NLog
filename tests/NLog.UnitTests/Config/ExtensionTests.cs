@@ -442,9 +442,11 @@ namespace NLog.UnitTests.Config
                 ConfigurationItemFactory.Default = null; //build new factory next time
                 ConfigurationItemFactory.AssemblyLoading += onAssemblyLoading;
 
-                using(new NoThrowNLogExceptions())
+                var logFactory = new LogFactory();
+                using (new NoThrowNLogExceptions(logFactory))
                 {
-                    LogManager.ThrowExceptions = true;
+                    
+                    logFactory.ThrowExceptions = true;
 
                     var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
 <nlog throwExceptions='false'>
@@ -456,7 +458,7 @@ namespace NLog.UnitTests.Config
       <logger name='*' writeTo='t'>
       </logger>
     </rules>
-</nlog>");
+</nlog>", logFactory);
 
                     var autoLoadedTarget = configuration.FindTargetByName("t");
 

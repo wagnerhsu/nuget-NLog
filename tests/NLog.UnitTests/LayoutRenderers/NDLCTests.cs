@@ -42,7 +42,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc} ${message}' /></targets>
                 <rules>
@@ -86,7 +86,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCTopTestTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:topframes=2} ${message}' /></targets>
                 <rules>
@@ -131,7 +131,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCTop1TestTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:topframes=1} ${message}' /></targets>
                 <rules>
@@ -180,7 +180,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCBottomTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:bottomframes=2} ${message}' /></targets>
                 <rules>
@@ -224,7 +224,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCSeparatorTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:separator=\:} ${message}' /></targets>
                 <rules>
@@ -268,7 +268,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCDeepTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:topframes=1} ${message}' /></targets>
                 <rules>
@@ -296,7 +296,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCTimingTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc}|${ndlctiming:CurrentScope=false:ScopeBeginTime=true:Format=yyyy-MM-dd HH\:mm\:ss}|${ndlctiming:CurrentScope=false:ScopeBeginTime=false:Format=fff}|${ndlctiming:CurrentScope=true:ScopeBeginTime=true:Format=HH\:mm\:ss.fff}|${ndlctiming:CurrentScope=true:ScopeBeginTime=false:Format=fffffff}|${message}' /></targets>
                 <rules>
@@ -372,7 +372,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDLCAsyncLogging()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndlc:separator=\:} ${message}' /></targets>
                 <rules>

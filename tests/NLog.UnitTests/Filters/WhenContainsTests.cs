@@ -42,7 +42,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenContainsTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -66,7 +66,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenContainsInsensitiveTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -92,7 +92,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenContainsQuoteTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -118,7 +118,7 @@ namespace NLog.UnitTests.Filters
         [Fact]
         public void WhenContainsQuoteTestComplex()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>

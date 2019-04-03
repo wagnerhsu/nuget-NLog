@@ -43,7 +43,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RenderStackTrace()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${stacktrace}' /></targets>
                 <rules>
@@ -58,7 +58,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RenderStackTrace_topframes()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${stacktrace:topframes=2}' /></targets>
                 <rules>
@@ -73,7 +73,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RenderStackTrace_skipframes()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${stacktrace:skipframes=1}' /></targets>
                 <rules>
@@ -89,7 +89,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RenderStackTrace_raw()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${stacktrace:format=Raw}' /></targets>
                 <rules>
@@ -109,7 +109,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RenderStackTrace_DetailedFlat()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message} ${stacktrace:format=DetailedFlat}' /></targets>
                 <rules>

@@ -47,7 +47,7 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void LineNumberOnlyTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-linenumber} ${message}' /></targets>
                 <rules>
@@ -78,7 +78,7 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void LineNumberOnlyAsyncTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
         <nlog>
             <targets><target name='debug' type='Debug' layout='${callsite-linenumber}' /></targets>
             <rules>

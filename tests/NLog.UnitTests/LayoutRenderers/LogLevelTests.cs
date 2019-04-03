@@ -43,7 +43,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LogLevelTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${level} ${message}' /></targets>
                 <rules>
@@ -67,7 +67,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LogLevelSingleCharacterTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${level:format=FirstCharacter} ${message}' /></targets>
                 <rules>
@@ -93,7 +93,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LogLevelOrdinalTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${level:format=Ordinal} ${message}' /></targets>
                 <rules>

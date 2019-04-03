@@ -148,7 +148,7 @@ namespace NLog.UnitTests.LayoutRenderers.Wrappers
         [Fact]
         public void WrapLineFromConfig()
         {
-            var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var configuration = CreateConfigFromXmlString(@"
 <nlog throwExceptions='true'>
     <targets>
         <target name='d1' type='Debug' layout='${message:wrapline=3}' />

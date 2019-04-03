@@ -128,7 +128,7 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void MessageQueueTarget_CheckIfQueueExists_setting_should_work()
         {
-            var configuration = XmlLoggingConfiguration.CreateFromXmlString(string.Format(@"
+            var configuration = CreateConfigFromXmlString(string.Format(@"
                 <nlog throwExceptions='true' >
                     <targets>
                         <target type='MSMQ'

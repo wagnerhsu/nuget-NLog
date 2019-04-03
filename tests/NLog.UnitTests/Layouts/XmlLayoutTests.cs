@@ -71,7 +71,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void XmlLayoutLog4j()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='debug'>

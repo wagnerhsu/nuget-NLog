@@ -64,7 +64,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void TimeTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${time}' /></targets>
                 <rules>
@@ -83,7 +83,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadLeftAlignLeft()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=5:fixedlength=true}' /></targets>
                 <rules>
@@ -100,7 +100,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadLeftAlignRight()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=5:fixedlength=true:alignmentOnTruncation=right}' /></targets>
                 <rules>
@@ -117,7 +117,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadRightAlignLeft()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=-5:fixedlength=true:alignmentOnTruncation=left}' /></targets>
                 <rules>
@@ -134,7 +134,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadRightAlignRight()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=-5:fixedlength=true:alignmentOnTruncation=right}' /></targets>
                 <rules>

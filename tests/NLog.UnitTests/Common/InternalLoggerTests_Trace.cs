@@ -265,7 +265,7 @@ namespace NLog.UnitTests.Common
 
             var xmlConfiguration = string.Format(XmlConfigurationFormat, logLevel, internalLogToTraceAttribute);
 
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(xmlConfiguration);
+            LogManager.Configuration = CreateConfigFromXmlString(xmlConfiguration);
 
             InternalLogger.IncludeTimestamp = false;
 

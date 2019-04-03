@@ -42,7 +42,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDCTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndc} ${message}' /></targets>
                 <rules>
@@ -86,7 +86,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDCTopTestTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndc:topframes=2} ${message}' /></targets>
                 <rules>
@@ -131,7 +131,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDCTop1TestTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndc:topframes=1} ${message}' /></targets>
                 <rules>
@@ -181,7 +181,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDCBottomTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndc:bottomframes=2} ${message}' /></targets>
                 <rules>
@@ -225,7 +225,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void NDCSeparatorTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${ndc:separator=\:} ${message}' /></targets>
                 <rules>

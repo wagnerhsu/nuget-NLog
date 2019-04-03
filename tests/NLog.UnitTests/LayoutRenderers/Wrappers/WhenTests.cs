@@ -150,7 +150,7 @@ namespace NLog.UnitTests.LayoutRenderers.Wrappers
         [Fact]
         public void WhenLogLevelConditionTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog throwExceptions='true'>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>

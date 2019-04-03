@@ -44,7 +44,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void NoRulesTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -60,7 +60,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void SimpleRuleTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -89,7 +89,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void SingleLevelTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -109,7 +109,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void MinMaxLevelTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -130,7 +130,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void NoLevelsTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -155,7 +155,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void ExplicitLevelsTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -177,7 +177,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void MultipleTargetsTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -202,7 +202,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void MultipleRulesSameTargetTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -240,7 +240,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void ChildRulesTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -267,7 +267,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' />
@@ -303,7 +303,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest_ignoreFinal()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -336,7 +336,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest_logFinal()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -370,7 +370,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest_ignore()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -404,7 +404,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest_defaultFilterAction()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -432,7 +432,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void FiltersTest_defaultFilterAction_noRules()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -457,7 +457,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void LoggingRule_Final_SuppressesOnlyMatchingLevels()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='d1' type='Debug' layout='${message}' />
@@ -489,7 +489,7 @@ namespace NLog.UnitTests.Config
 
             try
             {
-                XmlLoggingConfiguration.CreateFromXmlString("<nlog internalLogFile='" + tempFileName + @"' internalLogLevel='Warn'>
+               CreateConfigFromXmlString("<nlog internalLogFile='" + tempFileName + @"' internalLogLevel='Warn'>
                     <targets>
                         <target name='d1' type='Debug' />
                         <target name='d2' type='Debug' />
@@ -525,7 +525,7 @@ namespace NLog.UnitTests.Config
 
             try
             {
-                XmlLoggingConfiguration.CreateFromXmlString("<nlog internalLogFile='" + tempFileName + @"' internalLogLevel='Warn'>
+               CreateConfigFromXmlString("<nlog internalLogFile='" + tempFileName + @"' internalLogLevel='Warn'>
                     <extensions>
                         <add assembly='NLog.UnitTests'/> 
                     </extensions>
@@ -567,7 +567,7 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void LoggingRule_LevelOff_NotSetAsActualLogLevel()
         {
-            LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LoggingConfiguration c = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='l1' type='Debug' layout='${message}' />

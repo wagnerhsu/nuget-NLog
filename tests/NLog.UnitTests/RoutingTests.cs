@@ -42,7 +42,7 @@ namespace NLog.UnitTests
         [Fact]
         public void LogThresholdTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                 <rules>
@@ -70,7 +70,7 @@ namespace NLog.UnitTests
         [Fact]
         public void LogThresholdTest2()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug1' type='Debug' layout='${message}' />
@@ -112,7 +112,7 @@ namespace NLog.UnitTests
         [Fact]
         public void LoggerNameMatchTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug1' type='Debug' layout='${message}' />
@@ -142,7 +142,7 @@ namespace NLog.UnitTests
         [Fact]
         public void MultiAppenderTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets>
                     <target name='debug1' type='Debug' layout='${message}' />

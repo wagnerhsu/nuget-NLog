@@ -45,7 +45,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void DefaultDateTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${date}' /></targets>
                 <rules>
@@ -111,7 +111,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void FormattedDateTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${date:format=yyyy-MM-dd}' /></targets>
                 <rules>

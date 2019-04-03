@@ -90,7 +90,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryNamedValueTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NLogTest:value=Foo}' /></targets>
                 <rules>
@@ -107,7 +107,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryNamedValueTest_hive32()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NLogTest:value=view32:view=Registry32}' /></targets>
                 <rules>
@@ -122,7 +122,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryNamedValueTest_hive64()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NLogTest:value=view64:view=Registry64}' /></targets>
                 <rules>
@@ -139,7 +139,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryNamedValueTest_forward_slash()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU/Software/NLogTest:value=Foo}' /></targets>
                 <rules>
@@ -154,7 +154,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryUnnamedValueTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NLogTest}' /></targets>
                 <rules>
@@ -171,7 +171,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryUnnamedValueTest_forward_slash()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU/Software/NLogTest}' /></targets>
                 <rules>
@@ -187,7 +187,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryKeyNotFoundTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NoSuchKey:defaultValue=xyz}' /></targets>
                 <rules>
@@ -202,7 +202,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryKeyNotFoundTest_forward_slash()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU/Software/NoSuchKey:defaultValue=xyz}' /></targets>
                 <rules>
@@ -217,7 +217,7 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void RegistryValueNotFoundTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            LogManager.Configuration = CreateConfigFromXmlString(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${registry:key=HKCU\\Software\\NLogTest:value=NoSuchValue:defaultValue=xyz}' /></targets>
                 <rules>

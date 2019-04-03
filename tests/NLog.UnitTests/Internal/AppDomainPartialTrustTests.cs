@@ -129,7 +129,7 @@ namespace NLog.UnitTests.Internal
 
             using (new NLogTestBase.NoThrowNLogExceptions())
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(configXml);
+                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(configXml, new LogFactory());
 
                 //this method gave issues
                 LogFactory.LogConfigurationInitialized();
