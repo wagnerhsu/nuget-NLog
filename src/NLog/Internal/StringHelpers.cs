@@ -31,6 +31,8 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
+#nullable enable
+
 using System;
 using System.Linq;
 using JetBrains.Annotations;
