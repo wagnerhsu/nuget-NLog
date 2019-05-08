@@ -304,12 +304,15 @@ namespace MakeNLogXSD
 
             if (string.IsNullOrWhiteSpace(apiTypeName))
             {
-                throw new NotSupportedException("Unknown API type '" + apiTypeName + "'.");
+                throw new NotSupportedException("Unknown API empty type '" + apiTypeName + "'.");
             }
 
             switch (apiTypeName)
             {
                 case "Layout":
+                    return attribute ? "SimpleLayoutAttribute" : "Layout";
+                
+                case "IntLayout":
                     return attribute ? "SimpleLayoutAttribute" : "Layout";
 
                 case "Condition":
