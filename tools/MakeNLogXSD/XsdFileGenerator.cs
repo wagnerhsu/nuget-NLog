@@ -311,9 +311,9 @@ namespace MakeNLogXSD
             {
                 case "Layout":
                     return attribute ? "SimpleLayoutAttribute" : "Layout";
-                
-                case "IntLayout":
-                    return attribute ? "SimpleLayoutAttribute" : "Layout";
+             
+                case "NLog.Layouts.IntLayout":
+                    return attribute ? "SimpleLayoutAttribute" : "Layout"; //todo union with int?
 
                 case "Condition":
                     return "Condition";
