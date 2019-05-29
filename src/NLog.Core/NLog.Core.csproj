@@ -291,7 +291,20 @@ For all config options and platform support, check https://nlog-project.org/conf
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\NLog.ico" />
+    <ProjectReference Include="..\NLog.Abstractions\NLog.Abstractions.csproj" />
+
+    <None Update="Common\InternalLogger-generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>InternalLogger-generated.cs</LastGenOutput>
+    </None>
+    <None Update="Internal\LayoutHelpers-generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LayoutHelpers-generated.cs</LastGenOutput>
+    </None>
+    <None Update="Logger-generated.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Logger-generated.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -299,20 +312,33 @@ For all config options and platform support, check https://nlog-project.org/conf
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NLog.Abstractions\NLog.Abstractions.csproj" />
-    <ProjectReference Include="..\NLog.AppConfigFile\NLog.AppConfigFile.csproj" />
-    <ProjectReference Include="..\NLog.Core\NLog.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Conditions\Expressions\" />
-    <Folder Include="Json\" />
+    <Compile Update="Common\InternalLogger-generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>InternalLogger-generated.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Internal\LayoutHelpers-generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>LayoutHelpers-generated.tt</DependentUpon>
+    </Compile>
+    <Compile Update="Logger-generated.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Logger-generated.tt</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <PropertyGroup>
     <AssemblyTitle>$(Title)</AssemblyTitle>
     <!-- SonarQube WARNING: The following projects do not have a valid ProjectGuid and were not built using a valid solution (.sln) thus will be skipped from analysis… -->
-    <ProjectGuid>{A0BFF0DB-ED9A-4639-AE86-8E709A1EFC66}</ProjectGuid>
+    <ProjectGuid>{788B2CC8-075C-46B2-8409-DAD7BAEACB6C}</ProjectGuid>
   </PropertyGroup>
 
+  <ItemGroup>
+
+    <PackageReference Include="JetBrains.Annotations" Version="2019.1.1">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>

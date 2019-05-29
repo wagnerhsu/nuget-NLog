@@ -165,8 +165,9 @@ namespace NLog.Config
         /// <value>The ambient property factory.</value>
         public INamedItemFactory<LayoutRenderer, Type> AmbientProperties => _ambientProperties;
 
+        //todo
         /// <summary>
-        /// Gets or sets the JSON serializer to use with <see cref="WebServiceTarget"/> or <see cref="JsonLayout"/>
+        /// Gets or sets the JSON serializer to use.
         /// </summary>
         public IJsonConverter JsonConverter
         {
@@ -184,7 +185,7 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Gets or sets the parameter converter to use with <see cref="DatabaseTarget"/>, <see cref="WebServiceTarget"/> or <see cref="TargetWithContext"/>
+        /// Gets or sets the parameter converter to use.
         /// </summary>
         public IPropertyTypeConverter PropertyTypeConverter { get; set; } = new PropertyTypeConverter();
 
@@ -331,7 +332,7 @@ namespace NLog.Config
             object[] parameters = null;
             if (firstParam?.ParameterType == typeof(ConfigurationItemFactory))
             {
-                parameters = new object[] {configurationItemFactory};
+                parameters = new object[] { configurationItemFactory };
             }
 
             return parameters;

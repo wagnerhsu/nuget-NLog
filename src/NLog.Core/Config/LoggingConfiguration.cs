@@ -482,11 +482,12 @@ namespace NLog.Config
                 //problem: XmlLoggingConfiguration.Initialize eats exception with invalid XML. ALso XmlLoggingConfiguration.Reload never returns null.
                 //therefor we check the InitializeSucceeded property.
 
-                if (newConfig is XmlLoggingConfiguration xmlConfig && xmlConfig.InitializeSucceeded != true)
-                {
-                    InternalLogger.Warn("NLog Config Reload() failed. Invalid XML?");
-                    return null;
-                }
+                //todo
+                //if (newConfig is XmlLoggingConfiguration xmlConfig && xmlConfig.InitializeSucceeded != true)
+                //{
+                //    InternalLogger.Warn("NLog Config Reload() failed. Invalid XML?");
+                //    return null;
+                //}
 
                 var logFactory = LogFactory ?? LogManager.LogFactory;
                 if (logFactory.KeepVariablesOnReload)

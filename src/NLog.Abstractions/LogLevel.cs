@@ -35,7 +35,6 @@ namespace NLog
 {
     using System;
     using System.Collections.Generic;
-    using NLog.Internal;
 
     /// <summary>
     /// Defines available log levels.
@@ -122,9 +121,9 @@ namespace NLog
         /// </summary>
         public string Name => _name;
 
-        internal static LogLevel MaxLevel => Fatal;
+        public static LogLevel MaxLevel => Fatal;
 
-        internal static LogLevel MinLevel => Trace;
+        public static LogLevel MinLevel => Trace;
 
         /// <summary>
         /// Gets the ordinal of the log level.

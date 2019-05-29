@@ -31,45 +31,22 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-namespace NLog
-{
-    /// <summary>
-    /// Include context properties
-    /// </summary>
-    internal interface IIncludeContext
-    {
-        /// <summary>
-        /// Gets or sets a value indicating whether to include contents of the <see cref="MappedDiagnosticsContext"/> dictionary.
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        bool IncludeMdc { get; set; }
+using System;
+using System.Reflection;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Security;
 
-        /// <summary>
-        /// Gets or sets a value indicating whether to include contents of the <see cref="NestedDiagnosticsContext"/> stack.
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        bool IncludeNdc { get; set; }
+[assembly: AssemblyCulture("")]
+[assembly: CLSCompliant(true)]
+[assembly: ComVisible(false)]
 
-        /// <summary>
-        /// Gets or sets the option to include all properties from the log events
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        bool IncludeAllProperties { get; set; }
-
-#if !SILVERLIGHT
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to include contents of the <see cref="MappedDiagnosticsLogicalContext"/> dictionary.
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        bool IncludeMdlc { get; set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to include contents of the <see cref="NestedDiagnosticsLogicalContext"/> stack.
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        bool IncludeNdlc { get; set; }
-
-#endif
-    }
-}
+//todo
+//#if !SILVERLIGHT4
+//[assembly: AllowPartiallyTrustedCallers]
+//#if !NET3_5 && !MONO_2_0 && !SILVERLIGHT5 && !__IOS__ && !__ANDROID__ && !WINDOWS_PHONE && !NETSTANDARD1_0
+//[assembly: SecurityRules(SecurityRuleSet.Level1)]
+//#endif
+//#endif
+// NSubstitute
+[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2, PublicKey=0024000004800000940000000602000000240000525341310004000001000100c547cac37abd99c8db225ef2f6c8a3602f3b3606cc9891605d02baa56104f4cfc0734aa39b93bf7852f7d9266654753cc297e7d2edfe0bac1cdcf9f717241550e0a7b191195b7667bb4f64bcb8e2121380fd1d9d46ad2d92d2d15605093924cceaf74c4861eff62abf69b9291ed0a340e113be11e6a7d3113e92484cf7045cc7")]

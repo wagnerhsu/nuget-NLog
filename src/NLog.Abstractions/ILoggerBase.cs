@@ -56,14 +56,6 @@ namespace NLog
         }
 
         /// <summary>
-        /// Gets the factory that created this logger.
-        /// </summary>
-        LogFactory Factory
-        {
-            get;
-        }
-
-        /// <summary>
         /// Gets a value indicating whether logging is enabled for the specified level.
         /// </summary>
         /// <param name="level">Log level to be checked.</param>
@@ -72,18 +64,20 @@ namespace NLog
 
         #region Log() overloads
 
-        /// <summary>
-        /// Writes the specified diagnostic message.
-        /// </summary>
-        /// <param name="logEvent">Log event.</param>
-        void Log(LogEventInfo logEvent);
+        //todo 
+        ///// <summary>
+        ///// Writes the specified diagnostic message.
+        ///// </summary>
+        ///// <param name="logEvent">Log event.</param>
+        //void Log(LogEventInfo logEvent);
 
-        /// <summary>
-        /// Writes the specified diagnostic message.
-        /// </summary>
-        /// <param name="wrapperType">The name of the type that wraps Logger.</param>
-        /// <param name="logEvent">Log event.</param>
-        void Log(Type wrapperType, LogEventInfo logEvent);
+        //todo 
+        ///// <summary>
+        ///// Writes the specified diagnostic message.
+        ///// </summary>
+        ///// <param name="wrapperType">The name of the type that wraps Logger.</param>
+        ///// <param name="logEvent">Log event.</param>
+        //void Log(Type wrapperType, LogEventInfo logEvent);
 
         /// <overloads>
         /// Writes the diagnostic message at the specified level using the specified format provider and format parameters.

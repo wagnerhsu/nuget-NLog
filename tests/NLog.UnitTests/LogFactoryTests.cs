@@ -58,11 +58,11 @@ namespace NLog.UnitTests
                     </rules>
                 </nlog>");
 
-                ILogger logger = LogManager.GetCurrentClassLogger();
+                Logger logger = LogManager.GetCurrentClassLogger();
                 logger.Factory.Flush(_ => { }, TimeSpan.FromMilliseconds(1));
             }
         }
-
+        
         [Fact]
         public void InvalidXMLConfiguration_DoesNotThrowErrorWhen_ThrowExceptionFlagIsNotSet()
         {

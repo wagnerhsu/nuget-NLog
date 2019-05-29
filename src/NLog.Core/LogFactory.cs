@@ -106,11 +106,11 @@ namespace NLog
         /// Initializes a new instance of the <see cref="LogFactory" /> class.
         /// </summary>
         public LogFactory()
-#if !SILVERLIGHT && !__IOS__ && !__ANDROID__ && !NETSTANDARD1_3
-            : this(new LoggingConfigurationWatchableFileLoader())
-#else
-            : this(new LoggingConfigurationFileLoader())
-#endif
+//#if !SILVERLIGHT && !__IOS__ && !__ANDROID__ && !NETSTANDARD1_3
+//            : this(new LoggingConfigurationWatchableFileLoader())
+//#else
+//            : this(new LoggingConfigurationFileLoader())
+//#endif
         {
         }
 
@@ -951,10 +951,10 @@ namespace NLog
         public LogFactory LoadConfiguration(string configFile)
         {
             // TODO Remove explicit File-loading logic from LogFactory (Should handle environment without files)
-            if (_configLoader is LoggingConfigurationFileLoader configFileLoader)
-            {
-                Configuration = configFileLoader.Load(this, configFile);
-            }
+            //if (_configLoader is LoggingConfigurationFileLoader configFileLoader)
+            //{
+            //    Configuration = configFileLoader.Load(this, configFile);
+            //}
             return this;
         }
 

@@ -495,17 +495,18 @@ namespace NLog.Common
         private static string GetAppSettings(string configName)
         {
 #if !SILVERLIGHT && !__IOS__ && !__ANDROID__ && !NETSTANDARD
-            try
-            {
-                return System.Configuration.ConfigurationManager.AppSettings[configName];
-            }
-            catch (Exception ex)
-            {
-                if (ex.MustBeRethrownImmediately())
-                {
-                    throw;
-                }
-            }
+//todo
+            //try
+            //{
+            //    return System.Configuration.ConfigurationManager.AppSettings[configName];
+            //}
+            //catch (Exception ex)
+            //{
+            //    if (ex.MustBeRethrownImmediately())
+            //    {
+            //        throw;
+            //    }
+            //}
 #endif
             return null;
         }
