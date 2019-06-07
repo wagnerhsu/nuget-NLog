@@ -52,7 +52,7 @@ namespace NLog.Config
         internal ConfigurationItemFactory ConfigurationItemFactory
         {
             get => _localItemFactory ?? (_localItemFactory = new ConfigurationItemFactory(this, ConfigurationItemFactory.Default, ArrayHelper.Empty<Assembly>()));
-            set => _localItemFactory = null;
+            set => _localItemFactory = value;
         }
 
         /// <summary>
