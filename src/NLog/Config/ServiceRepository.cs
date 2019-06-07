@@ -42,7 +42,7 @@ namespace NLog.Config
     using NLog.Targets;
 
     /// <summary>
-    /// Repository of intefaces used by NLog to allow override for dependency injection
+    /// Repository of interfaces used by NLog to allow override for dependency injection
     /// </summary>
     public sealed class ServiceRepository
     {
@@ -93,7 +93,7 @@ namespace NLog.Config
         /// </summary>
         /// <param name="interfaceType">Type of interface</param>
         /// <param name="serviceInstance">Singleton object found</param>
-        /// <returns>Lookup was succesful</returns>
+        /// <returns>Lookup was successful</returns>
         public bool TryGetService(Type interfaceType, out object serviceInstance)
         {
             return _serviceRepository.TryGetValue(interfaceType, out serviceInstance);
@@ -119,7 +119,7 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Register a custom layout renderer with a callback function <paramref name="func"/>. The callback recieves the logEvent.
+        /// Register a custom layout renderer with a callback function <paramref name="func"/>. The callback receives the logEvent.
         /// </summary>
         /// <param name="name">Name of the layout renderer - without ${}.</param>
         /// <param name="func">Callback that returns the value for the layout renderer.</param>
@@ -129,7 +129,7 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Register a custom layout renderer with a callback function <paramref name="func"/>. The callback recieves the logEvent and the current configuration.
+        /// Register a custom layout renderer with a callback function <paramref name="func"/>. The callback receives the logEvent and the current configuration.
         /// </summary>
         /// <param name="name">Name of the layout renderer - without ${}.</param>
         /// <param name="func">Callback that returns the value for the layout renderer.</param>
@@ -206,7 +206,7 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Perform mesage template parsing and formatting of LogEvent messages (True = Always, False = Never, Null = Auto Detect)
+        /// Perform message template parsing and formatting of LogEvent messages (True = Always, False = Never, Null = Auto Detect)
         /// </summary>
         /// <remarks>
         /// - Null (Auto Detect) : NLog-parser checks <see cref="LogEventInfo.Message"/> for positional parameters, and will then fallback to string.Format-rendering.
