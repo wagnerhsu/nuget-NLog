@@ -81,7 +81,7 @@ namespace NLog.Config
             {
                 throw new ArgumentException($"{interfaceType} must be interface", nameof(interfaceType));
             }
-            if (serviceInstance == null || !interfaceType.IsAssignableFrom(serviceInstance.GetType()))
+            if (serviceInstance == null || !interfaceType.IsInstanceOfType(serviceInstance))
             {
                 throw new ArgumentException($"{serviceInstance} must be of type interface {interfaceType}", nameof(serviceInstance));
             }
