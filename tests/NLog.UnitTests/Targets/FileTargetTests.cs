@@ -214,7 +214,7 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void SimpleFileWithSpecialCharsTest()
         {
-            var logFile  = Path.Combine(Path.GetTempPath(), "nlog_" + Guid.NewGuid() + "!@#$%^&()_-=+ .log");
+            var logFile = Path.Combine(Path.GetTempPath(), "nlog_" + Guid.NewGuid() + "!@#$%^&()_-=+ .log");
             SimpleFileWriteLogTest(logFile);
         }
 
@@ -2739,6 +2739,55 @@ namespace NLog.UnitTests.Targets
                     File.Delete(logFile);
                 if (Directory.Exists(tempPath))
                     Directory.Delete(tempPath, true);
+            }
+        }
+
+        [Fact]
+        public void ArchiveFileSizeCorrect()
+        {
+            var tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            var logFile = Path.Combine(tempPath, "file.txt");
+            try
+            {
+                var archiveFileName = Path.Combine(tempPath, "archive", "file.txt2");
+                var fileTarget = WrapFileTarget(new FileTarget
+                {
+                    FileName = logFile,
+                    ArchiveFileName = archiveFileName,
+                    ArchiveAboveSize = 2_048_000,
+                    LineEnding = LineEndingMode.LF,
+                    Layout = "${message}",
+                    MaxArchiveFiles = 2,
+                });
+
+                SimpleConfigurator.ConfigureForTargetLogging(fileTarget, LogLevel.Debug);
+
+                CreateLogs(2_100_000, 1_000);
+
+                LogManager.Flush();
+
+                // Assert   
+                var archiveFile = new FileInfo(archiveFileName);
+                Assert.True(archiveFile.Exists);
+                Assert.Equal(2_048_000, archiveFile.Length);
+
+            }
+            finally
+            {
+                if (File.Exists(logFile))
+                    File.Delete(logFile);
+                if (Directory.Exists(tempPath))
+                    Directory.Delete(tempPath, true);
+            }
+        }
+
+        private void CreateLogs(int bytes, int lineSize)
+        {
+            var times = bytes / lineSize;
+            var line = new string('a', lineSize - 1);
+            for (var i = 0; i < times; ++i)
+            {
+                logger.Debug(line);
             }
         }
 
