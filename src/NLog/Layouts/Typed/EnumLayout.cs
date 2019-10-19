@@ -42,7 +42,7 @@ namespace NLog.Layouts
     /// <summary>
     /// Layout rendering to enum
     /// </summary>
-    public class EnumLayout<TEnum> : TypedLayout<TEnum?>
+    public class EnumLayout<TEnum> : TypedLayoutBase<TEnum?>
     where TEnum : struct
     {
         /// <inheritdoc />

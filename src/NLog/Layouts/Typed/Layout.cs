@@ -42,15 +42,15 @@ namespace NLog.Layouts
     /// Layout with a simple value (e.g. int) or a layout which results in a simple value (e.g. ${counter})
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class Layoutable<T> : TypedLayout<T>
+    public class Layout<T> : TypedLayoutBase<T>
     {
         /// <inheritdoc />
-        public Layoutable(T value) : base(value)
+        public Layout(T value) : base(value)
         {
         }
 
         /// <inheritdoc />
-        public Layoutable(Layout layout) : base(layout)
+        public Layout(Layout layout) : base(layout)
         {
         }
 
@@ -268,9 +268,9 @@ namespace NLog.Layouts
         /// </summary>
         /// <param name="value">Text to be converted.</param>
         /// <returns><see cref="SimpleLayout" /> object represented by the text.</returns>
-        public static implicit operator Layoutable<T>(T value)
+        public static implicit operator Layout<T>(T value)
         {
-            return new Layoutable<T>(value);
+            return new Layout<T>(value);
         }
 
         /// <summary>
@@ -278,9 +278,9 @@ namespace NLog.Layouts
         /// </summary>
         /// <param name="layout">Text to be converted.</param>
         /// <returns><see cref="SimpleLayout" /> object represented by the text.</returns>
-        public static implicit operator Layoutable<T>([Localizable(false)] string layout)
+        public static implicit operator Layout<T>([Localizable(false)] string layout)
         {
-            return new Layoutable<T>(layout);
+            return new Layout<T>(layout);
         }
 
         #endregion

@@ -43,7 +43,7 @@ namespace NLog.Layouts
     /// <summary>
     /// Layout rendering of <typeparam name="T"></typeparam>
     /// </summary>
-    public abstract class TypedLayout<T> : Layout
+    public abstract class TypedLayoutBase<T> : Layout
     {
         private readonly Layout _layout;
         private readonly T _value;
@@ -58,7 +58,7 @@ namespace NLog.Layouts
         /// Layout with fixed value
         /// </summary>
         /// <param name="value"></param>
-        protected TypedLayout(T value)
+        protected TypedLayoutBase(T value)
         {
             _value = value;
             _fixedValue = true;
@@ -69,7 +69,7 @@ namespace NLog.Layouts
         /// Layout with template
         /// </summary>
         /// <param name="layout"></param>
-        protected TypedLayout(Layout layout)
+        protected TypedLayoutBase(Layout layout)
         {
             _fixedValue = TryGetFixedValue(layout, out _value);
             _layout = layout;

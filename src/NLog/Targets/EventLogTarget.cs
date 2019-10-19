@@ -126,7 +126,7 @@ namespace NLog.Targets
         /// Gets or sets the layout that renders event ID.
         /// </summary>
         /// <docgen category='Event Log Options' order='10' />
-        public Layoutable<int> EventId { get; set; }
+        public Layout<int> EventId { get; set; }
 
         /// <summary>
         /// Gets or sets the layout that renders event Category.
