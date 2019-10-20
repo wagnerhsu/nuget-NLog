@@ -198,7 +198,7 @@ namespace NLog.Targets
         /// </summary>
         /// <docgen category='Connection Options' order='10' />
         [DefaultValue(NetworkTargetOverflowAction.Split)]
-        public NetworkTargetOverflowAction OnOverflow { get; set; }
+        public Layout<NetworkTargetOverflowAction> OnOverflow { get; set; }
 
         /// <summary>
         /// Gets or sets the encoding to be used.
@@ -289,6 +289,7 @@ namespace NLog.Targets
 
             byte[] bytes = GetBytesToWrite(logEvent.LogEvent);
 
+            var networkTargetOverflowAction = OnOverflow.ToValue(logEvent.LogEvent);
             if (KeepConnection)
             {
                 LinkedListNode<NetworkSender> senderNode;
@@ -314,7 +315,7 @@ namespace NLog.Targets
                         }
 
                         logEvent.Continuation(ex);
-                    });
+                    }, networkTargetOverflowAction);
             }
             else
             {
@@ -385,7 +386,7 @@ namespace NLog.Targets
 
                         sender.Close(ex2 => { });
                         logEvent.Continuation(ex);
-                    });
+                    }, networkTargetOverflowAction);
             }
         }
 
@@ -541,7 +542,7 @@ namespace NLog.Targets
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", Justification = "Using property names in message.")]
-        private void ChunkedSend(NetworkSender sender, byte[] buffer, AsyncContinuation continuation)
+        private void ChunkedSend(NetworkSender sender, byte[] buffer, AsyncContinuation continuation, NetworkTargetOverflowAction networkTargetOverflowAction)
         {
             int tosend = buffer.Length;
             if (tosend <= MaxMessageSize)
@@ -578,14 +579,15 @@ namespace NLog.Targets
                     int chunksize = tosend;
                     if (chunksize > MaxMessageSize)
                     {
-                        if (OnOverflow == NetworkTargetOverflowAction.Discard)
+                        var onOverflow = networkTargetOverflowAction;
+                        if (onOverflow == NetworkTargetOverflowAction.Discard)
                         {
                             InternalLogger.Trace("NetworkTarget(Name={0}): Discard because chunksize > this.MaxMessageSize", Name);
                             continuation(null);
                             return;
                         }
 
-                        if (OnOverflow == NetworkTargetOverflowAction.Error)
+                        if (onOverflow == NetworkTargetOverflowAction.Error)
                         {
                             continuation(new OverflowException($"Attempted to send a message larger than MaxMessageSize ({MaxMessageSize}). Actual size was: {buffer.Length}. Adjust OnOverflow and MaxMessageSize parameters accordingly."));
                             return;

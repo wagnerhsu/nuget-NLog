@@ -42,8 +42,14 @@ namespace NLog.Layouts
     /// Layout with a simple value (e.g. int) or a layout which results in a simple value (e.g. ${counter})
     /// </summary>
     /// <typeparam name="T"></typeparam>
+  //todo  [CLSCompliant(false)] // IConvertible
     public class Layout<T> : TypedLayoutBase<T>
+  //  where T: IConvertible //todo not CLS compliant
     {
+        private static TypeCode? _typeCode; 
+      //todo  private static bool _isEnum;
+
+
         /// <inheritdoc />
         public Layout(T value) : base(value)
         {
@@ -52,6 +58,12 @@ namespace NLog.Layouts
         /// <inheritdoc />
         public Layout(Layout layout) : base(layout)
         {
+        }
+
+        static Layout()
+        {
+            _typeCode = (default(T) as IConvertible)?.GetTypeCode();
+           //todo  _isEnum = typeof(T).IsEnum;
         }
 
         #region Overrides of TypedLayout<T>
@@ -88,7 +100,7 @@ namespace NLog.Layouts
             try
             {
                 // todo could be better?
-                var objTypeCode = (default(T) as IConvertible)?.GetTypeCode();
+                var objTypeCode = _typeCode;
                 switch (objTypeCode)
                 {
                     //todo ugly :P
@@ -259,6 +271,7 @@ namespace NLog.Layouts
             }
         }
 
+       
         #endregion
 
         #region Conversion
