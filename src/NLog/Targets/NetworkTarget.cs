@@ -104,6 +104,8 @@ namespace NLog.Targets
             ConnectionCacheSize = 5;
             LineEnding = LineEndingMode.CRLF;
             OptimizeBufferReuse = GetType() == typeof(NetworkTarget);   // Class not sealed, reduce breaking changes
+            MaxQueueSize = 0;
+            KeepAliveTimeSeconds = 0;
         }
 
         /// <summary>
@@ -143,54 +145,54 @@ namespace NLog.Targets
         /// </summary>
         /// <docgen category='Connection Options' order='10' />
         [DefaultValue(true)]
-        public bool KeepConnection { get; set; }
+        public Layout<bool> KeepConnection { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to append newline at the end of log message.
         /// </summary>
         /// <docgen category='Layout Options' order='10' />
         [DefaultValue(false)]
-        public bool NewLine { get; set; }
+        public Layout<bool> NewLine { get; set; } = false;
 
         /// <summary>
         /// Gets or sets the end of line value if a newline is appended at the end of log message <see cref="NewLine"/>.
         /// </summary>
         /// <docgen category='Layout Options' order='10' />
         [DefaultValue("CRLF")]
-        public LineEndingMode LineEnding { get; set; }
+        public Layout<LineEndingMode> LineEnding { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum message size in bytes.
         /// </summary>
         /// <docgen category='Layout Options' order='10' />
         [DefaultValue(65000)]
-        public int MaxMessageSize { get; set; }
+        public Layout<int> MaxMessageSize { get; set; }
 
         /// <summary>
         /// Gets or sets the size of the connection cache (number of connections which are kept alive).
         /// </summary>
         /// <docgen category="Connection Options" order="10"/>
         [DefaultValue(5)]
-        public int ConnectionCacheSize { get; set; }
+        public Layout<int> ConnectionCacheSize { get; set; }
 
         /// <summary>
         /// Gets or sets the maximum current connections. 0 = no maximum.
         /// </summary>
         /// <docgen category="Connection Options" order="10"/>
-        public int MaxConnections { get; set; }
+        public Layout<int> MaxConnections { get; set; } = 0;
 
         /// <summary>
         /// Gets or sets the action that should be taken if the will be more connections than <see cref="MaxConnections"/>.
         /// </summary>
         /// <docgen category='Connection Options' order='10' />
-        public NetworkTargetConnectionsOverflowAction OnConnectionOverflow { get; set; }
+        public Layout<NetworkTargetConnectionsOverflowAction> OnConnectionOverflow { get; set; } = NetworkTargetConnectionsOverflowAction.AllowNewConnnection;
 
         /// <summary>
         /// Gets or sets the maximum queue size.
         /// </summary>
         /// <docgen category='Connection Options' order='10' />
         [DefaultValue(0)]
-        public int MaxQueueSize { get; set; }
+        public Layout<int> MaxQueueSize { get; set; }
 
         /// <summary>
         /// Gets or sets the action that should be taken if the message is larger than
@@ -217,7 +219,7 @@ namespace NLog.Targets
         /// <summary>
         /// The number of seconds a connection will remain idle before the first keep-alive probe is sent
         /// </summary>
-        public int KeepAliveTimeSeconds { get; set; }
+        public Layout<int> KeepAliveTimeSeconds { get; set; }
 #endif
 
         internal INetworkSenderFactory SenderFactory { get; set; }
@@ -289,13 +291,17 @@ namespace NLog.Targets
 
             byte[] bytes = GetBytesToWrite(logEvent.LogEvent);
 
-            var networkTargetOverflowAction = OnOverflow.ToValue(logEvent.LogEvent);
-            if (KeepConnection)
+            var networkTargetOverflowAction = OnOverflow.ToValueSafe(logEvent);
+            var maxMessageSize = MaxMessageSize.ToValueSafe(logEvent);
+            var maxQueueSize = MaxQueueSize.ToValueSafe(logEvent);
+            var keepAliveTimeSeconds = KeepAliveTimeSeconds.ToValueSafe(logEvent);
+            if (KeepConnection.ToValueSafe(logEvent))
             {
                 LinkedListNode<NetworkSender> senderNode;
                 try
                 {
-                    senderNode = GetCachedNetworkSender(address);
+                    var connectionCacheSize = ConnectionCacheSize.ToValueSafe(logEvent);
+                    senderNode = GetCachedNetworkSender(address, connectionCacheSize, maxQueueSize, keepAliveTimeSeconds);
                 }
                 catch (Exception ex)
                 {
@@ -315,21 +321,23 @@ namespace NLog.Targets
                         }
 
                         logEvent.Continuation(ex);
-                    }, networkTargetOverflowAction);
+                    }, networkTargetOverflowAction, maxMessageSize);
             }
             else
             {
                 NetworkSender sender;
                 LinkedListNode<NetworkSender> linkedListNode;
 
+                var onConnectionOverflow = OnConnectionOverflow.ToValueSafe(logEvent);
                 lock (_openNetworkSenders)
                 {
                     //handle too many connections
-                    var tooManyConnections = _openNetworkSenders.Count >= MaxConnections;
+                    var maxConnections = MaxConnections.ToValueSafe(logEvent);
+                    var tooManyConnections = _openNetworkSenders.Count >= maxConnections;
 
-                    if (tooManyConnections && MaxConnections > 0)
+                    if (tooManyConnections && maxConnections > 0)
                     {
-                        switch (OnConnectionOverflow)
+                        switch (onConnectionOverflow)
                         {
                             case NetworkTargetConnectionsOverflowAction.DiscardMessage:
                                 InternalLogger.Warn("NetworkTarget(Name={0}): Discarding message otherwise to many connections.", Name);
@@ -341,7 +349,7 @@ namespace NLog.Targets
                                 break;
 
                             case NetworkTargetConnectionsOverflowAction.Block:
-                                while (_openNetworkSenders.Count >= MaxConnections)
+                                while (_openNetworkSenders.Count >= maxConnections)
                                 {
                                     InternalLogger.Debug("NetworkTarget(Name={0}): Blocking networktarget otherwhise too many connections.", Name);
                                     Monitor.Wait(_openNetworkSenders);
@@ -355,7 +363,7 @@ namespace NLog.Targets
 
                     try
                     {
-                        sender = CreateNetworkSender(address);
+                        sender = CreateNetworkSender(address, maxQueueSize, keepAliveTimeSeconds);
                     }
                     catch (Exception ex)
                     {
@@ -373,7 +381,7 @@ namespace NLog.Targets
                         lock (_openNetworkSenders)
                         {
                             TryRemove(_openNetworkSenders, linkedListNode);
-                            if (OnConnectionOverflow == NetworkTargetConnectionsOverflowAction.Block)
+                            if (onConnectionOverflow == NetworkTargetConnectionsOverflowAction.Block)
                             {
                                 Monitor.PulseAll(_openNetworkSenders);
                             }
@@ -386,7 +394,7 @@ namespace NLog.Targets
 
                         sender.Close(ex2 => { });
                         logEvent.Continuation(ex);
-                    }, networkTargetOverflowAction);
+                    }, networkTargetOverflowAction, maxMessageSize);
             }
         }
 
@@ -414,9 +422,11 @@ namespace NLog.Targets
         /// <returns>Byte array.</returns>
         protected virtual byte[] GetBytesToWrite(LogEventInfo logEvent)
         {
+            var newLine = NewLine.ToValueSafe(logEvent);
+            var newLineCharacters = LineEnding.ToValueSafe(logEvent).NewLineCharacters;
             if (OptimizeBufferReuse)
             {
-                if (!NewLine && logEvent.TryGetCachedLayoutValue(Layout, out var text))
+                if (!newLine && logEvent.TryGetCachedLayoutValue(Layout, out var text))
                 {
                     InternalLogger.Trace("NetworkTarget(Name={0}): Sending {1}", Name, text);
                     return Encoding.GetBytes(text.ToString());
@@ -426,9 +436,10 @@ namespace NLog.Targets
                     using (var localBuilder = ReusableLayoutBuilder.Allocate())
                     {
                         Layout.RenderAppendBuilder(logEvent, localBuilder.Result, false);
-                        if (NewLine)
+                        if (newLine)
                         {
-                            localBuilder.Result.Append(LineEnding.NewLineCharacters);
+
+                            localBuilder.Result.Append(newLineCharacters);
                         }
 
                         InternalLogger.Trace("NetworkTarget(Name={0}): Sending {1} chars", Name, localBuilder.Result.Length);
@@ -455,15 +466,15 @@ namespace NLog.Targets
             {
                 var rendered = Layout.Render(logEvent);
                 InternalLogger.Trace("NetworkTarget(Name={0}): Sending: {1}", Name, rendered);
-                if (NewLine)
+                if (newLine)
                 {
-                    rendered += LineEnding.NewLineCharacters;
+                    rendered += newLineCharacters;
                 }
                 return Encoding.GetBytes(rendered);
             }
         }
 
-        private LinkedListNode<NetworkSender> GetCachedNetworkSender(string address)
+        private LinkedListNode<NetworkSender> GetCachedNetworkSender(string address, int connectionCacheSize, int maxQueueSize, int keepAliveTimeSeconds)
         {
             lock (_currentSenderCache)
             {
@@ -474,7 +485,7 @@ namespace NLog.Targets
                     return senderNode;
                 }
 
-                if (_currentSenderCache.Count >= ConnectionCacheSize)
+                if (_currentSenderCache.Count >= connectionCacheSize)
                 {
                     // make room in the cache by closing the least recently used connection
                     int minAccessTime = int.MaxValue;
@@ -496,7 +507,7 @@ namespace NLog.Targets
                     }
                 }
 
-                NetworkSender sender = CreateNetworkSender(address);
+                NetworkSender sender = CreateNetworkSender(address, maxQueueSize, keepAliveTimeSeconds);
                 lock (_openNetworkSenders)
                 {
                     senderNode = _openNetworkSenders.AddLast(sender);
@@ -507,12 +518,12 @@ namespace NLog.Targets
             }
         }
 
-        private NetworkSender CreateNetworkSender(string address)
+        private NetworkSender CreateNetworkSender(string address, int maxQueueSize, int keepAliveTimeSeconds)
         {
 #if !SILVERLIGHT
-            var sender = SenderFactory.Create(address, MaxQueueSize, SslProtocols, TimeSpan.FromSeconds(KeepAliveTimeSeconds));
+            var sender = SenderFactory.Create(address, maxQueueSize, SslProtocols, TimeSpan.FromSeconds(keepAliveTimeSeconds));
 #else
-            var sender = SenderFactory.Create(address, MaxQueueSize);
+            var sender = SenderFactory.Create(address, maxQueueSize);
 #endif
             sender.Initialize();
 
@@ -542,10 +553,10 @@ namespace NLog.Targets
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", Justification = "Using property names in message.")]
-        private void ChunkedSend(NetworkSender sender, byte[] buffer, AsyncContinuation continuation, NetworkTargetOverflowAction networkTargetOverflowAction)
+        private void ChunkedSend(NetworkSender sender, byte[] buffer, AsyncContinuation continuation, NetworkTargetOverflowAction networkTargetOverflowAction, int maxMessageSize)
         {
             int tosend = buffer.Length;
-            if (tosend <= MaxMessageSize)
+            if (tosend <= maxMessageSize)
             {
                 // Chunking is not needed, no need to perform delegate capture
                 InternalLogger.Trace("NetworkTarget(Name={0}): Sending chunk, position: {1}, length: {2}", Name, 0, tosend);
@@ -577,7 +588,7 @@ namespace NLog.Targets
                     }
 
                     int chunksize = tosend;
-                    if (chunksize > MaxMessageSize)
+                    if (chunksize > maxMessageSize)
                     {
                         var onOverflow = networkTargetOverflowAction;
                         if (onOverflow == NetworkTargetOverflowAction.Discard)
@@ -589,11 +600,11 @@ namespace NLog.Targets
 
                         if (onOverflow == NetworkTargetOverflowAction.Error)
                         {
-                            continuation(new OverflowException($"Attempted to send a message larger than MaxMessageSize ({MaxMessageSize}). Actual size was: {buffer.Length}. Adjust OnOverflow and MaxMessageSize parameters accordingly."));
+                            continuation(new OverflowException($"Attempted to send a message larger than MaxMessageSize ({maxMessageSize}). Actual size was: {buffer.Length}. Adjust OnOverflow and MaxMessageSize parameters accordingly."));
                             return;
                         }
 
-                        chunksize = MaxMessageSize;
+                        chunksize = maxMessageSize;
                     }
 
                     int pos0 = pos;

@@ -35,6 +35,7 @@ using System;
 using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
+using NLog.Common;
 
 namespace NLog.Layouts
 {
@@ -297,5 +298,40 @@ namespace NLog.Layouts
         }
 
         #endregion
+    }
+
+    /// <summary>
+    /// Extensions
+    /// </summary>
+    public static class LayoutExtensions
+    {
+        /// <summary>
+        /// Null ref safe
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="l"></param>
+        /// <param name="logEvent"></param>
+        /// <returns></returns>
+        public static T ToValueSafe<T>(this Layout<T> l, AsyncLogEventInfo logEvent)
+        {
+            return ToValueSafe<T>(l, logEvent.LogEvent);
+        }
+
+        /// <summary>
+        /// Null ref safe
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="l"></param>
+        /// <param name="logEvent"></param>
+        /// <returns></returns>
+        public static T ToValueSafe<T>(this Layout<T> l, LogEventInfo logEvent)
+        {
+            if(l == null)
+            {
+                return default(T);
+            }
+
+            return l.ToValue(logEvent);
+        }
     }
 }

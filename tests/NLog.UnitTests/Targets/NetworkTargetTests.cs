@@ -31,6 +31,8 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
+using NLog.Layouts;
+
 namespace NLog.UnitTests.Targets
 {
     using System;
@@ -135,14 +137,15 @@ namespace NLog.UnitTests.Targets
         public void NetworkTargetDefaultsTest()
         {
             var target = new NetworkTarget();
-
-            Assert.True(target.KeepConnection);
-            Assert.False(target.NewLine);
-            Assert.Equal("\r\n", target.LineEnding.NewLineCharacters);
-            Assert.Equal(65000, target.MaxMessageSize);
-            Assert.Equal(5, target.ConnectionCacheSize);
-            Assert.Equal(0, target.MaxConnections);
-            Assert.Equal(0, target.MaxQueueSize);
+            //todo fix .ToValueSafe(logEventInfo)
+            var logEventInfo = LogEventInfo.CreateNullEvent();
+            Assert.True(target.KeepConnection.ToValueSafe(logEventInfo));
+            Assert.False(target.NewLine.ToValueSafe(logEventInfo));
+            Assert.Equal("\r\n", target.LineEnding.ToValueSafe(logEventInfo).NewLineCharacters);
+            Assert.Equal(65000, target.MaxMessageSize.ToValueSafe(logEventInfo));
+            Assert.Equal(5, target.ConnectionCacheSize.ToValueSafe(logEventInfo));
+            Assert.Equal(0, target.MaxConnections.ToValueSafe(logEventInfo));
+            Assert.Equal(0, target.MaxQueueSize.ToValueSafe(logEventInfo));
             Assert.Equal(Encoding.UTF8, target.Encoding);
         }
 
@@ -919,7 +922,7 @@ namespace NLog.UnitTests.Targets
             </nlog>");
 
             var target = config.FindTargetByName<NetworkTarget>("target1");
-            Assert.Equal(expected, target.KeepAliveTimeSeconds);
+            Assert.Equal(expected, target.KeepAliveTimeSeconds.ToValueSafe(LogEventInfo.CreateNullEvent()));
 
             LogManager.Configuration = config;
             var logger = LogManager.GetLogger("keepAliveTimeSeconds");
