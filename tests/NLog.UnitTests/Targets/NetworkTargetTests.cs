@@ -139,13 +139,13 @@ namespace NLog.UnitTests.Targets
             var target = new NetworkTarget();
             //todo fix .ToValueSafe(logEventInfo)
             var logEventInfo = LogEventInfo.CreateNullEvent();
-            Assert.True(target.KeepConnection.ToValueSafe(logEventInfo));
-            Assert.False(target.NewLine.ToValueSafe(logEventInfo));
-            Assert.Equal("\r\n", target.LineEnding.ToValueSafe(logEventInfo).NewLineCharacters);
-            Assert.Equal(65000, target.MaxMessageSize.ToValueSafe(logEventInfo));
-            Assert.Equal(5, target.ConnectionCacheSize.ToValueSafe(logEventInfo));
-            Assert.Equal(0, target.MaxConnections.ToValueSafe(logEventInfo));
-            Assert.Equal(0, target.MaxQueueSize.ToValueSafe(logEventInfo));
+            Assert.True(target.KeepConnection.ToValueOrDefault(logEventInfo));
+            Assert.False(target.NewLine.ToValueOrDefault(logEventInfo));
+            Assert.Equal("\r\n", target.LineEnding.ToValueOrDefault(logEventInfo).NewLineCharacters);
+            Assert.Equal(65000, target.MaxMessageSize.ToValueOrDefault(logEventInfo));
+            Assert.Equal(5, target.ConnectionCacheSize.ToValueOrDefault(logEventInfo));
+            Assert.Equal(0, target.MaxConnections.ToValueOrDefault(logEventInfo));
+            Assert.Equal(0, target.MaxQueueSize.ToValueOrDefault(logEventInfo));
             Assert.Equal(Encoding.UTF8, target.Encoding);
         }
 
@@ -922,7 +922,7 @@ namespace NLog.UnitTests.Targets
             </nlog>");
 
             var target = config.FindTargetByName<NetworkTarget>("target1");
-            Assert.Equal(expected, target.KeepAliveTimeSeconds.ToValueSafe(LogEventInfo.CreateNullEvent()));
+            Assert.Equal(expected, target.KeepAliveTimeSeconds.ToValueOrDefault(LogEventInfo.CreateNullEvent()));
 
             LogManager.Configuration = config;
             var logger = LogManager.GetLogger("keepAliveTimeSeconds");

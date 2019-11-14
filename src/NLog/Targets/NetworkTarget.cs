@@ -291,16 +291,16 @@ namespace NLog.Targets
 
             byte[] bytes = GetBytesToWrite(logEvent.LogEvent);
 
-            var networkTargetOverflowAction = OnOverflow.ToValueSafe(logEvent);
-            var maxMessageSize = MaxMessageSize.ToValueSafe(logEvent);
-            var maxQueueSize = MaxQueueSize.ToValueSafe(logEvent);
-            var keepAliveTimeSeconds = KeepAliveTimeSeconds.ToValueSafe(logEvent);
-            if (KeepConnection.ToValueSafe(logEvent))
+            var networkTargetOverflowAction = OnOverflow.ToValueOrDefault(logEvent);
+            var maxMessageSize = MaxMessageSize.ToValueOrDefault(logEvent);
+            var maxQueueSize = MaxQueueSize.ToValueOrDefault(logEvent);
+            var keepAliveTimeSeconds = KeepAliveTimeSeconds.ToValueOrDefault(logEvent);
+            if (KeepConnection.ToValueOrDefault(logEvent))
             {
                 LinkedListNode<NetworkSender> senderNode;
                 try
                 {
-                    var connectionCacheSize = ConnectionCacheSize.ToValueSafe(logEvent);
+                    var connectionCacheSize = ConnectionCacheSize.ToValueOrDefault(logEvent);
                     senderNode = GetCachedNetworkSender(address, connectionCacheSize, maxQueueSize, keepAliveTimeSeconds);
                 }
                 catch (Exception ex)
@@ -328,11 +328,11 @@ namespace NLog.Targets
                 NetworkSender sender;
                 LinkedListNode<NetworkSender> linkedListNode;
 
-                var onConnectionOverflow = OnConnectionOverflow.ToValueSafe(logEvent);
+                var onConnectionOverflow = OnConnectionOverflow.ToValueOrDefault(logEvent);
                 lock (_openNetworkSenders)
                 {
                     //handle too many connections
-                    var maxConnections = MaxConnections.ToValueSafe(logEvent);
+                    var maxConnections = MaxConnections.ToValueOrDefault(logEvent);
                     var tooManyConnections = _openNetworkSenders.Count >= maxConnections;
 
                     if (tooManyConnections && maxConnections > 0)
@@ -422,8 +422,8 @@ namespace NLog.Targets
         /// <returns>Byte array.</returns>
         protected virtual byte[] GetBytesToWrite(LogEventInfo logEvent)
         {
-            var newLine = NewLine.ToValueSafe(logEvent);
-            var newLineCharacters = LineEnding.ToValueSafe(logEvent).NewLineCharacters;
+            var newLine = NewLine.ToValueOrDefault(logEvent);
+            var newLineCharacters = LineEnding.ToValueOrDefault(logEvent).NewLineCharacters;
             if (OptimizeBufferReuse)
             {
                 if (!newLine && logEvent.TryGetCachedLayoutValue(Layout, out var text))

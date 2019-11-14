@@ -312,9 +312,9 @@ namespace NLog.Layouts
         /// <param name="l"></param>
         /// <param name="logEvent"></param>
         /// <returns></returns>
-        public static T ToValueSafe<T>(this Layout<T> l, AsyncLogEventInfo logEvent)
+        public static T ToValueOrDefault<T>(this Layout<T> l, AsyncLogEventInfo logEvent)
         {
-            return ToValueSafe<T>(l, logEvent.LogEvent);
+            return ToValueOrDefault<T>(l, logEvent.LogEvent);
         }
 
         /// <summary>
@@ -324,7 +324,7 @@ namespace NLog.Layouts
         /// <param name="l"></param>
         /// <param name="logEvent"></param>
         /// <returns></returns>
-        public static T ToValueSafe<T>(this Layout<T> l, LogEventInfo logEvent)
+        public static T ToValueOrDefault<T>(this Layout<T> l, LogEventInfo logEvent)
         {
             if(l == null)
             {
