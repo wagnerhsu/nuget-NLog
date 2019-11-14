@@ -144,9 +144,9 @@ namespace NLog.Layouts
         /// </summary>
         /// <docgen category='LogEvent Properties XML Options' order='10' />
 #if NET3_5
-        public HashSet<string> ExcludeProperties { get; set; }
+        public Layout<HashSet<string>> ExcludeProperties { get; set; }
 #else
-        public ISet<string> ExcludeProperties { get; set; }
+        public Layout<ISet<string>> ExcludeProperties { get; set; }
 #endif
 
         /// <summary>
@@ -407,7 +407,8 @@ namespace NLog.Layouts
                 if (string.IsNullOrEmpty(prop.Name))
                     continue;
 
-                if (ExcludeProperties.Contains(prop.Name))
+                var excludeProperties = ExcludeProperties.ToValueSafe(logEventInfo);
+                if (excludeProperties != null && excludeProperties.Contains(prop.Name))
                     continue;
 
                 var propertyValue = prop.Value;
