@@ -219,7 +219,7 @@ namespace NLog.Layouts
                 return true;
             }
 
-            value = default(T);
+            value = default;
 
             return false;
         }
