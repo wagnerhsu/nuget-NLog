@@ -41,9 +41,22 @@ using NLog.Internal;
 namespace NLog.Layouts
 {
     /// <summary>
+    /// ToValue
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public interface IToValue<out T>
+    {
+        /// <summary>
+        /// Render to value
+        /// </summary>
+        /// <returns></returns>
+        T ToValue(LogEventInfo logEvent);
+    }
+
+    /// <summary>
     /// Layout rendering of <typeparam name="T"></typeparam>
     /// </summary>
-    public abstract class TypedLayoutBase<T> : Layout
+    public abstract class TypedLayoutBase<T> : Layout, IToValue<T>
     {
         private readonly Layout _layout;
         private readonly T _value;
@@ -114,7 +127,7 @@ namespace NLog.Layouts
         /// Render to value
         /// </summary>
         /// <returns></returns>
-        public T ToValue(LogEventInfo logEvent)
+        T IToValue<T>.ToValue(LogEventInfo logEvent)
         {
             if (_fixedValue)
             {

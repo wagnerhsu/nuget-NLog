@@ -137,7 +137,7 @@ namespace NLog.UnitTests.Targets
         public void NetworkTargetDefaultsTest()
         {
             var target = new NetworkTarget();
-            //todo fix .ToValueSafe(logEventInfo)
+            //todo fix .ToValueOrDefault(logEventInfo)
             var logEventInfo = LogEventInfo.CreateNullEvent();
             Assert.True(target.KeepConnection.ToValueOrDefault(logEventInfo));
             Assert.False(target.NewLine.ToValueOrDefault(logEventInfo));
