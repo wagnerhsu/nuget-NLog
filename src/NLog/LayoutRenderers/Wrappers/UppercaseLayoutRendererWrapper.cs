@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Globalization;
     using System.Text;
     using NLog.Config;
@@ -48,39 +47,38 @@ namespace NLog.LayoutRenderers.Wrappers
     /// ${level:uppercase} // [AmbientProperty]
     /// </example>
     [LayoutRenderer("uppercase")]
-    [AmbientProperty("Uppercase")]
+    [AmbientProperty(nameof(Uppercase))]
+    [AmbientProperty(nameof(ToUpper))]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class UppercaseLayoutRendererWrapper : WrapperLayoutRendererBase
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UppercaseLayoutRendererWrapper" /> class.
-        /// </summary>
-        public UppercaseLayoutRendererWrapper()
-        {
-            Culture = CultureInfo.InvariantCulture;
-            Uppercase = true;
-        }
-
         /// <summary>
         /// Gets or sets a value indicating whether upper case conversion should be applied.
         /// </summary>
         /// <value>A value of <c>true</c> if upper case conversion should be applied otherwise, <c>false</c>.</value>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(true)]
-        public bool Uppercase { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public bool Uppercase { get; set; } = true;
+
+        /// <summary>
+        /// Same as <see cref="Uppercase"/>-property, so it can be used as ambient property.
+        /// </summary>
+        /// <example>
+        /// ${level:toupper}
+        /// </example>
+        /// <docgen category="Layout Options" order="10"/>
+        public bool ToUpper { get => Uppercase; set => Uppercase = value; }
 
         /// <summary>
         /// Gets or sets the culture used for rendering. 
         /// </summary>
-        /// <docgen category='Transformation Options' order='10' />
-        public CultureInfo Culture { get; set; }
+        /// <docgen category='Layout Options' order='100' />
+        public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
 
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            Inner.RenderAppendBuilder(logEvent, builder);
+            Inner.Render(logEvent, builder);
             if (Uppercase && builder.Length > orgLength)
             {
                 TransformToUpperCase(builder, orgLength);

@@ -31,12 +31,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using NLog.Layouts;
-using Xunit;
-
 namespace NLog.UnitTests.Layouts
 {
+    using System;
+    using NLog.Layouts;
+    using Xunit;
+
     public class LayoutTypedTests : NLogTestBase
     {
         [Fact]
@@ -54,6 +54,37 @@ namespace NLog.UnitTests.Layouts
             Assert.True(layout.IsFixed);
             Assert.Equal(5, layout.FixedValue);
             Assert.Equal("5", layout.ToString());
+            Assert.Equal(5, layout);
+            Assert.NotEqual(0, layout);
+        }
+
+        [Fact]
+        public void LayoutFixedInvalidIntTest()
+        {
+            Layout<int> layout;
+            Assert.Throws<NLogConfigurationException>(() => layout = "abc");
+        }
+
+        [Fact]
+        public void LayoutFixedEmptyIntTest()
+        {
+            Layout<int> layout = "";
+            var result = layout.RenderValue(LogEventInfo.CreateNullEvent());
+            Assert.Equal(0, result);
+            Assert.Equal("", layout.ToString());
+        }
+
+        [Fact]
+        public void LayoutFixedNullEventTest()
+        {
+            // Arrange
+            Layout<int> layout = 5;
+
+            // Act
+            var result = layout.RenderValue(null);
+
+            // Assert
+            Assert.Equal(5, result);
         }
 
         [Fact]
@@ -71,6 +102,27 @@ namespace NLog.UnitTests.Layouts
             Assert.True(layout.IsFixed);
             Assert.Equal(5, layout.FixedValue);
             Assert.Equal("5", layout.ToString());
+            Assert.Equal(5, layout);
+            Assert.NotEqual(0, layout);
+            Assert.NotEqual(default(int?), layout);
+        }
+
+        [Fact]
+        public void LayoutFixedInvalidNullableIntTest()
+        {
+            Layout<int?> layout;
+            Assert.Throws<NLogConfigurationException>(() => layout = "abc");
+        }
+
+        [Fact]
+        public void LayoutFixedEmptyNullableIntTest()
+        {
+            Layout<int?> layout = "";
+            var result = layout.RenderValue(LogEventInfo.CreateNullEvent());
+            var result5 = layout.RenderValue(LogEventInfo.CreateNullEvent(), 5);
+            Assert.Null(result);
+            Assert.Null(result5);
+            Assert.Equal("null", layout.ToString());
         }
 
         [Fact]
@@ -88,10 +140,11 @@ namespace NLog.UnitTests.Layouts
             Assert.Null(result);
             Assert.Null(result5);
             Assert.Equal("", layout.Render(LogEventInfo.CreateNullEvent()));
-            Assert.Equal(nullValue, layout);
             Assert.True(layout.IsFixed);
             Assert.Null(layout.FixedValue);
             Assert.Equal("null", layout.ToString());
+            Assert.Equal(nullValue, layout);
+            Assert.NotEqual(0, layout);
         }
 
         [Fact]
@@ -113,6 +166,9 @@ namespace NLog.UnitTests.Layouts
             Assert.Equal(uri, layout.FixedValue);
             Assert.Same(layout.FixedValue, layout.FixedValue);
             Assert.Equal(uri.ToString(), layout.ToString());
+            Assert.Equal(uri, layout);
+            Assert.NotEqual(new Uri("//other"), layout);
+            Assert.NotEqual(default(Uri), layout);
         }
 
         [Fact]
@@ -135,6 +191,26 @@ namespace NLog.UnitTests.Layouts
             Assert.Equal(uri, layout.FixedValue);
             Assert.Same(layout.FixedValue, layout.FixedValue);
             Assert.Equal("null", layout.ToString());
+            Assert.NotEqual(new Uri("//other"), layout);
+        }
+
+        [Fact]
+        public void LayoutFixedInvalidUrlTest()
+        {
+            Layout<Uri> layout;
+            Assert.Throws<NLogConfigurationException>(() => layout = "!!!");
+        }
+
+        [Fact]
+        public void LayoutFixedEmptyUrlTest()
+        {
+            var uri = new Uri("http://nlog");
+            Layout<Uri> layout = "";
+            var result = layout.RenderValue(LogEventInfo.CreateNullEvent());
+            var resultFallback = layout.RenderValue(LogEventInfo.CreateNullEvent(), uri);
+            Assert.Null(result);
+            Assert.Equal(uri, resultFallback);
+            Assert.Equal("", layout.ToString());
         }
 
         [Fact]
@@ -181,6 +257,19 @@ namespace NLog.UnitTests.Layouts
             Assert.False(layout.IsFixed);
             Assert.Equal(simpleLayout, layout.ToString());
             Assert.NotEqual(0, layout);
+        }
+
+        [Fact]
+        public void LayoutDynamicIntNullEventTest()
+        {
+            // Arrange
+            Layout<int> layout = "${event-properties:intvalue}";
+
+            // Act
+            var result = layout.RenderValue(null, 42);
+
+            // Assert
+            Assert.Equal(42, result);
         }
 
         [Fact]
@@ -255,6 +344,20 @@ namespace NLog.UnitTests.Layouts
             Assert.False(layout.IsFixed);
             Assert.NotEqual(uri, layout);
             Assert.NotEqual(default(Uri), layout);
+        }
+
+        [Fact]
+        public void LayoutDynamicUrlNullEventTest()
+        {
+            // Arrange
+            Layout<Uri> layout = "${event-properties:urlvalue}";
+            var uri = new Uri("http://nlog");
+
+            // Act
+            var result = layout.RenderValue(null, uri);
+
+            // Assert
+            Assert.Equal(uri, result);
         }
 
         [Fact]
@@ -876,6 +979,57 @@ namespace NLog.UnitTests.Layouts
             Assert.Equal(100, result);
         }
 
+#if !DEBUG
+        [Fact(Skip = "RELEASE not working, only DEBUG")]
+#else
+        [Fact]
+#endif
+        public void RenderShouldRecognizeStackTraceUsage()
+        {
+            // Arrange
+            object[] callback_args = null;
+            Action<LogEventInfo, object[]> callback = (evt, args) => callback_args = args;
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                var methodCall = new NLog.Targets.MethodCallTarget("dbg", callback);
+                methodCall.Parameters.Add(new NLog.Targets.MethodCallParameter("LineNumber", "${callsite-linenumber}", typeof(int)));
+                builder.ForLogger().WriteTo(methodCall);
+            }).GetLogger(nameof(RenderShouldRecognizeStackTraceUsage));
+
+            // Act
+            logger.Info("Testing");
+
+            // Assert
+            Assert.Single(callback_args);
+            var lineNumber = Assert.IsType<int>(callback_args[0]);
+            Assert.True(lineNumber > 0);
+        }
+
+        [Fact]
+        public void LayoutRendererSupportTypedLayout()
+        {
+            var cif = new NLog.Config.ConfigurationItemFactory();
+            cif.LayoutRendererFactory.RegisterType<LayoutTypedTestLayoutRenderer>(nameof(LayoutTypedTestLayoutRenderer));
+
+            Layout l = new SimpleLayout("${LayoutTypedTestLayoutRenderer:IntProperty=42}", cif);
+            l.Initialize(null);
+            var result = l.Render(LogEventInfo.CreateNullEvent());
+            Assert.Equal("42", result);
+        }
+
+        [Fact]
+        [Obsolete("Instead override type-creation by calling NLog.LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        public void LayoutRendererSupportTypedLayout_Legacy()
+        {
+            var cif = new NLog.Config.ConfigurationItemFactory();
+            cif.RegisterType(typeof(LayoutTypedTestLayoutRenderer), string.Empty);
+
+            Layout l = new SimpleLayout("${LayoutTypedTestLayoutRenderer:IntProperty=42}", cif);
+            l.Initialize(null);
+            var result = l.Render(LogEventInfo.CreateNullEvent());
+            Assert.Equal("42", result);
+        }
+
         private class TestObject
         {
             public string Value { get; set; }
@@ -892,6 +1046,17 @@ namespace NLog.UnitTests.Layouts
             var logEventInfo = LogEventInfo.Create(LogLevel.Info, "logger1", "message1");
             logEventInfo.Properties.Add("value1", value);
             return logEventInfo;
+        }
+
+        [NLog.LayoutRenderers.LayoutRenderer(nameof(LayoutTypedTestLayoutRenderer))]
+        public class LayoutTypedTestLayoutRenderer : NLog.LayoutRenderers.LayoutRenderer
+        {
+            public Layout<int> IntProperty { get; set; } = 0;
+
+            protected override void Append(System.Text.StringBuilder builder, LogEventInfo logEvent)
+            {
+                builder.Append(IntProperty.RenderValue(logEvent).ToString());
+            }
         }
     }
 }

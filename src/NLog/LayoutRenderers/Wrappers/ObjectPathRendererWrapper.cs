@@ -44,7 +44,6 @@ namespace NLog.LayoutRenderers.Wrappers
     /// </summary>
     [LayoutRenderer("Object-Path")]
     [AmbientProperty(nameof(ObjectPath))]
-    [ThreadSafe]
     [ThreadAgnostic]
     public sealed class ObjectPathRendererWrapper : WrapperLayoutRendererBase, IRawValue
     {
@@ -57,7 +56,7 @@ namespace NLog.LayoutRenderers.Wrappers
         ///
         /// Shortcut for <see cref="ObjectPath"/>
         /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
+        /// <docgen category="Layout Options" order="10"/>
         public string Path
         {
             get => ObjectPath;
@@ -67,7 +66,7 @@ namespace NLog.LayoutRenderers.Wrappers
         /// <summary>
         /// Gets or sets the object-property-navigation-path for lookup of nested property
         /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
+        /// <docgen category="Layout Options" order="10"/>
         public string ObjectPath
         {
             get => _objectPropertyPath.Value;
@@ -77,45 +76,53 @@ namespace NLog.LayoutRenderers.Wrappers
         /// <summary>
         /// Format string for conversion from object to string.
         /// </summary>
-        /// <docgen category="Transformation Options" order="100"/>
+        /// <docgen category="Layout Options" order="100"/>
         public string Format { get; set; }
 
         /// <summary>
         /// Gets or sets the culture used for rendering. 
         /// </summary>
-        /// <docgen category="Transformation Options" order="100"/>
+        /// <docgen category="Layout Options" order="100"/>
         public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override string Transform(string text)
         {
             throw new NotSupportedException();
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            if (TryGetRawValue(logEvent, out object rawValue))
+            if (TryGetRawPropertyValue(logEvent, out object propertyValue))
             {
                 var formatProvider = GetFormatProvider(logEvent, Culture);
-                builder.AppendFormattedValue(rawValue, Format, formatProvider, ValueFormatter);
+                builder.AppendFormattedValue(propertyValue, Format, formatProvider, ValueFormatter);
             }
         }
 
-        /// <inheritdoc />
-        private bool TryGetRawValue(LogEventInfo logEvent, out object value)
+        private bool TryGetRawPropertyValue(LogEventInfo logEvent, out object propertyValue)
         {
             if (Inner != null &&
                 Inner.TryGetRawValue(logEvent, out var rawValue) &&
-                ObjectReflectionCache.TryGetObjectProperty(rawValue, _objectPropertyPath.PathNames, out value))
+                TryGetPropertyValue(rawValue, out propertyValue))
             {
                 return true;
             }
 
-            value = null;
+            propertyValue = null;
             return false;
         }
 
-        bool IRawValue.TryGetRawValue(LogEventInfo logEvent, out object value) => TryGetRawValue(logEvent, out value);
+        /// <summary>
+        /// Lookup property-value from source object based on <see cref="ObjectPath"/>
+        /// </summary>
+        /// <returns>Could resolve property-value?</returns>
+        public bool TryGetPropertyValue(object sourceObject, out object propertyValue)
+        {
+            return ObjectReflectionCache.TryGetObjectProperty(sourceObject, _objectPropertyPath.PathNames, out propertyValue);
+        }
+
+        bool IRawValue.TryGetRawValue(LogEventInfo logEvent, out object value) => TryGetRawPropertyValue(logEvent, out value);
     }
 }

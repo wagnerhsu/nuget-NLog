@@ -39,10 +39,8 @@ namespace NLog.Config
     /// Marks the class or a member as advanced. Advanced classes and members are hidden by 
     /// default in generated documentation.
     /// </summary>
+    [Obsolete("Attribute is no longer used. Obsolete with NLog 5.0")]
     [AttributeUsage(AttributeTargets.Property)]
-#if !NET35 && !NETSTANDARD1_3 && !NETSTANDARD1_5
-    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
-#endif
     public sealed class AdvancedAttribute : Attribute
     {
         /// <summary>

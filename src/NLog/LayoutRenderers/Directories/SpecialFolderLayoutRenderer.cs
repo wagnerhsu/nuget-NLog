@@ -47,7 +47,6 @@ namespace NLog.LayoutRenderers
     [LayoutRenderer("specialfolder")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class SpecialFolderLayoutRenderer : LayoutRenderer
     {
         /// <summary>
@@ -57,16 +56,16 @@ namespace NLog.LayoutRenderers
         /// Full list of options is available at <a href="https://docs.microsoft.com/en-us/dotnet/api/system.environment.specialfolder">MSDN</a>.
         /// The most common ones are:
         /// <ul>
-        /// <li><b>ApplicationData</b> - roaming application data for current user.</li>
         /// <li><b>CommonApplicationData</b> - application data for all users.</li>
-        /// <li><b>MyDocuments</b> - My Documents</li>
-        /// <li><b>DesktopDirectory</b> - Desktop directory</li>
-        /// <li><b>LocalApplicationData</b> - non roaming application data</li>
-        /// <li><b>Personal</b> - user profile directory</li>
+        /// <li><b>ApplicationData</b> - roaming application data for current user.</li>
+        /// <li><b>LocalApplicationData</b> - non roaming application data for current user</li>
+        /// <li><b>UserProfile</b> - Profile folder for current user</li>
+        /// <li><b>DesktopDirectory</b> - Desktop-directory for current user</li>
+        /// <li><b>MyDocuments</b> - My Documents-directory for current user</li>
         /// <li><b>System</b> - System directory</li>
         /// </ul>
         /// </remarks>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [DefaultParameter]
         public Environment.SpecialFolder Folder { get; set; }
 
@@ -82,16 +81,66 @@ namespace NLog.LayoutRenderers
         /// <docgen category='Advanced Options' order='10' />
         public string Dir { get; set; }
 
-        /// <summary>
-        /// Renders the directory where NLog is located and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
-            string basePath = Environment.GetFolderPath(Folder);
+            string basePath = GetFolderPath(Folder);
             var path = PathHelpers.CombinePaths(basePath, Dir, File);
             builder.Append(path);
+        }
+
+        internal static string GetFolderPath(Environment.SpecialFolder folder)
+        {
+            try
+            {
+                var folderPath = Environment.GetFolderPath(folder);
+                if (!string.IsNullOrEmpty(folderPath))
+                    return folderPath;
+            }
+            catch
+            {
+                var folderPath = GetFolderPathFromEnvironment(folder);
+                if (!string.IsNullOrEmpty(folderPath))
+                    return folderPath;
+
+                throw;
+            }
+
+            return GetFolderPathFromEnvironment(folder);
+        }
+
+        private static string GetFolderPathFromEnvironment(Environment.SpecialFolder folder)
+        {
+            try
+            {
+                var variableName = GetFolderWindowsEnvironmentVariable(folder);
+                if (string.IsNullOrEmpty(variableName))
+                    return string.Empty;
+                if (!PlatformDetector.IsWin32)
+                    return string.Empty;
+
+                // Fallback for Windows Nano: https://github.com/dotnet/runtime/issues/21430
+                var folderPath = Environment.GetEnvironmentVariable(variableName);
+                return folderPath ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string GetFolderWindowsEnvironmentVariable(Environment.SpecialFolder folder)
+        {
+            switch (folder)
+            {
+                case Environment.SpecialFolder.CommonApplicationData: return "COMMONAPPDATA";   // Default user
+                case Environment.SpecialFolder.LocalApplicationData: return "LOCALAPPDATA";     // Current user
+                case Environment.SpecialFolder.ApplicationData: return "APPDATA";               // Current user
+#if !NET35
+                case Environment.SpecialFolder.UserProfile: return "USERPROFILE";               // Current user
+#endif
+                default: return string.Empty;
+            }
         }
     }
 }

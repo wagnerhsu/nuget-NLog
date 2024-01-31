@@ -41,7 +41,6 @@ namespace NLog.Common
     using System.Reflection;
     using NLog.Internal;
     using NLog.Time;
-    using NLog.Targets;
 
     /// <summary>
     /// NLog internal logger.
@@ -65,7 +64,7 @@ namespace NLog.Common
 
             LogToConsole = GetSetting("nlog.internalLogToConsole", "NLOG_INTERNAL_LOG_TO_CONSOLE", false);
             LogToConsoleError = GetSetting("nlog.internalLogToConsoleError", "NLOG_INTERNAL_LOG_TO_CONSOLE_ERROR", false);
-            LogLevel = GetSetting("nlog.internalLogLevel", "NLOG_INTERNAL_LOG_LEVEL", LogLevel.Info);
+            LogLevel = GetSetting("nlog.internalLogLevel", "NLOG_INTERNAL_LOG_LEVEL", LogLevel.Off);
             LogFile = GetSetting("nlog.internalLogFile", "NLOG_INTERNAL_LOG_FILE", string.Empty);
             LogToTrace = GetSetting("nlog.internalLogToTrace", "NLOG_INTERNAL_LOG_TO_TRACE", false);
             IncludeTimestamp = GetSetting("nlog.internalLogIncludeTimestamp", "NLOG_INTERNAL_INCLUDE_TIMESTAMP", true);
@@ -80,8 +79,8 @@ namespace NLog.Common
         /// Gets or sets the minimal internal log level. 
         /// </summary>
         /// <example>If set to <see cref="NLog.LogLevel.Info"/>, then messages of the levels <see cref="NLog.LogLevel.Info"/>, <see cref="NLog.LogLevel.Error"/> and <see cref="NLog.LogLevel.Fatal"/> will be written.</example>
-        public static LogLevel LogLevel { get => _logLevel; set => _logLevel = value ?? LogLevel.Info; }
-        private static LogLevel _logLevel;
+        public static LogLevel LogLevel { get => _logLevel; set => _logLevel = value ?? LogLevel.Off; }
+        private static LogLevel _logLevel = LogLevel.Off;
 
         /// <summary>
         /// Gets or sets a value indicating whether internal messages should be written to the console output stream.
@@ -114,8 +113,9 @@ namespace NLog.Common
             set
             {
                 _logFile = value;
-                if (!string.IsNullOrEmpty(_logFile))
+                if (!string.IsNullOrEmpty(value))
                 {
+                    _logFile = ExpandFilePathVariables(value);
                     CreateDirectoriesIfNeeded(_logFile);
                 }
             }
@@ -139,7 +139,7 @@ namespace NLog.Common
         /// <summary>
         /// Gets or sets a value indicating whether timestamp should be included in internal log output.
         /// </summary>
-        public static bool IncludeTimestamp { get; set; }
+        public static bool IncludeTimestamp { get; set; } = true;
 
         /// <summary>
         /// Is there an <see cref="Exception"/> thrown when writing the message?
@@ -248,10 +248,22 @@ namespace NLog.Common
                 return;
             }
 
+            string fullMessage = message;
+
             try
             {
-                var fullMessage = CreateFullMessage(message, args);
+                fullMessage = CreateFullMessage(message, args);
+            }
+            catch (Exception exception)
+            {
+                if (ex is null)
+                    ex = exception;
+                if (LogLevel.Error > level)
+                    level = LogLevel.Error;
+            }
 
+            try
+            {
                 if (hasActiveLoggersWithLine)
                 {
                     WriteLogLine(ex, level, fullMessage);
@@ -342,7 +354,7 @@ namespace NLog.Common
         private static string CreateFullMessage(string message, object[] args)
         {
             var formattedMessage =
-                (args == null) ? message : string.Format(CultureInfo.InvariantCulture, message, args);
+                (args is null) ? message : string.Format(CultureInfo.InvariantCulture, message, args);
             return formattedMessage;
         }
 
@@ -363,7 +375,7 @@ namespace NLog.Common
         /// <returns><c>true</c> if logging is enabled; otherwise, <c>false</c>.</returns>
         private static bool IsLogLevelEnabled(LogLevel logLevel)
         {
-            return !ReferenceEquals(_logLevel, LogLevel.Off) && logLevel >= _logLevel;
+            return !ReferenceEquals(_logLevel, LogLevel.Off) && _logLevel.CompareTo(logLevel) <= 0;
         }
 
         /// <summary>
@@ -425,7 +437,7 @@ namespace NLog.Common
         private static void WriteToTextWriter(string message)
         {
             var writer = LogWriter;
-            if (writer == null)
+            if (writer is null)
             {
                 return;
             }
@@ -507,18 +519,23 @@ namespace NLog.Common
 #if !NETSTANDARD1_3 && !NETSTANDARD1_5
                 var fileVersionInfo = !string.IsNullOrEmpty(assembly.Location) ?
                     System.Diagnostics.FileVersionInfo.GetVersionInfo(assembly.Location) : null;
+                var globalAssemblyCache = false;
+#if !NETSTANDARD
+                if (assembly.GlobalAssemblyCache)
+                    globalAssemblyCache = true;
+#endif
                 Info("{0}. File version: {1}. Product version: {2}. GlobalAssemblyCache: {3}",
                     assembly.FullName,
                     fileVersionInfo?.FileVersion,
                     fileVersionInfo?.ProductVersion,
-                    assembly.GlobalAssemblyCache);
+                    globalAssemblyCache);
 #else
                 Info(assembly.FullName);
 #endif
             }
             catch (Exception ex)
             {
-                Error(ex, "Error logging version of assembly {0}.", assembly.FullName);
+                Error(ex, "Error logging version of assembly {0}.", assembly?.FullName);
             }
         }
 
@@ -576,7 +593,7 @@ namespace NLog.Common
         private static LogLevel GetSetting(string configName, string envName, LogLevel defaultValue)
         {
             string value = GetSettingString(configName, envName);
-            if (value == null)
+            if (value is null)
             {
                 return defaultValue;
             }
@@ -599,7 +616,7 @@ namespace NLog.Common
         private static T GetSetting<T>(string configName, string envName, T defaultValue)
         {
             string value = GetSettingString(configName, envName);
-            if (value == null)
+            if (value is null)
             {
                 return defaultValue;
             }
@@ -643,6 +660,45 @@ namespace NLog.Common
                     throw;
                 }
             }
+        }
+
+        private static string ExpandFilePathVariables(string internalLogFile)
+        {
+            try
+            {
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${currentdir}", out string currentDirToken))
+                    internalLogFile = internalLogFile.Replace(currentDirToken, System.IO.Directory.GetCurrentDirectory() + System.IO.Path.DirectorySeparatorChar.ToString());
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${basedir}", out string baseDirToken))
+                    internalLogFile = internalLogFile.Replace(baseDirToken, LogManager.LogFactory.CurrentAppEnvironment.AppDomainBaseDirectory + System.IO.Path.DirectorySeparatorChar.ToString());
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${tempdir}", out string tempDirToken))
+                    internalLogFile = internalLogFile.Replace(tempDirToken, LogManager.LogFactory.CurrentAppEnvironment.UserTempFilePath + System.IO.Path.DirectorySeparatorChar.ToString());
+#if !NETSTANDARD1_3
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${processdir}", out string processDirToken))
+                    internalLogFile = internalLogFile.Replace(processDirToken, System.IO.Path.GetDirectoryName(LogManager.LogFactory.CurrentAppEnvironment.CurrentProcessFilePath) + System.IO.Path.DirectorySeparatorChar.ToString());
+#endif
+#if !NETSTANDARD1_3 && !NETSTANDARD1_5
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${commonApplicationDataDir}", out string commonAppDataDirToken))
+                    internalLogFile = internalLogFile.Replace(commonAppDataDirToken, NLog.LayoutRenderers.SpecialFolderLayoutRenderer.GetFolderPath(Environment.SpecialFolder.CommonApplicationData) + System.IO.Path.DirectorySeparatorChar.ToString());
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${userApplicationDataDir}", out string appDataDirToken))
+                    internalLogFile = internalLogFile.Replace(appDataDirToken, NLog.LayoutRenderers.SpecialFolderLayoutRenderer.GetFolderPath(Environment.SpecialFolder.ApplicationData) + System.IO.Path.DirectorySeparatorChar.ToString());
+                if (ContainsSubStringIgnoreCase(internalLogFile, "${userLocalApplicationDataDir}", out string localapplicationdatadir))
+                    internalLogFile = internalLogFile.Replace(localapplicationdatadir, NLog.LayoutRenderers.SpecialFolderLayoutRenderer.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + System.IO.Path.DirectorySeparatorChar.ToString());
+#endif
+                if (internalLogFile.IndexOf('%') >= 0)
+                    internalLogFile = Environment.ExpandEnvironmentVariables(internalLogFile);
+                return internalLogFile;
+            }
+            catch
+            {
+                return internalLogFile;
+            }
+        }
+
+        private static bool ContainsSubStringIgnoreCase(string haystack, string needle, out string result)
+        {
+            int needlePos = haystack.IndexOf(needle, StringComparison.OrdinalIgnoreCase);
+            result = needlePos >= 0 ? haystack.Substring(needlePos, needle.Length) : null;
+            return result != null;
         }
     }
 }

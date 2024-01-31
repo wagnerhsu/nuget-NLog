@@ -34,7 +34,7 @@
 namespace NLog.LayoutRenderers
 {
     using System;
-    using System.ComponentModel;
+    using System.Globalization;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -44,40 +44,42 @@ namespace NLog.LayoutRenderers
     /// </summary>
     [LayoutRenderer("time")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class TimeLayoutRenderer : LayoutRenderer, IRawValue
     {
         /// <summary>
         /// Gets or sets a value indicating whether to output UTC time instead of local time.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(false)]
-        public bool UniversalTime { get; set; }
+        /// <docgen category='Layout Options' order='50' />
+        public bool UniversalTime { get => _universalTime ?? false; set => _universalTime = value; }
+        private bool? _universalTime;
 
         /// <summary>
         /// Gets or sets a value indicating whether to output in culture invariant format
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(false)]
-        public bool Invariant { get; set; }
+        /// <docgen category='Layout Options' order='100' />
+        public bool Invariant { get => ReferenceEquals(Culture, CultureInfo.InvariantCulture); set => Culture = value ? CultureInfo.InvariantCulture : CultureInfo.CurrentCulture; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets or sets the culture used for rendering. 
+        /// </summary>
+        /// <docgen category='Layout Options' order='100' />
+        [RequiredParameter]
+        public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
+
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             var dt = GetValue(logEvent);
+            var culture = GetCulture(logEvent, Culture);
 
             string timeSeparator = ":";
             string ticksSeparator = ".";
-            if (!Invariant)
+            if (!ReferenceEquals(culture, CultureInfo.InvariantCulture))
             {
-                var culture = GetCulture(logEvent);
-                if (culture != null)
-                {
 #if !NETSTANDARD1_3 && !NETSTANDARD1_5
-                    timeSeparator = culture.DateTimeFormat.TimeSeparator;
+                timeSeparator = culture.DateTimeFormat.TimeSeparator;
 #endif
-                    ticksSeparator = culture.NumberFormat.NumberDecimalSeparator;
-                }
+                ticksSeparator = culture.NumberFormat.NumberDecimalSeparator;
             }
 
             builder.Append2DigitsZeroPadded(dt.Hour);
@@ -89,7 +91,6 @@ namespace NLog.LayoutRenderers
             builder.Append4DigitsZeroPadded((int)(dt.Ticks % 10000000) / 1000);
         }
 
-        /// <inheritdoc />
         bool IRawValue.TryGetRawValue(LogEventInfo logEvent, out object value)
         {
             value = GetValue(logEvent);
@@ -98,13 +99,15 @@ namespace NLog.LayoutRenderers
 
         private DateTime GetValue(LogEventInfo logEvent)
         {
-            DateTime dt = logEvent.TimeStamp;
-            if (UniversalTime)
+            DateTime timestamp = logEvent.TimeStamp;
+            if (_universalTime.HasValue)
             {
-                dt = dt.ToUniversalTime();
+                if (_universalTime.Value)
+                    timestamp = timestamp.ToUniversalTime();
+                else
+                    timestamp = timestamp.ToLocalTime();
             }
-
-            return dt;
+            return timestamp;
         }
     }
 }

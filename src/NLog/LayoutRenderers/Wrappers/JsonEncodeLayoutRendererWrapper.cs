@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
 
@@ -45,31 +44,19 @@ namespace NLog.LayoutRenderers.Wrappers
     [AmbientProperty("JsonEncode")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class JsonEncodeLayoutRendererWrapper : WrapperLayoutRendererBase
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="JsonEncodeLayoutRendererWrapper" /> class.
+        /// Gets or sets whether output should be encoded with Json-string escaping.
         /// </summary>
-        public JsonEncodeLayoutRendererWrapper()
-        {
-            JsonEncode = true;
-            EscapeUnicode = true;
-        }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to apply JSON encoding.
-        /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
-        [DefaultValue(true)]
-        public bool JsonEncode { get; set; }
+        /// <docgen category="Layout Options" order="10"/>
+        public bool JsonEncode { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether to escape non-ascii characters
         /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
-        [DefaultValue(true)]
-        public bool EscapeUnicode { get; set; }
+        /// <docgen category="Layout Options" order="10"/>
+        public bool EscapeUnicode { get; set; } = true;
 
         /// <summary>
         /// Should forward slashes be escaped? If true, / will be converted to \/ 
@@ -77,24 +64,16 @@ namespace NLog.LayoutRenderers.Wrappers
         /// <remarks>
         /// If not set explicitly then the value of the parent will be used as default.
         /// </remarks>
-        /// <docgen category="Transformation Options" order="10"/>
-        [DefaultValue(false)]
-        public bool EscapeForwardSlash
-        {
-            get => EscapeForwardSlashInternal ?? false;
-            set => EscapeForwardSlashInternal = value;
-        }
-        internal bool? EscapeForwardSlashInternal;
+        /// <docgen category="Layout Options" order="10"/>
+        public bool EscapeForwardSlash { get; set; }
 
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            Inner.RenderAppendBuilder(logEvent, builder);
-            if (JsonEncode && builder.Length > orgLength && RequiresJsonEncode(builder, orgLength))
+            Inner.Render(logEvent, builder);
+            if (JsonEncode && builder.Length > orgLength)
             {
-                var str = builder.ToString(orgLength, builder.Length - orgLength);
-                builder.Length = orgLength;
-                Targets.DefaultJsonSerializer.AppendStringEscape(builder, str, EscapeUnicode, EscapeForwardSlash);
+                Targets.DefaultJsonSerializer.PerformJsonEscapeWhenNeeded(builder, orgLength, EscapeUnicode, EscapeForwardSlash);
             }
         }
 
@@ -102,18 +81,6 @@ namespace NLog.LayoutRenderers.Wrappers
         protected override string Transform(string text)
         {
             throw new NotSupportedException();
-        }
-
-        private bool RequiresJsonEncode(StringBuilder target, int startPos = 0)
-        {
-            for (int i = startPos; i < target.Length; ++i)
-            {
-                if (Targets.DefaultJsonSerializer.RequiresJsonEscape(target[i], EscapeUnicode, EscapeForwardSlash))
-                {
-                    return true;
-                }
-            }
-            return false;
         }
     }
 }

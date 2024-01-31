@@ -80,19 +80,22 @@ namespace NLog.UnitTests.Targets
             switch (modes[0])
             {
                 case "async":
-                    SimpleConfigurator.ConfigureForTargetLogging(new AsyncTargetWrapper(ft, 100, AsyncTargetWrapperOverflowAction.Grow) { Name = name, TimeToSleepBetweenBatches = 10 }, LogLevel.Debug);
+                    var asyncTarget = new AsyncTargetWrapper(ft, 100, AsyncTargetWrapperOverflowAction.Grow) { Name = name, TimeToSleepBetweenBatches = 10 };
+                    LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(asyncTarget));
                     break;
 
                 case "buffered":
-                    SimpleConfigurator.ConfigureForTargetLogging(new BufferingTargetWrapper(ft, 100) { Name = name }, LogLevel.Debug);
+                    var bufferTarget = new BufferingTargetWrapper(ft, 100) { Name = name };
+                    LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(bufferTarget));
                     break;
 
                 case "buffered_timed_flush":
-                    SimpleConfigurator.ConfigureForTargetLogging(new BufferingTargetWrapper(ft, 100, 10) { Name = name }, LogLevel.Debug);
+                    var bufferFlushTarget = new BufferingTargetWrapper(ft, 100, 10) { Name = name };
+                    LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(bufferFlushTarget));
                     break;
 
                 default:
-                    SimpleConfigurator.ConfigureForTargetLogging(ft, LogLevel.Debug);
+                    LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(ft));
                     break;
             }
         }
@@ -273,7 +276,7 @@ namespace NLog.UnitTests.Targets
                 }
                 catch (Exception ex)
                 {
-                    var reoderProblem = equalsWhenReorderd == null ? "Dunno" : (equalsWhenReorderd == true ? "Yes" : "No");
+                    var reoderProblem = equalsWhenReorderd is null ? "Dunno" : (equalsWhenReorderd == true ? "Yes" : "No");
                     throw new InvalidOperationException($"Error when comparing path {tempPath} for process {currentProcess}. Is this a recording problem? {reoderProblem}", ex);
                 }
 

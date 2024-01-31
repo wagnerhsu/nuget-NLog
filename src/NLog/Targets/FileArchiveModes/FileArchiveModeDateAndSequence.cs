@@ -44,8 +44,8 @@ namespace NLog.Targets.FileArchiveModes
     /// with the prior period (Year, Month, Day) datetime. The most recent archive has the highest number (in
     /// combination with the date).
     /// 
-    /// When the number of archive files exceed <see cref="P:MaxArchiveFiles"/> the obsolete archives are deleted.
-    /// When the age of archive files exceed <see cref="P:MaxArchiveDays"/> the obsolete archives are deleted.
+    /// When the number of archive files exceed <see cref="FileTarget.MaxArchiveFiles"/> the obsolete archives are deleted.
+    /// When the age of archive files exceed <see cref="FileTarget.MaxArchiveDays"/> the obsolete archives are deleted.
     /// </summary>
     internal sealed class FileArchiveModeDateAndSequence : FileArchiveModeBase
     {
@@ -139,7 +139,7 @@ namespace NLog.Targets.FileArchiveModes
             {
                 return false;
             }
-            InternalLogger.Trace("FileTarget: parsed date '{0}' from file-template '{1}'", datePart, fileTemplate?.Template);
+            InternalLogger.Trace("FileTarget: parsed date '{0}' from file-template '{1}'", datePart, fileTemplate.Template);
             return true;
         }
     }

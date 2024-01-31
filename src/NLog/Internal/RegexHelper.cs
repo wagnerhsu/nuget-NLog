@@ -31,11 +31,11 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Text.RegularExpressions;
-
 namespace NLog.Internal
 {
+    using System;
+    using System.Text.RegularExpressions;
+
     internal class RegexHelper
     {
         private Regex _regex;
@@ -70,13 +70,11 @@ namespace NLog.Internal
         /// <summary>
         /// Compile the <see cref="Regex"/>? This can improve the performance, but at the costs of more memory usage. If <c>false</c>, the Regex Cache is used.
         /// </summary>
-        /// <docgen category='Rule Matching Options' order='10' />
         public bool CompileRegex { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to match whole words only.
         /// </summary>
-        /// <docgen category='Rule Matching Options' order='10' />
         public bool WholeWords
         {
             get => _wholeWords;
@@ -93,7 +91,6 @@ namespace NLog.Internal
         /// <summary>
         /// Gets or sets a value indicating whether to ignore case when comparing texts.
         /// </summary>
-        /// <docgen category='Rule Matching Options' order='10' />
         public bool IgnoreCase
         {
             get => _ignoreCase;
@@ -124,7 +121,7 @@ namespace NLog.Internal
 
         private void ResetRegex()
         {
-            _simpleSearchText = !WholeWords && !IgnoreCase && !string.IsNullOrEmpty(SearchText);
+            _simpleSearchText = !WholeWords && !CompileRegex && !string.IsNullOrEmpty(SearchText);
             if (!string.IsNullOrEmpty(SearchText))
             {
                 _regexPattern = Regex.Escape(SearchText);
@@ -156,7 +153,7 @@ namespace NLog.Internal
         {
             if (_simpleSearchText)
             {
-                return input.Replace(SearchText, replacement);
+                return IgnoreCase ? StringHelpers.Replace(input, SearchText, replacement, StringComparison.CurrentCultureIgnoreCase) : input.Replace(SearchText, replacement);
             }
             else if (CompileRegex)
             {

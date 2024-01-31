@@ -47,7 +47,6 @@ namespace NLog.LayoutRenderers.Wrappers
     [LayoutRenderer("rot13")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class Rot13LayoutRendererWrapper : WrapperLayoutRendererBase
     {
         /// <summary>
@@ -55,7 +54,7 @@ namespace NLog.LayoutRenderers.Wrappers
         /// </summary>
         /// <value>The layout to be wrapped.</value>
         /// <remarks>This variable is for backwards compatibility</remarks>
-        /// <docgen category='Transformation Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public Layout Text
         {
             get => Inner;
@@ -78,7 +77,7 @@ namespace NLog.LayoutRenderers.Wrappers
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            Inner.RenderAppendBuilder(logEvent, builder);
+            Inner.Render(logEvent, builder);
             if (builder.Length > orgLength)
             {
                 DecodeRot13(builder, orgLength);
@@ -96,7 +95,7 @@ namespace NLog.LayoutRenderers.Wrappers
         /// </summary>
         internal static void DecodeRot13(StringBuilder encodedValue, int startPos)
         {
-            if (encodedValue == null)
+            if (encodedValue is null)
             {
                 return;
             }

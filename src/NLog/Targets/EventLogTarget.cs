@@ -36,7 +36,6 @@
 namespace NLog.Targets
 {
     using System;
-    using System.ComponentModel;
     using System.Diagnostics;
     using NLog.Common;
     using NLog.Config;
@@ -45,17 +44,16 @@ namespace NLog.Targets
     /// <summary>
     /// Writes log message to the Event Log.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/nlog/nlog/wiki/EventLog-target">See NLog Wiki</a>
+    /// </remarks>
     /// <seealso href="https://github.com/nlog/nlog/wiki/EventLog-target">Documentation on NLog Wiki</seealso>
     /// <example>
     /// <p>
-    /// To set up the target in the <a href="config.html">configuration file</a>, 
+    /// To set up the target in the <a href="https://github.com/NLog/NLog/wiki/Configuration-file">configuration file</a>, 
     /// use the following syntax:
     /// </p>
     /// <code lang="XML" source="examples/targets/Configuration File/EventLog/NLog.config" />
-    /// <p>
-    /// This assumes just one target and a single rule. More configuration
-    /// options are described <a href="config.html">here</a>.
-    /// </p>
     /// <p>
     /// To set up the log target programmatically use code like this:
     /// </p>
@@ -67,7 +65,8 @@ namespace NLog.Targets
         /// <summary>
         /// Max size in characters (limitation of the EventLog API).
         /// </summary>
-        internal const int EventLogMaxMessageLength = 16384;
+        /// <seealso href="https://docs.microsoft.com/en-gb/windows/win32/api/winbase/nf-winbase-reporteventw"/>
+        internal const int EventLogMaxMessageLength = 30000;
 
         private readonly IEventLogWrapper _eventLogWrapper;
 
@@ -96,23 +95,19 @@ namespace NLog.Targets
         {
             _eventLogWrapper = eventLogWrapper ?? new EventLogWrapper();
             Source = sourceName ?? AppDomain.CurrentDomain.FriendlyName;
-            Log = "Application";
-            MachineName = ".";
-            MaxMessageLength = EventLogMaxMessageLength;
         }
 
         /// <summary>
         /// Gets or sets the name of the machine on which Event Log service is running.
         /// </summary>
         /// <docgen category='Event Log Options' order='10' />
-        [DefaultValue(".")]
-        public string MachineName { get; set; }
+        public string MachineName { get; set; } = ".";
 
         /// <summary>
         /// Gets or sets the layout that renders event ID.
         /// </summary>
         /// <docgen category='Event Log Options' order='10' />
-        public Layout<int> EventId { get; set; }
+        public Layout<int> EventId { get; set; } = "${event-properties:item=EventId}";
 
         /// <summary>
         /// Gets or sets the layout that renders event Category.
@@ -140,15 +135,13 @@ namespace NLog.Targets
         /// Gets or sets the name of the Event Log to write to. This can be System, Application or any user-defined name.
         /// </summary>
         /// <docgen category='Event Log Options' order='10' />
-        [DefaultValue("Application")]
-        public string Log { get; set; }
+        public string Log { get; set; } = "Application";
 
         /// <summary>
         /// Gets or sets the message length limit to write to the Event Log.
         /// </summary>
         /// <remarks><value>MaxMessageLength</value> cannot be zero or negative</remarks>
         /// <docgen category='Event Log Options' order='10' />
-        [DefaultValue(EventLogMaxMessageLength)]
         public int MaxMessageLength
         {
             get => _maxMessageLength;
@@ -160,7 +153,7 @@ namespace NLog.Targets
                 _maxMessageLength = value;
             }
         }
-        private int _maxMessageLength;
+        private int _maxMessageLength = EventLogMaxMessageLength;
 
         /// <summary>
         /// Gets or sets the maximum Event log size in kilobytes.
@@ -170,7 +163,6 @@ namespace NLog.Targets
         /// If <c>null</c>, the value will not be specified while creating the Event log.
         /// </remarks>
         /// <docgen category='Event Log Options' order='10' />
-        [DefaultValue(null)]
         public long? MaxKilobytes
         {
             get => _maxKilobytes;
@@ -187,9 +179,8 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the action to take if the message is larger than the <see cref="MaxMessageLength"/> option.
         /// </summary>
-        /// <docgen category='Event Log Overflow Action' order='10' />
-        [DefaultValue(EventLogTargetOverflowAction.Truncate)]
-        public EventLogTargetOverflowAction OnOverflow { get; set; }
+        /// <docgen category='Event Log Options' order='100' />
+        public EventLogTargetOverflowAction OnOverflow { get; set; } = EventLogTargetOverflowAction.Truncate;
 
         /// <summary>
         /// Performs installation which requires administrative permissions.
@@ -238,9 +229,7 @@ namespace NLog.Targets
             return null; //unclear!
         }
 
-        /// <summary>
-        /// Initializes the target.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeTarget()
         {
             base.InitializeTarget();
@@ -248,10 +237,7 @@ namespace NLog.Targets
             CreateEventSourceIfNeeded(GetFixedSource(), false);
         }
 
-        /// <summary>
-        /// Writes the specified logging event to the event log.
-        /// </summary>
-        /// <param name="logEvent">The logging event.</param>
+        /// <inheritdoc/>
         protected override void Write(LogEventInfo logEvent)
         {
             string message = RenderLogEvent(Layout, logEvent);
@@ -511,36 +497,22 @@ namespace NLog.Targets
         {
             private EventLog _windowsEventLog;
 
-            #region Instance methods
-
-            /// <inheritdoc />
             public string Source { get; private set; }
 
-            /// <inheritdoc />
             public string Log { get; private set; }
 
-            /// <inheritdoc />
             public string MachineName { get; private set; }
 
-            /// <inheritdoc />
             public long MaximumKilobytes
             {
                 get => _windowsEventLog.MaximumKilobytes;
                 set => _windowsEventLog.MaximumKilobytes = value;
             }
-
-            /// <inheritdoc />
             public bool IsEventLogAssociated => _windowsEventLog != null;
 
-            /// <inheritdoc />
             public void WriteEntry(string message, EventLogEntryType entryType, int eventId, short category) =>
                 _windowsEventLog.WriteEntry(message, entryType, eventId, category);
 
-            #endregion
-
-            #region "Static" methods
-
-            /// <inheritdoc />
             /// <summary>
             /// Creates a new association with an instance of Windows <see cref="EventLog"/>.
             /// </summary>
@@ -551,23 +523,18 @@ namespace NLog.Targets
                 Source = source;
                 Log = logName;
                 MachineName = machineName;
-                if (windowsEventLog != null)
-                    windowsEventLog.Dispose();
+                windowsEventLog?.Dispose();
             }
 
-            /// <inheritdoc />
             public void DeleteEventSource(string source, string machineName) =>
                 EventLog.DeleteEventSource(source, machineName);
 
-            /// <inheritdoc />
             public bool SourceExists(string source, string machineName) =>
                 EventLog.SourceExists(source, machineName);
 
-            /// <inheritdoc />
             public string LogNameFromSourceName(string source, string machineName) =>
                 EventLog.LogNameFromSourceName(source, machineName);
 
-            /// <inheritdoc />
             public void CreateEventSource(EventSourceCreationData sourceData) =>
                 EventLog.CreateEventSource(sourceData);
 
@@ -576,8 +543,6 @@ namespace NLog.Targets
                 _windowsEventLog?.Dispose();
                 _windowsEventLog = null;
             }
-
-            #endregion
         }
     }
 }

@@ -38,6 +38,7 @@ namespace NLog.Internal.Fakeables
     using System.Diagnostics;
     using System.IO;
     using System.Xml;
+    using NLog.Common;
 
     internal class AppEnvironmentWrapper : IAppEnvironment
     {
@@ -50,31 +51,31 @@ namespace NLog.Internal.Fakeables
         private string _currentProcessBaseName;
         private int? _currentProcessId;
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string EntryAssemblyLocation => _entryAssemblyLocation ?? (_entryAssemblyLocation = LookupEntryAssemblyLocation());
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string EntryAssemblyFileName => _entryAssemblyFileName ?? (_entryAssemblyFileName = LookupEntryAssemblyFileName());
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string CurrentProcessFilePath => _currentProcessFilePath ?? (_currentProcessFilePath = LookupCurrentProcessFilePathWithFallback());
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string CurrentProcessBaseName => _currentProcessBaseName ?? (_currentProcessBaseName = LookupCurrentProcessNameWithFallback());
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public int CurrentProcessId => _currentProcessId ?? (_currentProcessId = LookupCurrentProcessIdWithFallback()).Value;
 #endif
 #pragma warning disable CS0618 // Type or member is obsolete
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string AppDomainBaseDirectory => AppDomain.BaseDirectory;
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string AppDomainConfigurationFile => AppDomain.ConfigurationFile;
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string AppDomainFriendlyName => AppDomain.FriendlyName;
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public int AppDomainId => AppDomain.Id;
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public IEnumerable<string> AppDomainPrivateBinPath => AppDomain.PrivateBinPath;
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public IEnumerable<System.Reflection.Assembly> GetAppDomainRuntimeAssemblies() => AppDomain.GetAssemblies();
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public event EventHandler<EventArgs> ProcessExit
         {
             add
@@ -90,7 +91,7 @@ namespace NLog.Internal.Fakeables
         }
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public string UserTempFilePath => Path.GetTempPath();
         
         [Obsolete("For unit testing only. Marked obsolete on NLog 5.0")]
@@ -103,13 +104,13 @@ namespace NLog.Internal.Fakeables
         }
 #pragma warning restore CS0618 // Type or member is obsolete
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public bool FileExists(string path)
         {
             return File.Exists(path);
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public XmlReader LoadXmlFile(string path)
         {
             return XmlReader.Create(path);
@@ -118,20 +119,42 @@ namespace NLog.Internal.Fakeables
 #if !NETSTANDARD1_3
         private static string LookupEntryAssemblyLocation()
         {
-            return AssemblyHelpers.GetAssemblyFileLocation(System.Reflection.Assembly.GetEntryAssembly());
+            var entryAssembly = System.Reflection.Assembly.GetEntryAssembly();
+            var entryLocation = entryAssembly?.Location;
+            if (!string.IsNullOrEmpty(entryLocation))
+            {
+                return Path.GetDirectoryName(entryLocation);
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            return AssemblyHelpers.GetAssemblyFileLocation(entryAssembly);
+#pragma warning restore CS0618 // Type or member is obsolete
         }
 
         private static string LookupEntryAssemblyFileName()
         {
             try
             {
-                return Path.GetFileName(System.Reflection.Assembly.GetEntryAssembly()?.Location ?? string.Empty);
+                var entryAssembly = System.Reflection.Assembly.GetEntryAssembly();
+                var entryLocation = entryAssembly?.Location;
+                if (!string.IsNullOrEmpty(entryLocation))
+                {
+                    return Path.GetFileName(entryLocation);
+                }
+                
+                // Fallback to the Assembly-Name when unable to extract FileName from Location
+                var assemblyName = entryAssembly?.GetName()?.Name;
+                if (!string.IsNullOrEmpty(assemblyName))
+                    return assemblyName + ".dll";
+                else
+                    return string.Empty;
             }
             catch (Exception ex)
             {
                 if (ex.MustBeRethrownImmediately())
                     throw;
-
+                
+                InternalLogger.Debug("LookupEntryAssemblyFileName Failed - {0}", ex.Message);
                 return string.Empty;
             }
         }
@@ -148,6 +171,7 @@ namespace NLog.Internal.Fakeables
                 if (ex.MustBeRethrownImmediately())
                     throw;
 
+                InternalLogger.Debug("LookupCurrentProcessFilePath Failed - {0}", ex.Message);
                 return LookupCurrentProcessFilePathNative();
             }
         }
@@ -157,7 +181,8 @@ namespace NLog.Internal.Fakeables
             try
             {
                 var currentProcess = Process.GetCurrentProcess();
-                return currentProcess?.MainModule.FileName;
+                var currentProcessPath = currentProcess?.MainModule?.FileName;
+                return !string.IsNullOrEmpty(currentProcessPath) ? currentProcessPath : null;
             }
             catch (Exception ex)
             {
@@ -165,6 +190,7 @@ namespace NLog.Internal.Fakeables
                     throw;
 
                 // May throw a SecurityException or Access Denied when running from an IIS app. pool process
+                InternalLogger.Debug("LookupCurrentProcessFilePath Managed Failed - {0}", ex.Message);
                 return null;
             }
         }
@@ -182,6 +208,7 @@ namespace NLog.Internal.Fakeables
                     throw;
 
                 // May throw a SecurityException if running from an IIS app. pool process (Cannot compile method)
+                InternalLogger.Debug("LookupCurrentProcessId Failed - {0}", ex.Message);
                 return LookupCurrentProcessIdNative();
             }
         }
@@ -199,6 +226,7 @@ namespace NLog.Internal.Fakeables
                     throw;
 
                 // May throw a SecurityException or Access Denied when running from an IIS app. pool process
+                InternalLogger.Debug("LookupCurrentProcessId Managed Failed - {0}", ex.Message);
                 return null;
             }
         }
@@ -216,6 +244,7 @@ namespace NLog.Internal.Fakeables
                     throw;
 
                 // May throw a SecurityException if running from an IIS app. pool process (Cannot compile method)
+                InternalLogger.Debug("LookupCurrentProcessName Failed - {0}", ex.Message);
                 return LookupCurrentProcessNameNative();
             }
         }
@@ -233,6 +262,8 @@ namespace NLog.Internal.Fakeables
             {
                 if (ex.MustBeRethrownImmediately())
                     throw;
+
+                InternalLogger.Debug("LookupCurrentProcessName Managed Failed - {0}", ex.Message);
             }
 
             return null;
@@ -246,6 +277,14 @@ namespace NLog.Internal.Fakeables
                 var currentProcessName = Path.GetFileNameWithoutExtension(currentProcessFilePath);
                 if (!string.IsNullOrEmpty(currentProcessName))
                     return currentProcessName;
+            }
+
+            var entryAssemblyFileName = LookupEntryAssemblyFileName();
+            if (!string.IsNullOrEmpty(entryAssemblyFileName))
+            {
+                entryAssemblyFileName = Path.GetFileNameWithoutExtension(entryAssemblyFileName);
+                if (!string.IsNullOrEmpty(entryAssemblyFileName))
+                    return entryAssemblyFileName;
             }
 
             return UnknownProcessName;
@@ -267,6 +306,7 @@ namespace NLog.Internal.Fakeables
                 if (ex.MustBeRethrownImmediately())
                     throw;
 
+                InternalLogger.Debug("LookupCurrentProcessFilePath Native Failed - {0}", ex.Message);
                 return string.Empty;
             }
         }
@@ -289,6 +329,7 @@ namespace NLog.Internal.Fakeables
                 if (ex.MustBeRethrownImmediately())
                     throw;
 
+                InternalLogger.Debug("LookupCurrentProcessFilePath Win32 Failed - {0}", ex.Message);
                 return string.Empty;
             }
         }
@@ -307,6 +348,7 @@ namespace NLog.Internal.Fakeables
                 if (ex.MustBeRethrownImmediately())
                     throw;
 
+                InternalLogger.Debug("LookupCurrentProcessId Native Failed - {0}", ex.Message);
                 return 0;
             }
         }
@@ -323,6 +365,7 @@ namespace NLog.Internal.Fakeables
                 if (ex.MustBeRethrownImmediately())
                     throw;
 
+                InternalLogger.Debug("LookupCurrentProcessId Win32 Failed - {0}", ex.Message);
                 return 0;
             }
         }

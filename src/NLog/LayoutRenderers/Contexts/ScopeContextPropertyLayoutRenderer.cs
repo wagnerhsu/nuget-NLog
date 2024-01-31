@@ -33,6 +33,7 @@
 
 namespace NLog.LayoutRenderers
 {
+    using System.Globalization;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -41,13 +42,12 @@ namespace NLog.LayoutRenderers
     /// Renders specified property-item from <see cref="ScopeContext"/>
     /// </summary>
     [LayoutRenderer("scopeproperty")]
-    [ThreadSafe]
     public sealed class ScopeContextPropertyLayoutRenderer : LayoutRenderer, IStringValueRenderer
     {
         /// <summary>
         /// Gets or sets the name of the item.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [RequiredParameter]
         [DefaultParameter]
         public string Item { get; set; }
@@ -55,18 +55,23 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Format string for conversion from object to string.
         /// </summary>
-        /// <docgen category='Rendering Options' order='50' />
+        /// <docgen category='Layout Options' order='50' />
         public string Format { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets or sets the culture used for rendering. 
+        /// </summary>
+        /// <docgen category='Layout Options' order='100' />
+        public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
+
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             var value = GetValue();
-            var formatProvider = GetFormatProvider(logEvent, null);
+            var formatProvider = GetFormatProvider(logEvent, Culture);
             builder.AppendFormattedValue(value, Format, formatProvider, ValueFormatter);
         }
         
-        /// <inheritdoc/>
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent) => GetStringValue(logEvent);
 
         private string GetStringValue(LogEventInfo logEvent)
@@ -74,7 +79,7 @@ namespace NLog.LayoutRenderers
             if (Format != MessageTemplates.ValueFormatter.FormatAsJson)
             {
                 object value = GetValue();
-                string stringValue = FormatHelper.TryFormatToString(value, Format, GetFormatProvider(logEvent, null));
+                string stringValue = FormatHelper.TryFormatToString(value, Format, GetFormatProvider(logEvent, Culture));
                 return stringValue;
             }
             return null;

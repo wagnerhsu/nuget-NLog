@@ -73,6 +73,24 @@ namespace NLog.UnitTests.LayoutRenderers
         {
             AssertLayoutRendererOutput($"${{specialfolder:folder={sysDirString}:dir=aaa:file=bbb.txt}}", Path.Combine(sysDir, "aaa", "bbb.txt"));
         }
+
+        [Fact]
+        public void SpecialFolderCommonApplicationDataTest()
+        {
+            AssertLayoutRendererOutput("${CommonApplicationDataDir}", Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData));
+        }
+
+        [Fact]
+        public void SpecialFolderUserApplicationDataTest()
+        {
+            AssertLayoutRendererOutput("${UserApplicationDataDir}", Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
+        }
+
+        [Fact]
+        public void SpecialFolderUserLocalApplicationDataTest()
+        {
+            AssertLayoutRendererOutput("${UserLocalApplicationDataDir}", Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData));
+        }
     }
 #endif
 }

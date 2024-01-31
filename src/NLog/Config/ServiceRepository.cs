@@ -43,7 +43,7 @@ namespace NLog.Config
         /// <summary>
         /// Registers instance of singleton object for use in NLog
         /// </summary>
-        /// <param name="type">Type of service</param>
+        /// <param name="type">Type of service/interface to register</param>
         /// <param name="instance">Instance of service</param>
         public abstract void RegisterService(Type type, object instance);
 
@@ -53,12 +53,7 @@ namespace NLog.Config
         /// <remarks>Avoid calling this while handling a LogEvent, since random deadlocks can occur.</remarks>
         public abstract object GetService(Type serviceType);
 
-        /// <summary>
-        /// Mapping of symbol name to actual <see cref="System.Type"/>
-        /// </summary>
-        public abstract ConfigurationItemFactory ConfigurationItemFactory { get; internal set; }
-
-        internal abstract ConfigurationItemCreator ConfigurationItemCreator { get; set; }
+        internal abstract bool TryGetService<T>(out T serviceInstance) where T : class;
 
         internal ServiceRepository()
         {

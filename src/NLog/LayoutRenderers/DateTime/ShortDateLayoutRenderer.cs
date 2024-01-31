@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers
 {
     using System;
-    using System.ComponentModel;
     using System.Globalization;
     using System.Text;
     using NLog.Config;
@@ -45,23 +44,18 @@ namespace NLog.LayoutRenderers
     /// </summary>
     [LayoutRenderer("shortdate")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class ShortDateLayoutRenderer : LayoutRenderer, IRawValue, IStringValueRenderer
     {
         /// <summary>
         /// Gets or sets a value indicating whether to output UTC time instead of local time.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(false)]
-        public bool UniversalTime { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public bool UniversalTime { get => _universalTime ?? false; set => _universalTime = value; }
+        private bool? _universalTime;
 
         private CachedDateFormatted _cachedDateFormatted = new CachedDateFormatted(DateTime.MaxValue, string.Empty);
 
-        /// <summary>
-        /// Renders the current short date string (yyyy-MM-dd) and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             string formattedDate = GetStringValue(logEvent);
@@ -84,10 +78,13 @@ namespace NLog.LayoutRenderers
 
         private DateTime GetValue(LogEventInfo logEvent)
         {
-            var timestamp = logEvent.TimeStamp;
-            if (UniversalTime)
+            DateTime timestamp = logEvent.TimeStamp;
+            if (_universalTime.HasValue)
             {
-                timestamp = timestamp.ToUniversalTime();
+                if (_universalTime.Value)
+                    timestamp = timestamp.ToUniversalTime();
+                else
+                    timestamp = timestamp.ToLocalTime();
             }
             return timestamp;
         }
@@ -100,7 +97,7 @@ namespace NLog.LayoutRenderers
 
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent) => GetStringValue(logEvent);
 
-        private class CachedDateFormatted
+        private sealed class CachedDateFormatted
         {
             public CachedDateFormatted(DateTime date, string formattedDate)
             {

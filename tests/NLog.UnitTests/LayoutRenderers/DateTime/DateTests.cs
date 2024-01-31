@@ -31,8 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using NLog.Config;
-
 namespace NLog.UnitTests.LayoutRenderers
 {
     using System;
@@ -45,19 +43,20 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void DefaultDateTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${date}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            DateTime dt = DateTime.ParseExact(GetDebugLastMessage("debug"), "yyyy/MM/dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
-            DateTime now = DateTime.Now;
+            var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+            logFactory.GetLogger("d").Debug(ei);
+            DateTime dt = DateTime.ParseExact(GetDebugLastMessage("debug", logFactory), "yyyy/MM/dd HH:mm:ss.fff", CultureInfo.InvariantCulture);
+            DateTime now = ei.TimeStamp;
 
-            Assert.True(Math.Abs((dt - now).TotalSeconds) < 5);
+            Assert.True(Math.Abs((dt - now).TotalSeconds) < 1);
         }
 
         [Fact]
@@ -83,60 +82,102 @@ namespace NLog.UnitTests.LayoutRenderers
                 //-01:00, etc
                 Assert.Contains($"{offset2.Hours:D2}:{offset2.Minutes:D2}", result);
             }
-
         }
 
         [Fact]
         public void UniversalTimeTest()
         {
-            var dt = new DateLayoutRenderer();
-            dt.UniversalTime = true;
-            dt.Format = "R";
+            var orgTimeSource = NLog.Time.TimeSource.Current;
 
-            var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
-            Assert.Equal(ei.TimeStamp.ToUniversalTime().ToString("R"), dt.Render(ei));
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateLocalTimeSource();
+
+                var dt = new DateLayoutRenderer();
+                dt.UniversalTime = true;
+                dt.Format = "R";
+
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToUniversalTime().ToString("R"), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
         }
 
         [Fact]
         public void LocalTimeTest()
         {
-            var dt = new DateLayoutRenderer();
-            dt.UniversalTime = false;
-            dt.Format = "R";
+            var orgTimeSource = NLog.Time.TimeSource.Current;
 
-            var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
-            Assert.Equal(ei.TimeStamp.ToString("R"), dt.Render(ei));
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateUtcTimeSource();
+
+                var dt = new DateLayoutRenderer();
+                dt.UniversalTime = false;
+                dt.Format = "R";
+
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToLocalTime().ToString("R"), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
+        }
+
+        [Fact]
+        public void DefaultTimeTest()
+        {
+            var orgTimeSource = NLog.Time.TimeSource.Current;
+
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateUtcTimeSource();
+
+                var dt = new DateLayoutRenderer();
+                dt.Format = "R";
+
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToString("R"), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
         }
 
         [Fact]
         public void DateFormatExplicitTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${date:format=yyyy-MM-dd}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            AssertDebugLastMessage("debug", DateTime.Now.ToString("yyyy-MM-dd"));
+            logFactory.GetLogger("d").Debug("zzz");
+            logFactory.AssertDebugLastMessage(DateTime.Now.ToString("yyyy-MM-dd"));
         }
 
         [Fact]
         public void DateFormatDefaultTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${date:\thh\:mm\:ss:UniversalTime=true}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
             var dateTimeUtc = DateTime.UtcNow;
-            LogManager.GetLogger("d").Log(new LogEventInfo(LogLevel.Info, null, "Hello") { TimeStamp = dateTimeUtc });
-            AssertDebugLastMessage("debug", dateTimeUtc.ToString("\thh:mm:ss", CultureInfo.InvariantCulture));
+            logFactory.GetLogger("d").Log(new LogEventInfo(LogLevel.Info, null, "Hello") { TimeStamp = dateTimeUtc });
+            logFactory.AssertDebugLastMessage(dateTimeUtc.ToString("\thh:mm:ss", CultureInfo.InvariantCulture));
         }
 
         [Fact]
@@ -144,7 +185,7 @@ namespace NLog.UnitTests.LayoutRenderers
         {
             Assert.Throws<NLogConfigurationException>(() =>
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                new LogFactory().Setup().LoadConfigurationFromXml(@"
                     <nlog throwConfigExceptions='true'>
                         <variable name='logDate' value='${date:format=hh:mm}' />
                     </nlog>");

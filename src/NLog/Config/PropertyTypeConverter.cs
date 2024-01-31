@@ -35,6 +35,7 @@ namespace NLog.Config
 {
     using System;
     using System.Collections.Generic;
+    using System.Diagnostics.CodeAnalysis;
     using System.Reflection;
     using NLog.Internal;
 
@@ -57,31 +58,38 @@ namespace NLog.Config
             {
                 { typeof(System.Text.Encoding), (stringvalue, format, formatProvider) => ConvertToEncoding(stringvalue) },
                 { typeof(System.Globalization.CultureInfo), (stringvalue, format, formatProvider) => new System.Globalization.CultureInfo(stringvalue) },
-                { typeof(Type), (stringvalue, format, formatProvider) => Type.GetType(stringvalue, true) },
+                { typeof(Type), (stringvalue, format, formatProvider) => ConvertToType(stringvalue, true) },
                 { typeof(NLog.Targets.LineEndingMode), (stringvalue, format, formatProvider) => NLog.Targets.LineEndingMode.FromString(stringvalue) },
+                { typeof(LogLevel), (stringvalue, format, formatProvider) => LogLevel.FromString(stringvalue) },
                 { typeof(Uri), (stringvalue, format, formatProvider) => new Uri(stringvalue) },
                 { typeof(DateTime), (stringvalue, format, formatProvider) => ConvertToDateTime(format, formatProvider, stringvalue) },
                 { typeof(DateTimeOffset), (stringvalue, format, formatProvider) => ConvertToDateTimeOffset(format, formatProvider, stringvalue) },
                 { typeof(TimeSpan), (stringvalue, format, formatProvider) => ConvertToTimeSpan(format, formatProvider, stringvalue) },
-                { typeof(Guid), (stringvalue, format, formatProvider) => ConvertGuid(format, stringvalue) }
+                { typeof(Guid), (stringvalue, format, formatProvider) => ConvertGuid(format, stringvalue) },
             };
+        }
+
+        [UnconditionalSuppressMessage("Trimming - Allow converting option-values from config", "IL2057")]
+        internal static Type ConvertToType(string stringvalue, bool throwOnError)
+        {
+            return Type.GetType(stringvalue, throwOnError);
         }
 
         internal static bool IsComplexType(Type type)
         {
-            return !type.IsValueType() && !typeof(IConvertible).IsAssignableFrom(type) && !StringConverterLookup.ContainsKey(type) && type.GetFirstCustomAttribute<System.ComponentModel.TypeConverterAttribute>() == null;
+            return !type.IsValueType() && !typeof(IConvertible).IsAssignableFrom(type) && !StringConverterLookup.ContainsKey(type) && type.GetFirstCustomAttribute<System.ComponentModel.TypeConverterAttribute>() is null;
         }
 
         /// <inheritdoc/>
         public object Convert(object propertyValue, Type propertyType, string format, IFormatProvider formatProvider)
         {
-            if (propertyValue == null || propertyType == null || propertyType == typeof(object))
+            if (propertyValue is null || propertyType is null || propertyType == typeof(object))
             {
                 return propertyValue;   // No type conversion required
             }
 
             var propertyValueType = propertyValue.GetType();
-            if (propertyType == propertyValueType)
+            if (propertyType.Equals(propertyValueType))
             {
                 return propertyValue;   // Same type
             }
@@ -89,7 +97,7 @@ namespace NLog.Config
             var nullableType = Nullable.GetUnderlyingType(propertyType);
             if (nullableType != null)
             {
-                if (nullableType == propertyValueType)
+                if (nullableType.Equals(propertyValueType))
                 {
                     return propertyValue;   // Same type
                 }
@@ -105,30 +113,35 @@ namespace NLog.Config
             return ChangeObjectType(propertyValue, propertyType, format, formatProvider);
         }
 
+        private static bool TryConvertFromString(string propertyString, Type propertyType, string format, IFormatProvider formatProvider, out object propertyValue)
+        {
+            propertyValue = propertyString = propertyString.Trim();
+
+            if (StringConverterLookup.TryGetValue(propertyType, out var converter))
+            {
+                propertyValue = converter.Invoke(propertyString, format, formatProvider);
+                return true;
+            }
+
+            if (propertyType.IsEnum())
+            {
+                return NLog.Common.ConversionHelpers.TryParseEnum(propertyString, propertyType, out propertyValue);
+            }
+
+            if (PropertyHelper.TryTypeConverterConversion(propertyType, propertyString, out var convertedValue))
+            {
+                propertyValue = convertedValue;
+                return true;
+            }
+
+            return false;
+        }
+
         private static object ChangeObjectType(object propertyValue, Type propertyType, string format, IFormatProvider formatProvider)
         {
-            if (propertyValue is string propertyString)
+            if (propertyValue is string propertyString && TryConvertFromString(propertyString, propertyType, format, formatProvider, out propertyValue))
             {
-                propertyValue = propertyString = propertyString.Trim();
-
-                if (StringConverterLookup.TryGetValue(propertyType, out var converter))
-                {
-                    return converter.Invoke(propertyString, format, formatProvider);
-                }
-
-                if (propertyType.IsEnum() && NLog.Common.ConversionHelpers.TryParseEnum(propertyString, propertyType, out var enumValue))
-                {
-                    return enumValue;
-                }
-
-                if (!typeof(IConvertible).IsAssignableFrom(propertyType) && PropertyHelper.TryTypeConverterConversion(propertyType, propertyString, out var convertedValue))
-                {
-                    return convertedValue;
-                }
-            }
-            else if (!string.IsNullOrEmpty(format) && propertyValue is IFormattable formattableValue)
-            {
-                propertyValue = formattableValue.ToString(format, formatProvider);
+                return propertyValue;
             }
 
             if (propertyValue is IConvertible convertibleValue)
@@ -136,13 +149,44 @@ namespace NLog.Config
                 var typeCode = convertibleValue.GetTypeCode();
 #if !NETSTANDARD1_3 && !NETSTANDARD1_5
                 if (typeCode == TypeCode.DBNull)
-                    return propertyValue;
+                    return convertibleValue;
 #endif
                 if (typeCode == TypeCode.Empty)
                     return null;
             }
+            else if (TryConvertToType(propertyValue, propertyType, out var convertedValue))
+            {
+                return convertedValue;
+            }
+
+            if (!string.IsNullOrEmpty(format) && propertyValue is IFormattable formattableValue)
+            {
+                propertyValue = formattableValue.ToString(format, formatProvider);
+            }
 
             return System.Convert.ChangeType(propertyValue, propertyType, formatProvider);
+        }
+
+        [UnconditionalSuppressMessage("Trimming - Allow converting option-values from config", "IL2026")]
+        [UnconditionalSuppressMessage("Trimming - Allow converting option-values from config", "IL2067")]
+        [UnconditionalSuppressMessage("Trimming - Allow converting option-values from config", "IL2072")]
+        private static bool TryConvertToType(object propertyValue, Type propertyType, out object convertedValue)
+        {
+            if (propertyValue is null || propertyType.IsAssignableFrom(propertyValue.GetType()))
+            {
+                convertedValue = null;
+                return false;
+            }
+
+            var typeConverter = System.ComponentModel.TypeDescriptor.GetConverter(propertyValue.GetType());
+            if (typeConverter != null && typeConverter.CanConvertTo(propertyType))
+            {
+                convertedValue = typeConverter.ConvertTo(propertyValue, propertyType);
+                return true;
+            }
+
+            convertedValue = null;
+            return false;
         }
 
         private static object ConvertGuid(string format, string propertyString)

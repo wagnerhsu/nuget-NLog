@@ -34,30 +34,21 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
+    using System.Text;
     using NLog.Config;
 
     /// <summary>
     /// Applies padding to another layout output.
     /// </summary>
     [LayoutRenderer("pad")]
-    [AmbientProperty("Padding")]
-    [AmbientProperty("PadCharacter")]
-    [AmbientProperty("FixedLength")]
-    [AmbientProperty("AlignmentOnTruncation")]
+    [AmbientProperty(nameof(Padding))]
+    [AmbientProperty(nameof(PadCharacter))]
+    [AmbientProperty(nameof(FixedLength))]
+    [AmbientProperty(nameof(AlignmentOnTruncation))]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class PaddingLayoutRendererWrapper : WrapperLayoutRendererBase
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="PaddingLayoutRendererWrapper" /> class.
-        /// </summary>
-        public PaddingLayoutRendererWrapper()
-        {
-            PadCharacter = ' ';
-        }
-
         /// <summary>
         /// Gets or sets the number of characters to pad the output to. 
         /// </summary>
@@ -65,22 +56,20 @@ namespace NLog.LayoutRenderers.Wrappers
         /// Positive padding values cause left padding, negative values 
         /// cause right padding to the desired width.
         /// </remarks>
-        /// <docgen category='Transformation Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public int Padding { get; set; }
 
         /// <summary>
         /// Gets or sets the padding character.
         /// </summary>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(' ')]
-        public char PadCharacter { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public char PadCharacter { get; set; } = ' ';
 
         /// <summary>
         /// Gets or sets a value indicating whether to trim the 
         /// rendered text to the absolute value of the padding length.
         /// </summary>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Layout Options' order='10' />
         public bool FixedLength { get; set; }
 
         /// <summary>
@@ -90,51 +79,87 @@ namespace NLog.LayoutRenderers.Wrappers
         /// or right-aligned (characters removed from the left). The
         /// default is left alignment.
         /// </summary>
-        /// <docgen category='Transformation Options' order='10' />RegistryLayoutRenderer
-        [DefaultValue(PaddingHorizontalAlignment.Left)]
-        public PaddingHorizontalAlignment AlignmentOnTruncation { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public PaddingHorizontalAlignment AlignmentOnTruncation { get; set; } = PaddingHorizontalAlignment.Left;
 
-        /// <summary>
-        /// Transforms the output of another layout.
-        /// </summary>
-        /// <param name="text">Output to be transform.</param>
-        /// <returns>Transformed text.</returns>
-        protected override string Transform(string text)
+        /// <inheritdoc/>
+        protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            string s = text ?? string.Empty;
-
+            Inner.Render(logEvent, builder);
             if (Padding != 0)
             {
-                if (Padding > 0)
-                {
-                    s = s.PadLeft(Padding, PadCharacter);
-                }
-                else
-                {
-                    s = s.PadRight(-Padding, PadCharacter);
-                }
-
                 int absolutePadding = Padding;
                 if (absolutePadding < 0)
                 {
                     absolutePadding = -absolutePadding;
                 }
 
-                if (FixedLength && s.Length > absolutePadding)
+                var deltaLength = AppendPadding(builder, orgLength, absolutePadding);
+
+                if (FixedLength && deltaLength > absolutePadding)
                 {
-                    if (AlignmentOnTruncation == PaddingHorizontalAlignment.Right)
+                    if (AlignmentOnTruncation == PaddingHorizontalAlignment.Left)
                     {
-                        s = s.Substring(s.Length - absolutePadding);
+                        // Keep left side
+                        builder.Length = orgLength + absolutePadding;
                     }
                     else
                     {
-                        //left
-                        s = s.Substring(0, absolutePadding);
+                        builder.Remove(orgLength, deltaLength - absolutePadding);
                     }
                 }
             }
+        }
 
-            return s;
+        private int AppendPadding(StringBuilder builder, int orgLength, int absolutePadding)
+        {
+            int deltaLength = builder.Length - orgLength;
+
+            if (Padding > 0)
+            {
+                // Pad Left
+                if (deltaLength < 10 || deltaLength >= absolutePadding)
+                {
+                    for (int i = deltaLength; i < absolutePadding; ++i)
+                    {
+                        builder.Append(PadCharacter);
+                        for (int j = builder.Length - 1; j > orgLength; --j)
+                        {
+                            builder[j] = builder[j - 1];
+                        }
+                        builder[orgLength] = PadCharacter;
+                        ++deltaLength;
+                    }
+                }
+                else
+                {
+                    var innerResult = builder.ToString(orgLength, deltaLength);
+                    builder.Length = orgLength;
+                    for (int i = deltaLength; i < absolutePadding; ++i)
+                    {
+                        builder.Append(PadCharacter);
+                        ++deltaLength;
+                    }
+                    builder.Append(innerResult);
+                }
+            }
+            else
+            {
+                // Pad Right
+                for (int i = deltaLength; i < absolutePadding; ++i)
+                {
+                    builder.Append(PadCharacter);
+                    ++deltaLength;
+                }
+            }
+
+            return deltaLength;
+        }
+
+        /// <inheritdoc/>
+        protected override string Transform(string text)
+        {
+            throw new NotSupportedException();
         }
     }
 }

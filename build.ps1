@@ -2,7 +2,7 @@
 # creates NuGet package at \artifacts
 dotnet --version
 
-$versionPrefix = "4.7.10"
+$versionPrefix = "5.2.8"
 $versionSuffix = ""
 $versionFile = $versionPrefix + "." + ${env:APPVEYOR_BUILD_NUMBER}
 $versionProduct = $versionPrefix;
@@ -27,23 +27,18 @@ msbuild /t:Restore,Pack .\src\NLog\ /p:targetFrameworks='"net46;net45;net35;nets
 if (-Not $LastExitCode -eq 0)
 	{ exit $LastExitCode }
 
-function create-package($packageName)
+function create-package($packageName, $targetFrameworks)
 {
-
 	$path = ".\src\$packageName\"
-	msbuild /t:Restore,Pack $path /p:VersionPrefix=$versionPrefix /p:VersionSuffix=$versionSuffix /p:FileVersion=$versionFile /p:ProductVersion=$versionProduct /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PackageOutputPath=..\..\artifacts /verbosity:minimal  /maxcpucount
+	msbuild /t:Restore,Pack $path /p:targetFrameworks=$targetFrameworks /p:VersionPrefix=$versionPrefix /p:VersionSuffix=$versionSuffix /p:FileVersion=$versionFile /p:ProductVersion=$versionProduct /p:Configuration=Release /p:IncludeSymbols=true /p:SymbolPackageFormat=snupkg /p:ContinuousIntegrationBuild=true /p:EmbedUntrackedSources=true /p:PackageOutputPath=..\..\artifacts /verbosity:minimal  /maxcpucount
 	if (-Not $LastExitCode -eq 0)
 		{ exit $LastExitCode }
-
 }
 
-create-package('NLog.MSMQ')
-create-package('NLog.OutputDebugString')
-create-package('NLog.PerformanceCounter')
-create-package('NLog.Wcf')
-create-package('NLog.WindowsEventLog')
-create-package('NLog.WindowsIdentity')
-create-package('NLog.WindowsRegistry')
+create-package 'NLog.Database' '"net35;net45;net46;netstandard1.3;netstandard1.5;netstandard2.0"'
+create-package 'NLog.OutputDebugString' '"net35;net45;net46;netstandard2.0"'
+create-package 'NLog.WindowsRegistry' '"net35;net45;net46;netstandard2.0"'
+create-package 'NLog.WindowsEventLog' '"netstandard2.0"'
 
 msbuild /t:xsd /t:NuGetSchemaPackage .\src\NLog.proj /p:Configuration=Release /p:BuildNetFX45=true /p:BuildVersion=$versionProduct /p:Configuration=Release /p:BuildLabelOverride=NONE /verbosity:minimal
 

@@ -36,6 +36,7 @@ namespace NLog.Layouts
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.ComponentModel;
     using System.Text;
     using NLog.Common;
     using NLog.Config;
@@ -46,12 +47,15 @@ namespace NLog.Layouts
     /// Represents a string with embedded placeholders that can render contextual information.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// This layout is not meant to be used explicitly. Instead you can just use a string containing layout 
     /// renderers everywhere the layout is required.
+    /// </para>
+    /// <a href="https://github.com/NLog/NLog/wiki/SimpleLayout">See NLog Wiki</a>
     /// </remarks>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/SimpleLayout">Documentation on NLog Wiki</seealso>
     [Layout("SimpleLayout")]
     [ThreadAgnostic]
-    [ThreadSafe]
     [AppDomainFixedOutput]
     public class SimpleLayout : Layout, IUsesStackTrace
     {
@@ -73,7 +77,7 @@ namespace NLog.Layouts
         /// Initializes a new instance of the <see cref="SimpleLayout" /> class.
         /// </summary>
         /// <param name="txt">The layout string to parse.</param>
-        public SimpleLayout(string txt)
+        public SimpleLayout([Localizable(false)] string txt)
             : this(txt, ConfigurationItemFactory.Default)
         {
         }
@@ -83,7 +87,7 @@ namespace NLog.Layouts
         /// </summary>
         /// <param name="txt">The layout string to parse.</param>
         /// <param name="configurationItemFactory">The NLog factories to use when creating references to layout renderers.</param>
-        public SimpleLayout(string txt, ConfigurationItemFactory configurationItemFactory)
+        public SimpleLayout([Localizable(false)] string txt, ConfigurationItemFactory configurationItemFactory)
             :this(txt, configurationItemFactory, null)
         {
         }
@@ -94,13 +98,13 @@ namespace NLog.Layouts
         /// <param name="txt">The layout string to parse.</param>
         /// <param name="configurationItemFactory">The NLog factories to use when creating references to layout renderers.</param>
         /// <param name="throwConfigExceptions">Whether <see cref="NLogConfigurationException"/> should be thrown on parse errors.</param>
-        internal SimpleLayout(string txt, ConfigurationItemFactory configurationItemFactory, bool? throwConfigExceptions)
+        internal SimpleLayout([Localizable(false)] string txt, ConfigurationItemFactory configurationItemFactory, bool? throwConfigExceptions)
         {
             _configurationItemFactory = configurationItemFactory;
             SetLayoutText(txt, throwConfigExceptions);
         }
 
-        internal SimpleLayout(LayoutRenderer[] renderers, string text, ConfigurationItemFactory configurationItemFactory)
+        internal SimpleLayout(LayoutRenderer[] renderers, [Localizable(false)] string text, ConfigurationItemFactory configurationItemFactory)
         {
             _configurationItemFactory = configurationItemFactory;
             OriginalText = text;
@@ -167,9 +171,9 @@ namespace NLog.Layouts
         /// </summary>
         /// <param name="text">Text to be converted.</param>
         /// <returns>A <see cref="SimpleLayout"/> object.</returns>
-        public static implicit operator SimpleLayout(string text)
+        public static implicit operator SimpleLayout([Localizable(false)] string text)
         {
-            if (text == null) return null;
+            if (text is null) return null;
 
             return new SimpleLayout(text);
         }
@@ -186,9 +190,9 @@ namespace NLog.Layouts
         /// Escaping is done by replacing all occurrences of
         /// '${' with '${literal:text=${}'
         /// </remarks>
-        public static string Escape(string text)
+        public static string Escape([Localizable(false)] string text)
         {
-            return text.Replace("${", "${literal:text=${}");
+            return text.Replace("${", @"${literal:text=\$\{}");
         }
 
         /// <summary>
@@ -198,7 +202,7 @@ namespace NLog.Layouts
         /// <param name="logEvent">Log event to be used for evaluation.</param>
         /// <returns>The input text with all occurrences of ${} replaced with
         /// values provided by the appropriate layout renderers.</returns>
-        public static string Evaluate(string text, LogEventInfo logEvent)
+        public static string Evaluate([Localizable(false)] string text, LogEventInfo logEvent)
         {
             var layout = new SimpleLayout(text);
             return layout.Render(logEvent);
@@ -211,20 +215,20 @@ namespace NLog.Layouts
         /// <param name="text">The text to be evaluated.</param>
         /// <returns>The input text with all occurrences of ${} replaced with
         /// values provided by the appropriate layout renderers.</returns>
-        public static string Evaluate(string text)
+        public static string Evaluate([Localizable(false)] string text)
         {
             return Evaluate(text, LogEventInfo.CreateNullEvent());
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override string ToString()
         {
-            if (string.IsNullOrEmpty(Text) && _layoutRenderers.Length > 0)
+            if (string.IsNullOrEmpty(Text) && !IsFixedText && _layoutRenderers.Length > 0)
             {
                 return ToStringWithNestedItems(_layoutRenderers, r => r.ToString());
             }
 
-            return Text;
+            return Text ?? _fixedText ?? string.Empty;
         }
 
         internal void SetLayoutRenderers(LayoutRenderer[] layoutRenderers, string text)
@@ -246,16 +250,14 @@ namespace NLog.Layouts
                 {
                     _fixedText = renderer.Text;
                 }
-                else
+                else if (_layoutRenderers[0] is IStringValueRenderer stringValueRenderer)
                 {
-                    if (_layoutRenderers[0] is IRawValue rawValueRenderer)
-                    {
-                        _rawValueRenderer = rawValueRenderer;
-                    }
-                    if (_layoutRenderers[0] is IStringValueRenderer stringValueRenderer)
-                    {
-                        _stringValueRenderer = stringValueRenderer;
-                    }
+                    _stringValueRenderer = stringValueRenderer;
+                }
+
+                if (_layoutRenderers[0] is IRawValue rawValueRenderer)
+                {
+                    _rawValueRenderer = rawValueRenderer;
                 }
             }
 
@@ -267,7 +269,7 @@ namespace NLog.Layouts
             }
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void InitializeLayout()
         {
             for (int i = 0; i < _layoutRenderers.Length; i++)
@@ -297,8 +299,24 @@ namespace NLog.Layouts
             base.InitializeLayout();
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override void Precalculate(LogEventInfo logEvent)
+        {
+            if (!IsLogEventMutableSafe(logEvent))
+            {
+                Render(logEvent);
+            }
+        }
+
+        internal override void PrecalculateBuilder(LogEventInfo logEvent, StringBuilder target)
+        {
+            if (!IsLogEventMutableSafe(logEvent))
+            {
+                PrecalculateBuilderInternal(logEvent, target, null);
+            }
+        }
+
+        private bool IsLogEventMutableSafe(LogEventInfo logEvent)
         {
             if (_rawValueRenderer != null)
             {
@@ -309,13 +327,22 @@ namespace NLog.Layouts
                         Initialize(LoggingConfiguration);
                     }
 
-                    if (ThreadAgnostic && MutableUnsafe)
+                    if (ThreadAgnostic)
                     {
-                        // If raw value doesn't have the ability to mutate, then we can skip precalculate
-                        var success = _rawValueRenderer.TryGetRawValue(logEvent, out var value);
-                        if (success && value != null && (Convert.GetTypeCode(value) != TypeCode.Object || value.GetType().IsValueType()))
-                            return;
+                        if (MutableUnsafe)
+                        {
+                            // If raw value doesn't have the ability to mutate, then we can skip precalculate
+                            var success = _rawValueRenderer.TryGetRawValue(logEvent, out var value);
+                            if (success && IsObjectValueMutableSafe(value))
+                                return true;
+                        }
+                        else
+                        {
+                            return true;
+                        }
                     }
+
+                    return false;
                 }
                 catch (Exception exception)
                 {
@@ -334,15 +361,15 @@ namespace NLog.Layouts
                 }
             }
 
-            base.Precalculate(logEvent);
+            return ThreadAgnostic && !MutableUnsafe;
         }
 
-        internal override void PrecalculateBuilder(LogEventInfo logEvent, StringBuilder target)
+        private static bool IsObjectValueMutableSafe(object value)
         {
-            PrecalculateBuilderInternal(logEvent, target);
+            return value != null && (Convert.GetTypeCode(value) != TypeCode.Object || value.GetType().IsValueType());
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         internal override bool TryGetRawValue(LogEventInfo logEvent, out object rawValue)
         {
             if (_rawValueRenderer != null)
@@ -384,7 +411,7 @@ namespace NLog.Layouts
             return false;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override string GetFormattedMessage(LogEventInfo logEvent)
         {
             if (IsFixedText)
@@ -408,7 +435,7 @@ namespace NLog.Layouts
                     //check for performance
                     if (InternalLogger.IsWarnEnabled || InternalLogger.IsErrorEnabled)
                     {
-                        InternalLogger.Warn(exception, "Exception in '{0}.GetFormattedString()'", _stringValueRenderer?.GetType().FullName);
+                        InternalLogger.Warn(exception, "Exception in '{0}.GetFormattedString()'", _stringValueRenderer.GetType().FullName);
                     }
 
                     if (exception.MustBeRethrown())
@@ -450,7 +477,7 @@ namespace NLog.Layouts
             }
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
         {
             if (IsFixedText)

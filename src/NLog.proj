@@ -21,7 +21,7 @@
 
   <PropertyGroup>
     <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>
-    <BaseOutputDirectory>$(MSBuildProjectDirectory)\nlog\</BaseOutputDirectory>
+    <BaseOutputDirectory>$(MSBuildProjectDirectory)\NLog\</BaseOutputDirectory>
     <ProjectTarget Condition="'$(ProjectTarget)'==''">Build</ProjectTarget>
     <BuildAllFrameworks>false</BuildAllFrameworks>
     <IgnoreBuildFailures>false</IgnoreBuildFailures>
@@ -29,7 +29,6 @@
     <DumpApiXml>$(ToolsDir)\DumpApiXml.exe</DumpApiXml>
     <MergeApiXml>$(ToolsDir)\MergeApiXml.exe</MergeApiXml>
     <MakeNLogXSD>$(ToolsDir)\MakeNLogXSD.exe</MakeNLogXSD>
-    <BuildDocPages>$(ToolsDir)\BuildDocPages.exe</BuildDocPages>
     <InfoZip>$(MSBuildProjectDirectory)\..\tools\zip.exe</InfoZip>
     <Tar>$(MSBuildProjectDirectory)\..\tools\tar.exe</Tar>
     <BZip2>$(MSBuildProjectDirectory)\..\tools\bzip2.exe</BZip2>
@@ -58,21 +57,8 @@
   <Target Name="Build">
   </Target>
 
-  <Target Name="BuildMergedDocumentation">
-    <MSBuild Projects="NLog.Extended\NLog.Extended.doc.csproj"
-             Targets="Build"
-             Properties="$(StyleCopProperties);BaseOutputDirectory=$(BaseOutputDirectory)"
-             ContinueOnError="$(BuildAllFrameworks)"
-             StopOnFirstFailure="false" />
-    <Exec Command='"$(WinDir)\Microsoft.NET\Framework\v3.5\MSBuild.exe" Docs\NLog.shfbproj /p:Framework="Documentation" /p:Configuration=$(Configuration) /p:BuildLabel="$(BuildLabel)" /p:BuildVersion="$(BuildVersion)"' ContinueOnError="$(BuildAllFrameworks)" />
-  </Target>
-
   <Target Name="BuildIndividualDocumentation">
-    <Exec Command='"$(WinDir)\Microsoft.NET\Framework\v3.5\MSBuild.exe" Docs\NLog.shfbproj /p:Framework="%(TargetFramework.Identity)" /p:Configuration=$(Configuration) /p:BuildLabel="$(BuildLabel)" /p:BuildVersion="$(BuildVersion)"' ContinueOnError="$(BuildAllFrameworks)" />
-  </Target>
-
-  <Target Name="BuildDocumentationNetFX45">
-    <Exec Command='"$(WinDir)\Microsoft.NET\Framework\v3.5\MSBuild.exe" Docs\NLog.shfbproj /p:Framework="BuildNetFX45" /p:Configuration=$(Configuration) /p:BuildLabel="$(BuildLabel)" /p:BuildVersion="$(BuildVersion)"' />
+    <Exec Command='"$(WinDir)\Microsoft.NET\Framework\v3.5\MSBuild.exe" $(ToolsDir)\SandCastleDocs\NLog.shfbproj /p:Configuration=$(Configuration) /p:BuildLabel="$(BuildLabel)" /p:BuildVersion="$(BuildVersion)"' ContinueOnError="$(BuildAllFrameworks)" />
   </Target>
 
   <Target Name="PostProcessDocumentation">
@@ -91,7 +77,7 @@
   <Target Name="IndividualDocumentation" DependsOnTargets="BuildIndividualDocumentation;PostProcessDocumentation">
   </Target>
 
-  <Target Name="Documentation" DependsOnTargets="BuildMergedDocumentation">
+  <Target Name="Documentation">
     <MSBuild Projects="$(MSBuildProjectFile)" Targets="PostProcessSingleDoc" Properties="DocBuildDir=$(BaseOutputDirectory)\bin\$(Configuration)\Documentation" />
   </Target>
 
@@ -124,21 +110,14 @@
     <MSBuild Projects="..\tools\MergeApiXml\MergeApiXml.csproj" />
   </Target>
 
-  <Target Name="BuildDocPagesTool">
-    <MSBuild Projects="..\tools\BuildDocPages\BuildDocPages.csproj" />
-  </Target>
-
-  <Target Name="BuildDocPages" DependsOnTargets="BuildDocPagesTool">
-  </Target>
-
-  <Target Name="Tools" DependsOnTargets="BuildApiDumpTool;BuildDocPagesTool;BuildApiMergeTool;BuildMakeNLogXSDTool">
+  <Target Name="Tools" DependsOnTargets="BuildApiDumpTool;BuildApiMergeTool;BuildMakeNLogXSDTool">
   </Target>
 
   <Target Name="DumpApi" DependsOnTargets="BuildApiDumpTool;BuildApiMergeTool"
     Inputs="@(TargetFramework -> '$(BaseOutputDirectory)\bin\$(Configuration)\%(Identity)\NLog.dll');$(DumpApiXml);$(MergeApiXml)"
     Outputs="$(BaseOutputDirectory)\bin\$(Configuration)\NLogMerged.api.xml"
     >
-    <Exec Command='"$(DumpApiXml)" -assembly NLog.dll -assembly NLog.Extended.dll -output API\NLog.api'
+    <Exec Command='"$(DumpApiXml)" -assembly NLog.dll -assembly $(MSBuildProjectDirectory)\NLog.Database\Bin\$(Configuration)\%(TargetFramework.Identity)\NLog.Database.dll -output API\NLog.api'
           WorkingDirectory="$(BaseOutputDirectory)\bin\$(Configuration)\%(TargetFramework.Identity)"
           ContinueOnError="$(BuildAllFrameworks)" />
     <Exec Command='"$(MergeApiXml)" "$(BaseOutputDirectory)\bin\$(Configuration)"' />
@@ -189,7 +168,7 @@ File.WriteAllText(Path, content);
     <DirectoriesToCleanup Include="_ReSharper.*" />
     <DirectoriesToCleanup Include="..\build\bin" />
     <DirectoriesToCleanup Include="..\build\obj" />
-    <DirectoriesToCleanup Include="Docs\Working" />
+    <DirectoriesToCleanup Include="..\tools\SandcastleDocs\Working" />
     <DirectoriesToCleanup Include="TestResults" />
     <ProjectsToCleanup Include="NLog" />
     <ProjectsToCleanup Include="Doc" />

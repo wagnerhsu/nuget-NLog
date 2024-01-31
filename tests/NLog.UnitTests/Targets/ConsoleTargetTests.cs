@@ -31,14 +31,13 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using NLog.Config;
-
 namespace NLog.UnitTests.Targets
 {
     using System;
-    using System.IO;
-    using NLog.Targets;
     using System.Collections.Generic;
+    using System.IO;
+    using NLog.Config;
+    using NLog.Targets;
     using Xunit;
     using System.Threading.Tasks;
 
@@ -56,7 +55,7 @@ namespace NLog.UnitTests.Targets
             ConsoleOutTest(true);
         }
 
-        private void ConsoleOutTest(bool writeBuffer)
+        private static void ConsoleOutTest(bool writeBuffer)
         {
             var target = new ConsoleTarget()
             {
@@ -92,14 +91,14 @@ namespace NLog.UnitTests.Targets
 
             var actual = consoleOutWriter.ToString();
 
-            Assert.True(actual.IndexOf("-- header --") != -1);
-            Assert.True(actual.IndexOf("Logger1 message1") != -1);
-            Assert.True(actual.IndexOf("Logger1 message2") != -1);
-            Assert.True(actual.IndexOf("Logger1 message3") != -1);
-            Assert.True(actual.IndexOf("Logger2 message4") != -1);
-            Assert.True(actual.IndexOf("Logger2 message5") != -1);
-            Assert.True(actual.IndexOf("Logger1 message6") != -1);
-            Assert.True(actual.IndexOf("-- footer --") != -1);
+            Assert.Contains("-- header --", actual);
+            Assert.Contains("Logger1 message1", actual);
+            Assert.Contains("Logger1 message2", actual);
+            Assert.Contains("Logger1 message3", actual);
+            Assert.Contains("Logger2 message4", actual);
+            Assert.Contains("Logger2 message5", actual);
+            Assert.Contains("Logger1 message6", actual);
+            Assert.Contains("-- footer --", actual);
         }
 
         [Fact]
@@ -227,10 +226,11 @@ namespace NLog.UnitTests.Targets
                 </rules>
             </nlog>";
 
-            ConsoleRaceCondtionIgnoreInnerTest(configXml);
+            var success = ConsoleRaceCondtionIgnoreInnerTest(configXml);
+            Assert.True(success);
         }
 
-        internal static void ConsoleRaceCondtionIgnoreInnerTest(string configXml)
+        internal static bool ConsoleRaceCondtionIgnoreInnerTest(string configXml)
         {
             LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(configXml);
 
@@ -240,7 +240,7 @@ namespace NLog.UnitTests.Targets
             //             
             // Full error: 
             //   Error during session close: System.IndexOutOfRangeException: Probable I/ O race condition detected while copying memory.
-            //   The I/ O package is not thread safe by default.In multithreaded applications, 
+            //   The I/ O package is not thread safe by default. In multi-threaded applications, 
             //   a stream must be accessed in a thread-safe way, such as a thread - safe wrapper returned by TextReader's or 
             //   TextWriter's Synchronized methods.This also applies to classes like StreamWriter and StreamReader.
 
@@ -264,6 +264,7 @@ namespace NLog.UnitTests.Targets
                           logger.Trace("test message to the out and error stream");
                       }
                   });
+                return true;
             }
             finally
             {

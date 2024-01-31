@@ -41,12 +41,17 @@ namespace NLog.Layouts
     /// <summary>
     /// A layout containing one or more nested layouts.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/NLog/NLog/wiki/CompoundLayout">See NLog Wiki</a>
+    /// </remarks>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/CompoundLayout">Documentation on NLog Wiki</seealso>
     [Layout("CompoundLayout")]
     [ThreadAgnostic]
-    [ThreadSafe]
     [AppDomainFixedOutput]
     public class CompoundLayout : Layout
     {
+        private Layout[] _precalculateLayouts;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CompoundLayout"/> class.
         /// </summary>
@@ -62,36 +67,29 @@ namespace NLog.Layouts
         [ArrayParameter(typeof(Layout), "layout")]
         public IList<Layout> Layouts { get; private set; }
 
-        /// <summary>
-        /// Initializes the layout.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeLayout()
         {
-            base.InitializeLayout();
             foreach (var layout in Layouts)
                 layout.Initialize(LoggingConfiguration);
+
+            base.InitializeLayout();
+
+            _precalculateLayouts = ResolveLayoutPrecalculation(Layouts);
         }
 
         internal override void PrecalculateBuilder(LogEventInfo logEvent, StringBuilder target)
         {
-            PrecalculateBuilderInternal(logEvent, target);
+            PrecalculateBuilderInternal(logEvent, target, _precalculateLayouts);
         }
 
-        /// <summary>
-        /// Formats the log event relying on inner layouts.
-        /// </summary>
-        /// <param name="logEvent">The log event to be formatted.</param>
-        /// <returns>A string representation of the log event.</returns>
+        /// <inheritdoc/>
         protected override string GetFormattedMessage(LogEventInfo logEvent)
         {
             return RenderAllocateBuilder(logEvent);
         }
 
-        /// <summary>
-        /// Formats the log event relying on inner layouts.
-        /// </summary>
-        /// <param name="logEvent">The logging event.</param>
-        /// <param name="target"><see cref="StringBuilder"/> for the result</param>
+        /// <inheritdoc/>
         protected override void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
         {
             //Memory profiling pointed out that using a foreach-loop was allocating
@@ -99,24 +97,20 @@ namespace NLog.Layouts
             for (int i = 0; i < Layouts.Count; i++)
             {
                 Layout layout = Layouts[i];
-                layout.RenderAppendBuilder(logEvent, target);
+                layout.Render(logEvent, target);
             }
         }
 
-        /// <summary>
-        /// Closes the layout.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void CloseLayout()
         {
+            _precalculateLayouts = null;
             foreach (var layout in Layouts)
                 layout.Close();
             base.CloseLayout();
         }
 
-        /// <summary>
-        /// Generate description of Compound Layout
-        /// </summary>
-        /// <returns>Compound Layout String Description</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return ToStringWithNestedItems(Layouts, l => l.ToString());

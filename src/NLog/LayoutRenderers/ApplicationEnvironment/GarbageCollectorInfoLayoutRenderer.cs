@@ -31,38 +31,32 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if !MONO
-
 namespace NLog.LayoutRenderers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
-    using NLog.Config;
     using NLog.Internal;
 
     /// <summary>
     /// The information about the garbage collector.
     /// </summary>
     [LayoutRenderer("gc")]
-    [ThreadSafe]
     public class GarbageCollectorInfoLayoutRenderer : LayoutRenderer
     {
         /// <summary>
         /// Gets or sets the property to retrieve.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue("TotalMemory")]
+        /// <docgen category='Layout Options' order='10' />
         public GarbageCollectorProperty Property { get; set; } = GarbageCollectorProperty.TotalMemory;
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             var value = GetValue();
             if (value >= 0 && value < uint.MaxValue)
                 builder.AppendInvariant((uint)value);
             else
-                builder.Append(value.ToString());
+                builder.Append(value);
         }
 
         private long GetValue()
@@ -100,5 +94,3 @@ namespace NLog.LayoutRenderers
         }
     }
 }
-
-#endif

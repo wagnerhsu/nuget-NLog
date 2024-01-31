@@ -31,11 +31,11 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using JetBrains.Annotations;
-
 namespace NLog
 {
     using System;
+    using System.ComponentModel;
+    using JetBrains.Annotations;
 
     /// <summary>
     /// Exception thrown during NLog configuration.
@@ -62,23 +62,29 @@ namespace NLog
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NLogRuntimeException" /> class.
+        /// Obsolete and replaced by using normal string-interpolation with <see cref="NLogConfigurationException(string)"/> in NLog v5.
+        /// Initializes a new instance of the <see cref="NLogConfigurationException" /> class.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="messageParameters">Parameters for the message</param>
+        [Obsolete("Instead use string interpolation. Marked obsolete with NLog 5.0")]
         [StringFormatMethod("message")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public NLogConfigurationException(string message, params object[] messageParameters)
             : base(string.Format(message, messageParameters))
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NLogRuntimeException" /> class.
+        /// Obsolete and replaced by using normal string-interpolation with <see cref="NLogConfigurationException(string)"/> in NLog v5.
+        /// Initializes a new instance of the <see cref="NLogConfigurationException" /> class.
         /// </summary>
         /// <param name="innerException">The inner exception.</param>
         /// <param name="message">The message.</param>
         /// <param name="messageParameters">Parameters for the message</param>
+        [Obsolete("Instead use string interpolation. Marked obsolete with NLog 5.0")]
         [StringFormatMethod("message")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public NLogConfigurationException(Exception innerException, string message, params object[] messageParameters)
             : base(string.Format(message, messageParameters), innerException)
         {
@@ -98,13 +104,13 @@ namespace NLog
         /// <summary>
         /// Initializes a new instance of the <see cref="NLogConfigurationException" /> class.
         /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
-        /// <param name="context">The <see cref="T:System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
-        /// <exception cref="T:System.ArgumentNullException">
+        /// <param name="info">The <see cref="System.Runtime.Serialization.SerializationInfo"/> that holds the serialized object data about the exception being thrown.</param>
+        /// <param name="context">The <see cref="System.Runtime.Serialization.StreamingContext"/> that contains contextual information about the source or destination.</param>
+        /// <exception cref="System.ArgumentNullException">
         /// The <paramref name="info"/> parameter is null.
         /// </exception>
-        /// <exception cref="T:System.Runtime.Serialization.SerializationException">
-        /// The class name is null or <see cref="P:System.Exception.HResult"/> is zero (0).
+        /// <exception cref="System.Runtime.Serialization.SerializationException">
+        /// The class name is null or <see cref="System.Exception.HResult"/> is zero (0).
         /// </exception>
         protected NLogConfigurationException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context)
             : base(info, context)

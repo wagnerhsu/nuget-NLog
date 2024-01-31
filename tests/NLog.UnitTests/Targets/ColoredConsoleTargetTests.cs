@@ -39,7 +39,6 @@ namespace NLog.UnitTests.Targets
     using System.Linq;
     using NLog.Targets;
     using Xunit;
-    using Xunit.Extensions;
 
     public class ColoredConsoleTargetTests : NLogTestBase
     {
@@ -176,6 +175,54 @@ namespace NLog.UnitTests.Targets
         }
 
         [Fact]
+        public void SetupBuilder_WriteToColoredConsole()
+        {
+            var logFactory = new LogFactory().Setup().LoadConfiguration(c =>
+            {
+                c.ForLogger().FilterMinLevel(LogLevel.Error).WriteToColoredConsole("${level}|${message}", stderr: true, enableAnsiOutput: true);
+            }).LogFactory;
+
+            var consoleErrorWriter = new StringWriter();
+            TextWriter oldConsoleErrorWriter = Console.Error;
+            Console.SetError(consoleErrorWriter);
+
+            try
+            {
+                logFactory.GetCurrentClassLogger().Error("Abort");
+                logFactory.GetCurrentClassLogger().Info("Continue");
+                Assert.Equal($"\u001b[31mError|Abort\u001b[0m{System.Environment.NewLine}", consoleErrorWriter.ToString());
+            }
+            finally
+            {
+                Console.SetError(oldConsoleErrorWriter);
+            }
+        }
+
+        [Fact]
+        public void SetupBuilder_WriteToColoredConsole_HighlightWord()
+        {
+            var logFactory = new LogFactory().Setup().LoadConfiguration(c =>
+            {
+                c.ForLogger().FilterMinLevel(LogLevel.Error).WriteToColoredConsole("${level}|${message}", stderr: true, enableAnsiOutput: true, highlightWordLevel: true);
+            }).LogFactory;
+
+            var consoleErrorWriter = new StringWriter();
+            TextWriter oldConsoleErrorWriter = Console.Error;
+            Console.SetError(consoleErrorWriter);
+
+            try
+            {
+                logFactory.GetCurrentClassLogger().Error("Abort");
+                logFactory.GetCurrentClassLogger().Info("Continue");
+                Assert.Equal($"\u001b[31mError\u001b[0m|Abort\u001b[0m{System.Environment.NewLine}", consoleErrorWriter.ToString());
+            }
+            finally
+            {
+                Console.SetError(oldConsoleErrorWriter);
+            }
+        }
+
+        [Fact]
         public void ColoredConsoleAnsi_RepeatedWordHighlight_VerificationTest()
         {
             var target = new ColoredConsoleTarget { Layout = "${logger} ${message}", EnableAnsiOutput = true };
@@ -286,7 +333,8 @@ namespace NLog.UnitTests.Targets
                 </rules>
             </nlog>";
 
-            ConsoleTargetTests.ConsoleRaceCondtionIgnoreInnerTest(configXml);
+            var success = ConsoleTargetTests.ConsoleRaceCondtionIgnoreInnerTest(configXml);
+            Assert.True(success);
         }
 #endif
 
@@ -314,7 +362,7 @@ namespace NLog.UnitTests.Targets
                 target.Close();
 
                 Assert.Single(exceptions);
-                Assert.True(exceptions.TrueForAll(e => e == null));
+                Assert.True(exceptions.TrueForAll(e => e is null));
             }
             finally
             {

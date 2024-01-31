@@ -31,15 +31,15 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Linq;
-using System.Collections.Generic;
-using NLog.Internal;
-using NLog.MessageTemplates;
-using Xunit;
-
 namespace NLog.UnitTests.Internal
 {
+    using System;
+    using System.Linq;
+    using System.Collections.Generic;
+    using NLog.MessageTemplates;
+    using Xunit;
+    using NLog.Internal;
+
     public class PropertiesDictionaryTests : NLogTestBase
     {
         [Fact]
@@ -62,9 +62,9 @@ namespace NLog.UnitTests.Internal
             Assert.False(dictionary.TryGetValue("Hello World", out value));
             Assert.Null(value);
             Assert.False(dictionary.Remove("Hello World"));
-            dictionary.CopyTo(new KeyValuePair<object, object>[0], 0);
-            dictionary.Values.CopyTo(new object[0], 0);
-            dictionary.Keys.CopyTo(new object[0], 0);
+            dictionary.CopyTo(ArrayHelper.Empty<KeyValuePair<object, object>>(), 0);
+            dictionary.Values.CopyTo(ArrayHelper.Empty<object>(), 0);
+            dictionary.Keys.CopyTo(ArrayHelper.Empty<object>(), 0);
             dictionary.Clear();
         }
 
@@ -91,9 +91,9 @@ namespace NLog.UnitTests.Internal
             Assert.False(dictionary.TryGetValue("Hello World", out value));
             Assert.Null(value);
             Assert.False(dictionary.Remove("Hello World"));
-            dictionary.CopyTo(new KeyValuePair<object, object>[0], 0);
-            dictionary.Values.CopyTo(new object[0], 0);
-            dictionary.Keys.CopyTo(new object[0], 0);
+            dictionary.CopyTo(ArrayHelper.Empty<KeyValuePair<object, object>>(), 0);
+            dictionary.Values.CopyTo(ArrayHelper.Empty<object>(), 0);
+            dictionary.Keys.CopyTo(ArrayHelper.Empty<object>(), 0);
             dictionary.Clear();
         }
 
@@ -117,9 +117,9 @@ namespace NLog.UnitTests.Internal
             Assert.False(dictionary.TryGetValue("Hello World", out value));
             Assert.Null(value);
             Assert.False(dictionary.Remove("Hello World"));
-            dictionary.CopyTo(new KeyValuePair<object, object>[0], 0);
-            dictionary.Values.CopyTo(new object[0], 0);
-            dictionary.Keys.CopyTo(new object[0], 0);
+            dictionary.CopyTo(ArrayHelper.Empty<KeyValuePair<object, object>>(), 0);
+            dictionary.Values.CopyTo(ArrayHelper.Empty<object>(), 0);
+            dictionary.Keys.CopyTo(ArrayHelper.Empty<object>(), 0);
             dictionary.Clear();
         }
 
@@ -145,9 +145,9 @@ namespace NLog.UnitTests.Internal
             Assert.False(dictionary.TryGetValue("Hello World", out value));
             Assert.Null(value);
             Assert.False(dictionary.Remove("Hello World"));
-            dictionary.CopyTo(new KeyValuePair<object, object>[0], 0);
-            dictionary.Values.CopyTo(new object[0], 0);
-            dictionary.Keys.CopyTo(new object[0], 0);
+            dictionary.CopyTo(ArrayHelper.Empty<KeyValuePair<object, object>>(), 0);
+            dictionary.Values.CopyTo(ArrayHelper.Empty<object>(), 0);
+            dictionary.Keys.CopyTo(ArrayHelper.Empty<object>(), 0);
             dictionary.Clear();
         }
 
@@ -354,8 +354,6 @@ namespace NLog.UnitTests.Internal
             Assert.Empty(dictionary);
         }
 
-
-
         [Fact]
         public void OverrideMessagePropertiesDictionary()
         {
@@ -445,26 +443,41 @@ namespace NLog.UnitTests.Internal
         public void NonUniqueMessagePropertiesDictionary()
         {
             LogEventInfo logEvent = new LogEventInfo(LogLevel.Info, "MyLogger", string.Empty, new[]
-{
+            {
                 new MessageTemplateParameter("Hello World", 42, null, CaptureType.Normal),
                 new MessageTemplateParameter("Hello World", 666, null, CaptureType.Normal)
             });
             IDictionary<object, object> dictionary = logEvent.Properties;
 
-            Assert.Single(dictionary);
+            Assert.Equal(2, dictionary.Count);
             Assert.Equal(42, dictionary["Hello World"]);
+            Assert.Equal(666, dictionary["Hello World_1"]);
 
-            List<MessageTemplateParameter> parameters = new List<MessageTemplateParameter>();
-            parameters.Add(new MessageTemplateParameter("Hello World", 42, null, CaptureType.Normal));
-            for (int i = 1; i < 100; ++i)
-                parameters.Add(new MessageTemplateParameter("Hello World", 666, null, CaptureType.Normal));
-            logEvent = new LogEventInfo(LogLevel.Info, "MyLogger", string.Empty, new[]
+            foreach (var property in dictionary)
             {
-                new MessageTemplateParameter("Hello World", 42, null, CaptureType.Normal),
-                new MessageTemplateParameter("Hello World", 666, null, CaptureType.Normal)
-            });
-            Assert.Single(dictionary);
-            Assert.Equal(42, dictionary["Hello World"]);
+                if (property.Value.Equals(42))
+                    Assert.Equal("Hello World", property.Key);
+                else if (property.Value.Equals(666))
+                    Assert.Equal("Hello World_1", property.Key);
+                else
+                    Assert.Null(property.Key);
+            }
         }
+
+#if !NET35
+        [Fact]
+        public void NonUniqueEventPropertiesDictionary()
+        {
+            LogEventInfo logEvent = new LogEventInfo(LogLevel.Info, "MyLogger", string.Empty, new[]
+            {
+                new KeyValuePair<object,object>("Hello World", 42),
+                new KeyValuePair<object,object>("Hello World", 666),
+            });
+            IDictionary<object, object> dictionary = logEvent.Properties;
+
+            Assert.Single(dictionary);
+            Assert.Equal(666, dictionary["Hello World"]);   // Last one wins
+        }
+#endif
     }
 }

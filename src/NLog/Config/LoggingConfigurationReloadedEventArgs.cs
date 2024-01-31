@@ -36,10 +36,13 @@
 namespace NLog.Config
 {
     using System;
+    using System.ComponentModel;
 
     /// <summary>
-    /// Arguments for <see cref="LogFactory.ConfigurationReloaded"/>.
+    /// Obsolete and replaced by <see cref="LoggingConfigurationChangedEventArgs"/> and <see cref="LogFactory.ConfigurationChanged"/> with NLog v5.2.
     /// </summary>
+    [Obsolete("Replaced by ConfigurationChanged, but check args.ActivatedConfiguration != null. Marked obsolete on NLog 5.2")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public class LoggingConfigurationReloadedEventArgs : EventArgs
     {
         /// <summary>
@@ -66,13 +69,13 @@ namespace NLog.Config
         /// Gets a value indicating whether configuration reload has succeeded.
         /// </summary>
         /// <value>A value of <c>true</c> if succeeded; otherwise, <c>false</c>.</value>
-        public bool Succeeded { get; private set; }
+        public bool Succeeded { get; }
 
         /// <summary>
         /// Gets the exception which occurred during configuration reload.
         /// </summary>
         /// <value>The exception.</value>
-        public Exception Exception { get; private set; }
+        public Exception Exception { get; }
     }
 }
 

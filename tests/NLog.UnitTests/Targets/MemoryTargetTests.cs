@@ -31,42 +31,38 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Xunit;
-using NLog;
-using NLog.Targets;
-using NLog.Config;
-
 namespace NLog.UnitTests.Targets
 {
+    using System;
+    using System.Linq;
+    using NLog.Targets;
+    using Xunit;
+
     public class MemoryTargetTests : NLogTestBase
     {
         [Fact]
         public void MemoryTarget_LogLevelTest()
         { 
-            var logger = LogManager.GetCurrentClassLogger(); 
-
             var memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}" 
             };
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
-
-            Assert.True(memoryTarget.Logs.Count() == 0);
+            Assert.Empty(memoryTarget.Logs);
             logger.Trace("TTT");
             logger.Debug("DDD");
             logger.Info("III");
             logger.Warn("WWW");
             logger.Error("EEE");
-            logger.Fatal("FFF"); 
-            
-            LogManager.Configuration = null;
+            logger.Fatal("FFF");
 
-            Assert.True(memoryTarget.Logs.Count() == 6);
+            logger.Factory.Configuration = null;
+
+            Assert.True(memoryTarget.Logs.Count == 6);
             Assert.True(memoryTarget.Logs[0] == "Trace TTT");
             Assert.True(memoryTarget.Logs[1] == "Debug DDD");
             Assert.True(memoryTarget.Logs[2] == "Info III");
@@ -78,41 +74,43 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void MemoryTarget_ReconfigureTest_SameTarget_ExpectLogsEmptied()
         {
-            var logger = LogManager.GetCurrentClassLogger();
-
             var memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}"
             };
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
             logger.Debug("DDD");
             logger.Info("III");
             logger.Warn("WWW");
 
-            Assert.True(memoryTarget.Logs.Count() == 3);
+            Assert.True(memoryTarget.Logs.Count == 3);
             Assert.True(memoryTarget.Logs[0] == "Debug DDD");
             Assert.True(memoryTarget.Logs[1] == "Info III");
             Assert.True(memoryTarget.Logs[2] == "Warn WWW");
 
-            LogManager.Configuration = null;
+            logger.Factory.Configuration = null;
 
-            //
-            // Reconfigure the logger using the same MemoryTarget.
-
+            // Reconfigure the logger to use a new MemoryTarget.
             memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}"
             };
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
+            logger.Factory.Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
             logger.Trace("TTT");
             logger.Error("EEE");
             logger.Fatal("FFF");
 
-            Assert.True(memoryTarget.Logs.Count() == 3);
+            Assert.True(memoryTarget.Logs.Count == 3);
             Assert.True(memoryTarget.Logs[0] == "Trace TTT");
             Assert.True(memoryTarget.Logs[1] == "Error EEE");
             Assert.True(memoryTarget.Logs[2] == "Fatal FFF");
@@ -121,14 +119,15 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void MemoryTarget_ClearLogsTest()
         {
-            var logger = LogManager.GetCurrentClassLogger();
-
             var memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}"
             };
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
             logger.Warn("WWW");
             logger.Error("EEE");
@@ -139,26 +138,44 @@ namespace NLog.UnitTests.Targets
             logger.Debug("DDD");
             logger.Info("III");
 
-            LogManager.Configuration = null;
+            logger.Factory.Configuration = null;
 
-            Assert.True(memoryTarget.Logs.Count() == 3);
+            Assert.True(memoryTarget.Logs.Count == 3);
             Assert.True(memoryTarget.Logs[0] == "Trace TTT");
             Assert.True(memoryTarget.Logs[1] == "Debug DDD");
             Assert.True(memoryTarget.Logs[2] == "Info III");
 
+            Assert.True(memoryTarget.Logs.All(l => !string.IsNullOrEmpty(l)));
+            Assert.True(memoryTarget.Logs.Contains(memoryTarget.Logs[0]));
+            Assert.False(memoryTarget.Logs.Contains(string.Empty));
+            Assert.True(memoryTarget.Logs.Remove(memoryTarget.Logs[0]));
+            Assert.False(memoryTarget.Logs.Remove(string.Empty));
+            Assert.Equal(2, memoryTarget.Logs.Count);
+            Assert.Equal(0, memoryTarget.Logs.IndexOf(memoryTarget.Logs[0]));
+            Assert.Equal(1, memoryTarget.Logs.IndexOf(memoryTarget.Logs[1]));
+            Assert.Equal(-1, memoryTarget.Logs.IndexOf(string.Empty));
+            memoryTarget.Logs.RemoveAt(1);
+            Assert.Equal(1, memoryTarget.Logs.Count);
+            memoryTarget.Logs[0] = "Hello World";
+            Assert.Contains("Hello World", memoryTarget.Logs);
+            memoryTarget.Logs.Insert(1, "Goodbye World");
+            Assert.Equal("Hello World", memoryTarget.Logs[0]);
+            Assert.Equal("Goodbye World", memoryTarget.Logs[1]);
+            Assert.Equal(2, memoryTarget.Logs.Count);
         }
 
         [Fact]
         public void MemoryTarget_NullMessageTest()
         {
-            var logger = LogManager.GetCurrentClassLogger();
-
             var memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}"
             };
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
             string nullMessage = null;
 
@@ -168,9 +185,9 @@ namespace NLog.UnitTests.Targets
             logger.Warn(nullMessage);
             logger.Error("EEE");
 
-            LogManager.Configuration = null;
+            logger.Factory.Configuration = null;
 
-            Assert.True(memoryTarget.Logs.Count() == 5);
+            Assert.True(memoryTarget.Logs.Count == 5);
             Assert.True(memoryTarget.Logs[0] == "Trace TTT");
             Assert.True(memoryTarget.Logs[1] == "Debug ");
             Assert.True(memoryTarget.Logs[2] == "Info III");
@@ -181,14 +198,15 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void MemoryTarget_EmptyMessageTest()
         {
-            var logger = LogManager.GetCurrentClassLogger();
-
             var memoryTarget = new MemoryTarget
             {
                 Layout = "${level} ${message}"
             };
 
-            SimpleConfigurator.ConfigureForTargetLogging(memoryTarget, LogLevel.Trace);
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(memoryTarget);
+            }).GetCurrentClassLogger();
 
             logger.Trace("TTT");
             logger.Debug(String.Empty);
@@ -196,9 +214,9 @@ namespace NLog.UnitTests.Targets
             logger.Warn("");
             logger.Error("EEE");
 
-            LogManager.Configuration = null;
+            logger.Factory.Configuration = null;
 
-            Assert.True(memoryTarget.Logs.Count() == 5);
+            Assert.True(memoryTarget.Logs.Count == 5);
             Assert.True(memoryTarget.Logs[0] == "Trace TTT");
             Assert.True(memoryTarget.Logs[1] == "Debug ");
             Assert.True(memoryTarget.Logs[2] == "Info III");

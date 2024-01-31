@@ -33,13 +33,13 @@
 
 using System;
 using System.IO;
-using System.Linq;
 using System.Net;
 using NSubstitute;
 
 namespace NLog.UnitTests.Mocks
 {
-    public class WebRequestMock : WebRequest, IDisposable
+    [Obsolete("WebRequest is obsolete. Use HttpClient instead.")]
+    public sealed class WebRequestMock : WebRequest, IDisposable
     {
         public Uri RequestedAddress { get; set; }
 
@@ -48,14 +48,12 @@ namespace NLog.UnitTests.Mocks
         public MemoryStream RequestStream => _requestStream;
         private readonly ManualDisposableMemoryStream _requestStream = new ManualDisposableMemoryStream();
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public WebRequestMock()
         {
         }
 
-        #region Overrides of WebRequest
-
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override WebResponse EndGetResponse(IAsyncResult asyncResult)
         {
             if (FirstRequestMustFail)
@@ -64,7 +62,7 @@ namespace NLog.UnitTests.Mocks
                 RequestStream.Position = 0;
                 RequestStream.SetLength(0);
                 System.Threading.Thread.Sleep(50);
-                throw new ArgumentNullException("You are doomed");
+                throw new InvalidDataException("You are doomed");
             }
 
             var responseStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("new response 1"));
@@ -73,7 +71,7 @@ namespace NLog.UnitTests.Mocks
             return webResponseMock;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override IAsyncResult BeginGetRequestStream(AsyncCallback callback, object state)
         {
             var result = CreateAsyncResultMock(state);
@@ -81,13 +79,13 @@ namespace NLog.UnitTests.Mocks
             return result;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override Stream EndGetRequestStream(IAsyncResult asyncResult)
         {
             return RequestStream;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override IAsyncResult BeginGetResponse(AsyncCallback callback, object state)
         {
             var result = CreateAsyncResultMock(state);
@@ -95,10 +93,8 @@ namespace NLog.UnitTests.Mocks
             return result;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override string Method { get; set; }
-
-        #endregion
 
         public string GetRequestContentAsString()
         {
@@ -114,14 +110,10 @@ namespace NLog.UnitTests.Mocks
             return asyncResult;
         }
 
-        #region IDisposable
-
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public void Dispose()
         {
             _requestStream?.RealDispose();
         }
-
-        #endregion
     }
 }

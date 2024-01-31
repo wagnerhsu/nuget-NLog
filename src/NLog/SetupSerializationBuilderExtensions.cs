@@ -36,12 +36,25 @@ namespace NLog
     using System;
     using System.Reflection;
     using NLog.Config;
+    using NLog.Internal;
 
     /// <summary>
     /// Extension methods to setup NLog extensions, so they are known when loading NLog LoggingConfiguration
     /// </summary>
     public static class SetupSerializationBuilderExtensions
     {
+        /// <summary>
+        /// Enable/disables the NLog Message Template Parsing:
+        /// <para>- True = Always use NLog mesage-template-parser and formatting.</para>
+        /// <para>- False = Never use NLog-parser and only use string.Format (Disable support for message-template-syntax).</para>
+        /// <para>- Null = Auto detection of message-template-syntax, with fallback to string.Format (Default Behavior).</para>
+        /// </summary>
+        public static ISetupSerializationBuilder ParseMessageTemplates(this ISetupSerializationBuilder setupBuilder, bool? enable)
+        {
+            setupBuilder.LogFactory.ServiceRepository.ParseMessageTemplates(enable);
+            return setupBuilder;
+        }
+
         /// <summary>
         /// Overrides the active <see cref="IJsonConverter"/> with a new custom implementation
         /// </summary>
@@ -65,8 +78,7 @@ namespace NLog
         /// </summary>
         public static ISetupSerializationBuilder RegisterObjectTransformation<T>(this ISetupSerializationBuilder setupBuilder, Func<T, object> transformer)
         {
-            if (transformer == null)
-                throw new ArgumentNullException(nameof(transformer));
+            Guard.ThrowIfNull(transformer);
 
             var original = setupBuilder.LogFactory.ServiceRepository.GetService<IObjectTypeTransformer>();
             setupBuilder.LogFactory.ServiceRepository.RegisterObjectTypeTransformer(new ObjectTypeTransformation<T>(transformer, original));
@@ -78,17 +90,15 @@ namespace NLog
         /// </summary>
         public static ISetupSerializationBuilder RegisterObjectTransformation(this ISetupSerializationBuilder setupBuilder, Type objectType, Func<object, object> transformer)
         {
-            if (objectType == null)
-                throw new ArgumentNullException(nameof(objectType));
-            if (transformer == null)
-                throw new ArgumentNullException(nameof(transformer));
+            Guard.ThrowIfNull(objectType);
+            Guard.ThrowIfNull(transformer);
 
             var original = setupBuilder.LogFactory.ServiceRepository.GetService<IObjectTypeTransformer>();
             setupBuilder.LogFactory.ServiceRepository.RegisterObjectTypeTransformer(new ObjectTypeTransformation(objectType, transformer, original));
             return setupBuilder;
         }
 
-        private class ObjectTypeTransformation<T> : IObjectTypeTransformer
+        private sealed class ObjectTypeTransformation<T> : IObjectTypeTransformer
         {
             private readonly IObjectTypeTransformer _original;
             private readonly Func<T, object> _transformer;
@@ -111,7 +121,7 @@ namespace NLog
             }
         }
 
-        private class ObjectTypeTransformation : IObjectTypeTransformer
+        private sealed class ObjectTypeTransformation : IObjectTypeTransformer
         {
             private readonly IObjectTypeTransformer _original;
             private readonly Func<object, object> _transformer;

@@ -37,25 +37,22 @@ using NLog.Internal.NetworkSenders;
 
 namespace NLog.UnitTests.Mocks
 {
+    [Obsolete("WebRequest is obsolete. Use HttpClient instead.")]
     class WebRequestFactoryMock : IWebRequestFactory
     {
-        #region Implementation of IWebRequestFactory
-
         private readonly WebRequestMock _mock;
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public WebRequestFactoryMock(WebRequestMock mock)
         {
             _mock = mock;
         }
         
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public WebRequest CreateWebRequest(Uri address)
         {
             _mock.RequestedAddress = address;
             return _mock;
         }
-
-        #endregion
     }
 }

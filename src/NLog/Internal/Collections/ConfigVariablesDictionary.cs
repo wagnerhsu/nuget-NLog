@@ -35,7 +35,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 using NLog.Config;
 using NLog.Layouts;
 
@@ -65,7 +64,7 @@ namespace NLog.Internal
 
         public bool TryLookupDynamicVariable(string key, out Layout dynamicLayout)
         {
-            if (_dynamicVariables == null)
+            if (_dynamicVariables is null)
             {
                 if (!_variables.TryGetValue(key, out dynamicLayout))
                     return false;
@@ -85,11 +84,6 @@ namespace NLog.Internal
                     if (dynamicLayout != null)
                     {
                         dynamicLayout.Initialize(_configuration);
-                        if (!dynamicLayout.ThreadSafe)
-                        {
-                            dynamicLayout = new ThreadSafeWrapLayout(dynamicLayout);
-                            dynamicLayout.Initialize(_configuration);
-                        }
                     }
                     
                     _dynamicVariables[key] = dynamicLayout;
@@ -175,67 +169,12 @@ namespace NLog.Internal
 
         private void RegisterApiVariable(string key)
         {
-            if (_apiVariables == null)
+            if (_apiVariables is null)
             {
                 System.Threading.Interlocked.CompareExchange(ref _apiVariables, new ThreadSafeDictionary<string, bool>(_variables.Comparer), null);
             }
             _apiVariables[key] = true;
             _dynamicVariables?.Remove(key);
-        }
-
-        [ThreadAgnostic]
-        [ThreadSafe]
-        [AppDomainFixedOutput]
-        class ThreadSafeWrapLayout : Layout
-        {
-            private readonly object _lockObject = new object();
-
-            public Layout Unsafe { get; }
-
-            public ThreadSafeWrapLayout(Layout layout)
-            {
-                Unsafe = layout;
-                ThreadSafe = true;
-                ThreadAgnostic = true;
-            }
-
-            protected override void InitializeLayout()
-            {
-                lock (_lockObject)
-                {
-                    base.InitializeLayout();
-                    ThreadSafe = true;
-                }
-            }
-
-            public override void Precalculate(LogEventInfo logEvent)
-            {
-                lock (_lockObject)
-                    Unsafe.Precalculate(logEvent);
-            }
-
-            internal override void PrecalculateBuilder(LogEventInfo logEvent, StringBuilder target)
-            {
-                lock (_lockObject)
-                    Unsafe.PrecalculateBuilderInternal(logEvent, target);
-            }
-
-            protected override string GetFormattedMessage(LogEventInfo logEvent)
-            {
-                lock (_lockObject)
-                    return Unsafe.RenderAllocateBuilder(logEvent);
-            }
-
-            protected override void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
-            {
-                lock (_lockObject)
-                    Unsafe.RenderAppendBuilder(logEvent, target);
-            }
-
-            public override string ToString()
-            {
-                return Unsafe.ToString();
-            }
         }
     }
 }

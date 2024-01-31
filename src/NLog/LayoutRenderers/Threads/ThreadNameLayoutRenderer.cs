@@ -34,17 +34,15 @@
 namespace NLog.LayoutRenderers
 {
     using System.Text;
-    using NLog.Config;
     using NLog.Internal;
 
     /// <summary>
     /// The name of the current thread.
     /// </summary>
     [LayoutRenderer("threadname")]
-    [ThreadSafe]
     public class ThreadNameLayoutRenderer : LayoutRenderer, IStringValueRenderer
     {
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             builder.Append(GetStringValue());

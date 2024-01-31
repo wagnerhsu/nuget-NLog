@@ -31,12 +31,10 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System.Globalization;
-using NLog.Config;
-
 namespace NLog.UnitTests.LayoutRenderers
 {
     using System;
+    using System.Globalization;
     using NLog.LayoutRenderers;
     using NLog.Layouts;
     using Xunit;
@@ -46,16 +44,16 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            string date = GetDebugLastMessage("debug");
+            logFactory.GetLogger("d").Debug("zzz");
+            string date = GetDebugLastMessage("debug", logFactory);
             Assert.Equal(24, date.Length);
             Assert.Equal('-', date[4]);
             Assert.Equal('-', date[7]);
@@ -68,11 +66,22 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void UniversalTimeTest()
         {
-            var dt = new LongDateLayoutRenderer();
-            dt.UniversalTime = true;
+            var orgTimeSource = NLog.Time.TimeSource.Current;
+
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateLocalTimeSource();
+
+                var dt = new LongDateLayoutRenderer();
+                dt.UniversalTime = true;
             
-            var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
-            Assert.Equal(ei.TimeStamp.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture), dt.Render(ei));
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
         }
 
 
@@ -97,26 +106,57 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LocalTimeTest()
         {
-            var dt = new LongDateLayoutRenderer();
-            dt.UniversalTime = false;
-            
-            var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
-            Assert.Equal(ei.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture), dt.Render(ei));
+            var orgTimeSource = NLog.Time.TimeSource.Current;
+
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateUtcTimeSource();
+
+                var dt = new LongDateLayoutRenderer();
+                dt.UniversalTime = false;
+
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
+        }
+
+        [Fact]
+        public void DefaultTimeTest()
+        {
+            var orgTimeSource = NLog.Time.TimeSource.Current;
+
+            try
+            {
+                NLog.Time.TimeSource.Current = new NLog.Time.AccurateUtcTimeSource();
+
+                var dt = new LongDateLayoutRenderer();
+
+                var ei = new LogEventInfo(LogLevel.Info, "logger", "msg");
+                Assert.Equal(ei.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture), dt.Render(ei));
+            }
+            finally
+            {
+                NLog.Time.TimeSource.Current = orgTimeSource;
+            }
         }
 
         [Fact]
         public void LongDateWithPaddingPadLeftAlignLeft()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=5:fixedlength=true}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            string date = GetDebugLastMessage("debug");
+            logFactory.GetLogger("d").Debug("zzz");
+            string date = GetDebugLastMessage("debug", logFactory);
             Assert.Equal(5, date.Length);
             Assert.Equal('-', date[4]);
         }
@@ -124,16 +164,16 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadLeftAlignRight()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=5:fixedlength=true:alignmentOnTruncation=right}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            string date = GetDebugLastMessage("debug");
+            logFactory.GetLogger("d").Debug("zzz");
+            string date = GetDebugLastMessage("debug", logFactory);
             Assert.Equal(5, date.Length);
             Assert.Equal('.', date[0]);
         }
@@ -141,16 +181,16 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadRightAlignLeft()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=-5:fixedlength=true:alignmentOnTruncation=left}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            string date = GetDebugLastMessage("debug");
+            logFactory.GetLogger("d").Debug("zzz");
+            string date = GetDebugLastMessage("debug", logFactory);
             Assert.Equal(5, date.Length);
             Assert.Equal('-', date[4]);
         }
@@ -158,16 +198,16 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void LongDateWithPaddingPadRightAlignRight()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${longdate:padding=-5:fixedlength=true:alignmentOnTruncation=right}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            LogManager.GetLogger("d").Debug("zzz");
-            string date = GetDebugLastMessage("debug");
+            logFactory.GetLogger("d").Debug("zzz");
+            string date = GetDebugLastMessage("debug", logFactory);
             Assert.Equal(5, date.Length);
             Assert.Equal('.', date[0]);
         }

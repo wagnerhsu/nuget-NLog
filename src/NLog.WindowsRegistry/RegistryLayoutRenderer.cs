@@ -35,8 +35,6 @@ namespace NLog.LayoutRenderers
 {
     using System;
     using System.Collections.Generic;
-    using System.ComponentModel;
-    using System.Globalization;
     using System.Text;
     using Microsoft.Win32;
     using NLog.Common;
@@ -49,14 +47,6 @@ namespace NLog.LayoutRenderers
     [LayoutRenderer("registry")]
     public class RegistryLayoutRenderer : LayoutRenderer
     {
-        /// <summary>
-        /// Create new renderer
-        /// </summary>
-        public RegistryLayoutRenderer()
-        {
-            RequireEscapingSlashesInDefaultValue = true;
-        }
-
         /// <summary>
         /// Gets or sets the registry value name.
         /// </summary>
@@ -79,8 +69,7 @@ namespace NLog.LayoutRenderers
         /// </summary>
         /// <remarks>Default value wasn't a Layout before and needed an escape of the slash</remarks>
         /// <docgen category='Registry Options' order='50' />
-        [DefaultValue(true)]
-        public bool RequireEscapingSlashesInDefaultValue { get; set; }
+        public bool RequireEscapingSlashesInDefaultValue { get; set; } = true;
 
 #if !NET35
         /// <summary>
@@ -88,8 +77,7 @@ namespace NLog.LayoutRenderers
         /// Allowed values: Registry32, Registry64, Default 
         /// </summary>
         /// <docgen category='Registry Options' order='10' />
-        [DefaultValue("Default")]
-        public RegistryView View { get; set; }
+        public RegistryView View { get; set; } = RegistryView.Default;
 #endif
         /// <summary>
         /// Gets or sets the registry key.
@@ -115,12 +103,7 @@ namespace NLog.LayoutRenderers
         [RequiredParameter]
         public Layout Key { get; set; }
 
-        /// <summary>
-        /// Reads the specified registry key and value and appends it to
-        /// the passed <see cref="StringBuilder"/>.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event. Ignored.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             object registryValue = null;
@@ -160,7 +143,7 @@ namespace NLog.LayoutRenderers
             string value = null;
             if (registryValue != null) // valid value returned from registry will never be null
             {
-                value = Convert.ToString(registryValue, CultureInfo.InvariantCulture);
+                value = Convert.ToString(registryValue, System.Globalization.CultureInfo.InvariantCulture);
             }
             else if (DefaultValue != null)
             {
@@ -175,7 +158,7 @@ namespace NLog.LayoutRenderers
             builder.Append(value);
         }
 
-        private class ParseResult
+        private sealed class ParseResult
         {
             public string SubKey { get; set; }
 

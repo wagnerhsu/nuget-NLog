@@ -36,6 +36,7 @@ namespace NLog.UnitTests.Layouts
     using System;
     using System.Text;
     using NLog.Config;
+    using NLog.Internal;
     using NLog.LayoutRenderers;
     using NLog.Layouts;
     using Xunit;
@@ -61,7 +62,7 @@ namespace NLog.UnitTests.Layouts
             using (new NoThrowNLogExceptions())
             {
                 ConfigurationItemFactory configurationItemFactory = new ConfigurationItemFactory();
-                configurationItemFactory.LayoutRenderers.RegisterDefinition("throwsException", typeof(ThrowsExceptionRenderer));
+                configurationItemFactory.LayoutRendererFactory.RegisterType<ThrowsExceptionRenderer>("throwsException");
 
                 SimpleLayout l = new SimpleLayout("xx${throwsException}yy", configurationItemFactory);
                 string output = l.Render(LogEventInfo.CreateNullEvent());
@@ -85,8 +86,11 @@ namespace NLog.UnitTests.Layouts
             var l = new SimpleLayout("xx${level}yy");
             Assert.Equal("xx${level}yy", l.ToString());
 
-            var l2 = new SimpleLayout(new LayoutRenderer[0], "someFakeText", ConfigurationItemFactory.Default);
+            var l2 = new SimpleLayout(ArrayHelper.Empty<LayoutRenderer>(), "someFakeText", ConfigurationItemFactory.Default);
             Assert.Equal("someFakeText", l2.ToString());
+
+            var l3 = new SimpleLayout("");
+            Assert.Equal("", l3.ToString());
         }
 
         [Fact]
@@ -98,7 +102,7 @@ namespace NLog.UnitTests.Layouts
                         using (new NoThrowNLogExceptions())
                         {
                             ConfigurationItemFactory configurationItemFactory = new ConfigurationItemFactory();
-                            configurationItemFactory.LayoutRenderers.RegisterDefinition("throwsException", typeof(ThrowsExceptionRenderer));
+                            configurationItemFactory.LayoutRendererFactory.RegisterType<ThrowsExceptionRenderer>("throwsException");
 
                             SimpleLayout l = new SimpleLayout("xx${throwsException:msg1}yy${throwsException:msg2}zz", configurationItemFactory);
                             string output = l.Render(LogEventInfo.CreateNullEvent());
@@ -107,8 +111,8 @@ namespace NLog.UnitTests.Layouts
                     },
                     LogLevel.Warn);
 
-            Assert.True(internalLogOutput.IndexOf("msg1") >= 0, internalLogOutput);
-            Assert.True(internalLogOutput.IndexOf("msg2") >= 0, internalLogOutput);
+            Assert.Contains("msg1", internalLogOutput);
+            Assert.Contains("msg2", internalLogOutput);
         }
 
         [Fact]

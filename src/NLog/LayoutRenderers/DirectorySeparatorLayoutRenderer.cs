@@ -43,7 +43,6 @@ namespace NLog.LayoutRenderers
     /// </summary>
     [LayoutRenderer("dir-separator")]
     [ThreadAgnostic]
-    [ThreadSafe]
     [AppDomainFixedOutput]
     public class DirectorySeparatorLayoutRenderer : LayoutRenderer, IRawValue
     {
@@ -55,7 +54,6 @@ namespace NLog.LayoutRenderers
             builder.Append(_separatorChar);
         }
 
-        /// <inheritdoc />
         bool IRawValue.TryGetRawValue(LogEventInfo logEvent, out object value)
         {
             value = _separatorChar;

@@ -35,9 +35,11 @@ namespace NLog.WindowsRegistry.Tests
 {
     using System;
     using Microsoft.Win32;
-    using NLog.Config;
     using Xunit;
 
+#if NETSTANDARD
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+#endif
     public sealed class RegistryTests : IDisposable
     {
         private const string TestKey = @"Software\NLogTest";

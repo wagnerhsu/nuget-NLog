@@ -64,13 +64,16 @@ namespace NLog.Internal
             for (int i = 0; i < length; ++i)
             {
                 char ch = text[i];
-                if (!XmlConvert.IsXmlChar(ch) && !(i + 1 < text.Length && XmlConvert.IsXmlSurrogatePair(text[i + 1], text[i])))
+                if (!XmlConvert.IsXmlChar(ch))
                 {
-                    return CreateValidXmlString(text);   // rare expensive case
-                }
-                else
-                {
-                    ++i;
+                    if (i + 1 < text.Length && XmlConvert.IsXmlSurrogatePair(text[i + 1], ch))
+                    {
+                        ++i;
+                    }
+                    else
+                    {
+                        return CreateValidXmlString(text);   // rare expensive case
+                    }
                 }
             }
             return text;
@@ -100,12 +103,44 @@ namespace NLog.Internal
         }
 #endif
 
+        internal static void PerformXmlEscapeWhenNeeded(StringBuilder builder, int startPos, bool xmlEncodeNewlines)
+        {
+            if (RequiresXmlEscape(builder, startPos, xmlEncodeNewlines))
+            {
+                var str = builder.ToString(startPos, builder.Length - startPos);
+                builder.Length = startPos;
+                EscapeXmlString(str, xmlEncodeNewlines, builder);
+            }
+        }
+
+        private static bool RequiresXmlEscape(StringBuilder target, int startPos, bool xmlEncodeNewlines)
+        {
+            for (int i = startPos; i < target.Length; ++i)
+            {
+                switch (target[i])
+                {
+                    case '<':
+                    case '>':
+                    case '&':
+                    case '\'':
+                    case '"':
+                        return true;
+                    case '\r':
+                    case '\n':
+                        if (xmlEncodeNewlines)
+                            return true;
+                        break;
+                }
+            }
+            return false;
+        }
+
         private static readonly char[] XmlEscapeChars = new char[] { '<', '>', '&', '\'', '"' };
         private static readonly char[] XmlEscapeNewlineChars = new char[] { '<', '>', '&', '\'', '"', '\r', '\n' };
 
         internal static string EscapeXmlString(string text, bool xmlEncodeNewlines, StringBuilder result = null)
         {
-            if (result == null && SmallAndNoEscapeNeeded(text, xmlEncodeNewlines))
+            if (result is null && SmallAndNoEscapeNeeded(text, xmlEncodeNewlines))
             {
                 return text;
             }
@@ -155,7 +190,7 @@ namespace NLog.Internal
                 }
             }
 
-            return result == null ? sb.ToString() : null;
+            return result is null ? sb.ToString() : null;
         }
 
         /// <summary>
@@ -280,7 +315,7 @@ namespace NLog.Internal
                         }
                 }
 
-                if (sb == null)
+                if (sb is null)
                 {
                     sb = CreateStringBuilder(xmlElementName, i);
                 }
@@ -306,7 +341,7 @@ namespace NLog.Internal
             try
             {
                 var convertibleValue = value as IConvertible;
-                var objTypeCode = convertibleValue?.GetTypeCode() ?? (value == null ? TypeCode.Empty : TypeCode.Object);
+                var objTypeCode = convertibleValue?.GetTypeCode() ?? (value is null ? TypeCode.Empty : TypeCode.Object);
                 if (objTypeCode != TypeCode.Object)
                 {
                     return XmlConvertToString(convertibleValue, objTypeCode, safeConversion);
@@ -342,7 +377,7 @@ namespace NLog.Internal
         /// <returns>Object value converted to string</returns>
         internal static string XmlConvertToString(IConvertible value, TypeCode objTypeCode, bool safeConversion = false)
         {
-            if (objTypeCode == TypeCode.Empty || value == null)
+            if (objTypeCode == TypeCode.Empty || value is null)
             {
                 return "null";
             }

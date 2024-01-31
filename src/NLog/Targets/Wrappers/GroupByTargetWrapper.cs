@@ -43,8 +43,12 @@ namespace NLog.Targets.Wrappers
     /// <summary>
     /// A target that buffers log events and sends them in batches to the wrapped target.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/nlog/nlog/wiki/GroupByWrapper-target">See NLog Wiki</a>
+    /// </remarks>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/GroupByWrapper-target">Documentation on NLog Wiki</seealso>
     [Target("GroupByWrapper", IsWrapper = true)]
-    class GroupByTargetWrapper : WrapperTargetBase
+    public class GroupByTargetWrapper : WrapperTargetBase
     {
         SortHelpers.KeySelector<AsyncLogEventInfo, string> _buildKeyStringDelegate;
 
@@ -66,7 +70,7 @@ namespace NLog.Targets.Wrappers
         /// </summary>
         /// <param name="wrappedTarget">The wrapped target.</param>
         public GroupByTargetWrapper(Target wrappedTarget)
-            : this(null, wrappedTarget)
+            : this(string.IsNullOrEmpty(wrappedTarget?.Name) ? null : (wrappedTarget.Name + "_wrapped"), wrappedTarget)
         {
         }
 
@@ -93,16 +97,16 @@ namespace NLog.Targets.Wrappers
             Key = key;
         }
 
-        // <inheritdoc />
+        /// <inheritdoc/>
         protected override void Write(AsyncLogEventInfo logEvent)
         {
             WrappedTarget.WriteAsyncLogEvent(logEvent);
         }
 
-        // <inheritdoc />
+        /// <inheritdoc/>
         protected override void Write(IList<AsyncLogEventInfo> logEvents)
         {
-            if (_buildKeyStringDelegate == null)
+            if (_buildKeyStringDelegate is null)
                 _buildKeyStringDelegate = logEvent => RenderLogEvent(Key, logEvent.LogEvent);
 
             var buckets = logEvents.BucketSort(_buildKeyStringDelegate);

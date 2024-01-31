@@ -39,18 +39,17 @@ namespace NLog.LayoutRenderers
     using NLog.Internal;
 
     /// <summary>
-    /// Render a Mapped Diagnostic Logical Context item (based on CallContext).
-    /// See <see cref="MappedDiagnosticsLogicalContext"/>
+    /// Obsolete and replaced by <see cref="ScopeContextPropertyLayoutRenderer"/> with NLog v5.
+    /// Render Mapped Diagnostics Logical Context (MDLC) from <see cref="MappedDiagnosticsLogicalContext"/>
     /// </summary>
     [LayoutRenderer("mdlc")]
-    [ThreadSafe]
     [Obsolete("Replaced by ScopeContextPropertyLayoutRenderer ${scopeproperty}. Marked obsolete on NLog 5.0")]
     public class MdlcLayoutRenderer : LayoutRenderer, IStringValueRenderer
     {
         /// <summary>
         /// Gets or sets the name of the item.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [RequiredParameter]
         [DefaultParameter]
         public string Item { get; set; }
@@ -58,10 +57,10 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Format string for conversion from object to string.
         /// </summary>
-        /// <docgen category='Rendering Options' order='50' />
+        /// <docgen category='Layout Options' order='50' />
         public string Format { get; set; }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             var value = GetValue();
@@ -69,7 +68,6 @@ namespace NLog.LayoutRenderers
             builder.AppendFormattedValue(value, Format, formatProvider, ValueFormatter);
         }
         
-        /// <inheritdoc/>
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent) => GetStringValue(logEvent);
 
         private string GetStringValue(LogEventInfo logEvent)

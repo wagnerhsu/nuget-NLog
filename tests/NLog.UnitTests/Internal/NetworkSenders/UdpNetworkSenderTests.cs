@@ -38,12 +38,11 @@ namespace NLog.UnitTests.Internal.NetworkSenders
     using NLog.Internal.NetworkSenders;
 
     using Xunit;
-    using Xunit.Extensions;
 
     public class UdpNetworkSenderTests
     {
         [Theory]
-        [InlineData("udp://randomurl:8080", false)]
+        [InlineData("udp://127.0.0.1:8080", false)]
         [InlineData("udp://255.255.255.255:8080", true)]
         public void CreateSocket_HandlesBroadcast(string url, bool broadcastEnabled)
         {
@@ -51,7 +50,7 @@ namespace NLog.UnitTests.Internal.NetworkSenders
             var sender = new UdpNetworkSender(url, AddressFamily.InterNetwork);
 
             // act
-            var socket = sender.CreateSocket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            var socket = sender.CheckSocket();
 
             // assert
             Assert.Equal(broadcastEnabled, ((SocketProxy)socket).UnderlyingSocket.EnableBroadcast);

@@ -35,7 +35,6 @@ namespace NLog.UnitTests
 {
     using System;
     using System.Globalization;
-    using System.Reflection;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -45,7 +44,7 @@ namespace NLog.UnitTests
 
     public class LoggerTests : NLogTestBase
     {
-        private CultureInfo NLCulture = GetCultureInfo("nl-nl");
+        private static readonly CultureInfo NLCulture = GetCultureInfo("nl-nl");
 
         [Fact]
         public void TraceTest()
@@ -2025,12 +2024,14 @@ namespace NLog.UnitTests
             logger.SwallowAsync(Task.WhenAll()).Wait();
 
             int executions = 0;
-            logger.Swallow(Task.Run(() => ++executions));
-            logger.SwallowAsync(async () => { await Task.Delay(20); ++executions; }).Wait();
-            Assert.True(executions == 2);
+            logger.Swallow(Task.Run(() => Interlocked.Increment(ref executions)));
+            logger.SwallowAsync(async () => { await Task.Delay(50); Interlocked.Increment(ref executions); }).Wait();
+            for (int i = 0; i < 500 && executions != 2; ++i)
+                Thread.Sleep(10);
+            Assert.Equal(2, executions);
 
-            Assert.Equal(1, logger.SwallowAsync(async () => { await Task.Delay(20); return 1; }).Result);
-            Assert.Equal(1, logger.SwallowAsync(async () => { await Task.Delay(20); return 1; }, 2).Result);
+            Assert.Equal(1, logger.SwallowAsync(async () => { await Task.Delay(10); return 1; }).Result);
+            Assert.Equal(1, logger.SwallowAsync(async () => { await Task.Delay(10); return 1; }, 2).Result);
 #endif
 
             AssertDebugCounter("debug", 0);
@@ -2056,13 +2057,13 @@ namespace NLog.UnitTests
             logger.SwallowAsync(completion.Task).Wait();
             AssertDebugLastMessageContains("debug", "Test message 4");
 
-            logger.SwallowAsync(async () => { await Task.Delay(20); throw new InvalidOperationException("Test message 5"); }).Wait();
+            logger.SwallowAsync(async () => { await Task.Delay(10); throw new InvalidOperationException("Test message 5"); }).Wait();
             AssertDebugLastMessageContains("debug", "Test message 5");
 
-            Assert.Equal(0, logger.SwallowAsync(async () => { await Task.Delay(20); if (warningFix) throw new InvalidOperationException("Test message 6"); return 1; }).Result);
+            Assert.Equal(0, logger.SwallowAsync(async () => { await Task.Delay(10); if (warningFix) throw new InvalidOperationException("Test message 6"); return 1; }).Result);
             AssertDebugLastMessageContains("debug", "Test message 6");
 
-            Assert.Equal(2, logger.SwallowAsync(async () => { await Task.Delay(20); if (warningFix) throw new InvalidOperationException("Test message 7"); return 1; }, 2).Result);
+            Assert.Equal(2, logger.SwallowAsync(async () => { await Task.Delay(10); if (warningFix) throw new InvalidOperationException("Test message 7"); return 1; }, 2).Result);
             AssertDebugLastMessageContains("debug", "Test message 7");
 #endif
         }
@@ -2672,36 +2673,6 @@ namespace NLog.UnitTests
             public override string ToString() { return Name; }
         }
 
-        public abstract class BaseWrapper
-        {
-            public void Log(string what)
-            {
-                InternalLog(what);
-            }
-
-            protected abstract void InternalLog(string what);
-        }
-
-        public class MyWrapper : BaseWrapper
-        {
-            private readonly ILogger _wrapperLogger;
-
-            public MyWrapper()
-            {
-                _wrapperLogger = LogManager.GetLogger("WrappedLogger");
-            }
-
-            protected override void InternalLog(string what)
-            {
-                LogEventInfo info = new LogEventInfo(LogLevel.Warn, _wrapperLogger.Name, what);
-
-                // Provide BaseWrapper as wrapper type.
-                // Expected: UserStackFrame should point to the method that calls a 
-                // method of BaseWrapper.
-                _wrapperLogger.Log(typeof(BaseWrapper), info);
-            }
-        }
-
         public class MyTarget : TargetWithLayout
         {
             public MyTarget()
@@ -2819,6 +2790,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Instead use WithProperty which is safe. If really necessary then one can use Properties-property. Marked obsolete on NLog 5.0")]
         public void LoggerSetPropertyChangesCurrentLogger()
         {
             string uniqueLoggerName = Guid.NewGuid().ToString();
@@ -2918,7 +2890,7 @@ namespace NLog.UnitTests
             var logger = logFactory.GetLogger(nameof(LoggerPushScopeContextUpdatesMDLC));
 
             // Act
-            using (logger.PushScopeState("hello world"))
+            using (logger.PushScopeNested("hello world"))
             {
                 logger.Info("Test");
             }

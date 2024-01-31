@@ -58,10 +58,7 @@ namespace NLog.Targets.Wrappers
         }
         private Target _wrappedTarget;
 
-        /// <summary>
-        /// Returns the text representation of the object. Used for diagnostics.
-        /// </summary>
-        /// <returns>A string that describes the target.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return _tostring ?? (_tostring = GenerateTargetToString());
@@ -69,24 +66,21 @@ namespace NLog.Targets.Wrappers
 
         private string GenerateTargetToString()
         {
-            if (string.IsNullOrEmpty(Name))
-                return $"{GenerateTargetToString(true)}_{WrappedTarget}";
-            else if (WrappedTarget == null)
+            if (WrappedTarget is null)
                 return GenerateTargetToString(true);
+            else if (string.IsNullOrEmpty(Name))
+                return $"{GenerateTargetToString(true, "")}_{WrappedTarget}";
             else
                 return $"{GenerateTargetToString(true, "")}_{WrappedTarget.GenerateTargetToString(false, Name)}";
         }
 
-        /// <summary>
-        /// Flush any pending log messages (in case of asynchronous targets).
-        /// </summary>
-        /// <param name="asyncContinuation">The asynchronous continuation.</param>
+        /// <inheritdoc/>
         protected override void FlushAsync(AsyncContinuation asyncContinuation)
         {
-            if (WrappedTarget != null)
-                WrappedTarget.Flush(asyncContinuation);
-            else
+            if (WrappedTarget is null)
                 asyncContinuation(null);
+            else
+                WrappedTarget.Flush(asyncContinuation);
         }
 
         /// <summary>

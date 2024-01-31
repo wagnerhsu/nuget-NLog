@@ -36,6 +36,7 @@ namespace NLog.Config
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.ComponentModel;
     using System.Globalization;
     using System.Linq;
     using System.Text;
@@ -66,8 +67,6 @@ namespace NLog.Config
         public LoggingRule(string ruleName)
         {
             RuleName = ruleName;
-            Filters = new List<Filter>();
-            ChildRules = new List<LoggingRule>();
         }
 
         /// <summary>
@@ -100,7 +99,7 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Create a (disabled) <see cref="LoggingRule" />. You should call <see cref="EnableLoggingForLevel"/> or see cref="EnableLoggingForLevels"/> to enable logging.
+        /// Create a (disabled) <see cref="LoggingRule" />. You should call <see cref="EnableLoggingForLevel"/> or <see cref="EnableLoggingForLevels"/> to enable logging.
         /// </summary>
         /// <param name="loggerNamePattern">Logger name pattern used for <see cref="LoggerNamePattern"/>. It may include one or more '*' or '?' wildcards at any position.</param>
         /// <param name="target">Target to be written to when the rule matches.</param>
@@ -124,7 +123,7 @@ namespace NLog.Config
         /// <summary>
         /// Gets a collection of child rules to be evaluated when this rule matches.
         /// </summary>
-        public IList<LoggingRule> ChildRules { get; }
+        public IList<LoggingRule> ChildRules { get; } = new List<LoggingRule>();
 
         internal List<LoggingRule> GetChildRulesThreadSafe() { lock (ChildRules) return ChildRules.ToList(); }
         internal Target[] GetTargetsThreadSafe() { lock (_targets) return _targets.Count == 0 ? NLog.Internal.ArrayHelper.Empty<Target>() : _targets.ToArray(); }
@@ -133,12 +132,24 @@ namespace NLog.Config
         /// <summary>
         /// Gets a collection of filters to be checked before writing to targets.
         /// </summary>
-        public IList<Filter> Filters { get; }
+        public IList<Filter> Filters { get; } = new List<Filter>();
 
         /// <summary>
-        /// Gets or sets a value indicating whether to quit processing any further rule when this one matches.
+        /// Gets or sets a value indicating whether to quit processing any following rules when this one matches.
         /// </summary>
         public bool Final { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="NLog.LogLevel"/> whether to quit processing any following rules when lower severity and this one matches.
+        /// </summary>
+        /// <remarks>
+        /// Loggers matching will be restricted to specified minimum level for following rules.
+        /// </remarks>
+        public LogLevel FinalMinLevel
+        {
+            get => _logLevelFilter.FinalMinLevel;
+            set => _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetFinalMinLevel(value);
+        }
 
         /// <summary>
         /// Gets or sets logger name pattern.
@@ -154,12 +165,10 @@ namespace NLog.Config
         public string LoggerNamePattern
         {
             get => _loggerNameMatcher.Pattern;
-
-            set
-            {
-                _loggerNameMatcher = LoggerNameMatcher.Create(value);
-            }
+            set => _loggerNameMatcher = LoggerNameMatcher.Create(value);
         }
+
+        internal bool[] LogLevels => _logLevelFilter.LogLevels;
 
         /// <summary>
         /// Gets the collection of log levels enabled by this rule.
@@ -184,14 +193,24 @@ namespace NLog.Config
         }
 
         /// <summary>
-        /// Default action if none of the filters match
+        /// Obsolete and replaced by <see cref="FilterDefaultAction"/> with NLog v5.
+        /// 
+        /// Default action when filters not matching
         /// </summary>
+        /// <remarks>
+        /// NLog v4.6 introduced the setting with default value <see cref="FilterResult.Neutral"/>. 
+        /// NLog v5 marked it as obsolete and change default value to <see cref="FilterResult.Log"/>
+        /// </remarks>
         [Obsolete("Replaced by FilterDefaultAction. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public FilterResult DefaultFilterResult { get => FilterDefaultAction; set => FilterDefaultAction = value; }
 
         /// <summary>
         /// Default action if none of the filters match
         /// </summary>
+        /// <remarks>
+        /// NLog v5 changed default value to <see cref="FilterResult.Ignore"/>
+        /// </remarks>
         public FilterResult FilterDefaultAction { get; set; } = FilterResult.Ignore;
 
         /// <summary>
@@ -218,14 +237,14 @@ namespace NLog.Config
             _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(minLevel, maxLevel, true);
         }
 
-        internal void EnableLoggingForLevels(NLog.Layouts.SimpleLayout simpleLayout)
+        internal void EnableLoggingForLevelLayout(NLog.Layouts.SimpleLayout simpleLayout, NLog.Layouts.SimpleLayout finalMinLevel)
         {
-            _logLevelFilter = new DynamicLogLevelFilter(this, simpleLayout);
+            _logLevelFilter = new DynamicLogLevelFilter(this, simpleLayout, finalMinLevel);
         }
 
-        internal void EnableLoggingForRange(Layouts.SimpleLayout minLevel, Layouts.SimpleLayout maxLevel)
+        internal void EnableLoggingForLevelsLayout(Layouts.SimpleLayout minLevel, Layouts.SimpleLayout maxLevel, NLog.Layouts.SimpleLayout finalMinLevel)
         {
-            _logLevelFilter = new DynamicRangeLevelFilter(this, minLevel, maxLevel);
+            _logLevelFilter = new DynamicRangeLevelFilter(this, minLevel, maxLevel, finalMinLevel);
         }
 
         /// <summary>
@@ -246,7 +265,7 @@ namespace NLog.Config
         /// Disables logging for particular levels between (included) <paramref name="minLevel"/> and <paramref name="maxLevel"/>.
         /// </summary>
         /// <param name="minLevel">Minimum log level to be disables.</param>
-        /// <param name="maxLevel">Maximum log level to de disabled.</param>
+        /// <param name="maxLevel">Maximum log level to be disabled.</param>
         public void DisableLoggingForLevels(LogLevel minLevel, LogLevel maxLevel)
         {
             _logLevelFilter = _logLevelFilter.GetSimpleFilterForUpdate().SetLoggingLevels(minLevel, maxLevel, false);
@@ -255,7 +274,7 @@ namespace NLog.Config
         /// <summary>
         /// Enables logging the levels between (included) <paramref name="minLevel"/> and <paramref name="maxLevel"/>. All the other levels will be disabled.
         /// </summary>
-        /// <param name="minLevel">>Minimum log level needed to trigger this rule.</param>
+        /// <param name="minLevel">Minimum log level needed to trigger this rule.</param>
         /// <param name="maxLevel">Maximum log level needed to trigger this rule.</param>
         public void SetLoggingLevels(LogLevel minLevel, LogLevel maxLevel)
         {
@@ -265,38 +284,55 @@ namespace NLog.Config
         /// <summary>
         /// Returns a string representation of <see cref="LoggingRule"/>. Used for debugging.
         /// </summary>
-        /// <returns>
-        /// A <see cref="T:System.String"/> that represents the current <see cref="T:System.Object"/>.
-        /// </returns>
         public override string ToString()
         {
             var sb = new StringBuilder();
 
             sb.Append(_loggerNameMatcher.ToString());
             sb.Append(" levels: [ ");
+            
+            var targets = GetTargetsThreadSafe();
 
             var currentLogLevels = _logLevelFilter.LogLevels;
             for (int i = 0; i < currentLogLevels.Length; ++i)
             {
-                if (currentLogLevels[i])
+                if (targets.Length == 0 && !Final && FinalMinLevel != null)
+                {
+                    if (i < FinalMinLevel.Ordinal)
+                    {
+                        sb.AppendFormat(CultureInfo.InvariantCulture, "{0} ", LogLevel.FromOrdinal(i).ToString());
+                    }
+                }
+                else if (currentLogLevels[i])
                 {
                     sb.AppendFormat(CultureInfo.InvariantCulture, "{0} ", LogLevel.FromOrdinal(i).ToString());
                 }
             }
 
             sb.Append("] writeTo: [ ");
-            foreach (Target writeTo in GetTargetsThreadSafe())
+            foreach (Target writeTo in targets)
             {
                 var targetName = string.IsNullOrEmpty(writeTo.Name) ? writeTo.ToString() : writeTo.Name;
                 sb.AppendFormat(CultureInfo.InvariantCulture, "{0} ", targetName);
             }
 
-            sb.Append("]");
+            sb.Append(']');
+
+            if (Final)
+            {
+                sb.Append(" final: True");
+            }
+
+            if (FinalMinLevel != null)
+            {
+                sb.Append(" finalMinLevel: ").Append(FinalMinLevel);
+            }
+
             return sb.ToString();
         }
 
         /// <summary>
-        /// Checks whether te particular log level is enabled for this rule.
+        /// Checks whether the particular log level is enabled for this rule.
         /// </summary>
         /// <param name="level">Level to be checked.</param>
         /// <returns>A value of <see langword="true"/> when the log level is enabled, <see langword="false" /> otherwise.</returns>

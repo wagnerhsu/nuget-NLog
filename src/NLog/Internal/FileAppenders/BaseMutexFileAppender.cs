@@ -114,10 +114,7 @@ namespace NLog.Internal.FileAppenders
             }
         }
 
-        /// <summary>
-        /// Releases unmanaged and - optionally - managed resources.
-        /// </summary>
-        /// <param name="disposing">True to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        /// <inheritdoc/>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
@@ -189,7 +186,7 @@ namespace NLog.Internal.FileAppenders
 
             // The hash makes the name unique, but also add the end of the path,
             // so the end of the name tells us which file it is (for debugging)
-            mutexName = string.Format(mutexNameFormatString, mutexNamePrefix, hash);
+            mutexName = string.Format(System.Globalization.CultureInfo.InvariantCulture, mutexNameFormatString, mutexNamePrefix, hash);
             int cutOffIndex = canonicalName.Length - (maxMutexNameLength - mutexName.Length);
             return mutexName + canonicalName.Substring(cutOffIndex);
         }

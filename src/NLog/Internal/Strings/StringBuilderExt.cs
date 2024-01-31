@@ -80,7 +80,7 @@ namespace NLog.Internal
             if (value < 0)
             {
                 builder.Append('-');
-                uint uint_value = uint.MaxValue - ((uint)value) + 1; //< This is to deal with Int32.MinValue
+                uint uint_value = uint.MaxValue - ((uint)value) + 1; // NOSONAR: This is to deal with Int32.MinValue
                 AppendInvariant(builder, uint_value);
             }
             else
@@ -146,9 +146,9 @@ namespace NLog.Internal
         private static readonly char[] charToInt = new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' };
 
         /// <summary>
-        /// Convert DateTime into UTC and format to yyyy-MM-ddTHH:mm:ss.fffffffZ - ISO 6801 date (Round-Trip-Time)
+        /// Convert DateTime into UTC and format to yyyy-MM-ddTHH:mm:ss.fffffffZ - ISO 8601 Compliant Date Format (Round-Trip-Time)
         /// </summary>
-        public static void AppendXmlDateTimeRoundTrip(this StringBuilder builder, DateTime dateTime)
+        public static void AppendXmlDateTimeUtcRoundTrip(this StringBuilder builder, DateTime dateTime)
         {
             if (dateTime.Kind == DateTimeKind.Unspecified)
                 dateTime = new DateTime(dateTime.Ticks, DateTimeKind.Utc);
@@ -222,17 +222,19 @@ namespace NLog.Internal
         {
             int charCount;
             int byteCount = encoding.GetMaxByteCount(builder.Length);
-            ms.SetLength(ms.Position + byteCount);
+            long position = ms.Position;
+            ms.SetLength(position + byteCount);
             for (int i = 0; i < builder.Length; i += transformBuffer.Length)
             {
                 charCount = Math.Min(builder.Length - i, transformBuffer.Length);
                 builder.CopyTo(i, transformBuffer, 0, charCount);
-                byteCount = encoding.GetBytes(transformBuffer, 0, charCount, ms.GetBuffer(), (int)ms.Position);
-                ms.Position += byteCount;
+                byteCount = encoding.GetBytes(transformBuffer, 0, charCount, ms.GetBuffer(), (int)position);
+                position += byteCount;
             }
-            if (ms.Position != ms.Length)
+            ms.Position = position;
+            if (position != ms.Length)
             {
-                ms.SetLength(ms.Position);
+                ms.SetLength(position);
             }
         }
 
@@ -286,7 +288,8 @@ namespace NLog.Internal
         /// <returns>Index of the first occurrence (Else -1)</returns>
         public static int IndexOf(this StringBuilder builder, char needle, int startPos = 0)
         {
-            for (int i = startPos; i < builder.Length; ++i)
+            var builderLength = builder.Length;
+            for (int i = startPos; i < builderLength; ++i)
                 if (builder[i] == needle)
                     return i;
             return -1;
@@ -301,11 +304,10 @@ namespace NLog.Internal
         /// <returns>Index of the first occurrence (Else -1)</returns>
         public static int IndexOfAny(this StringBuilder builder, char[] needles, int startPos = 0)
         {
-            for (int i = startPos; i < builder.Length; ++i)
-            {
+            var builderLength = builder.Length;
+            for (int i = startPos; i < builderLength; ++i)
                 if (CharArrayContains(builder[i], needles))
                     return i;
-            }
             return -1;
         }
 
@@ -329,10 +331,11 @@ namespace NLog.Internal
         /// <returns>True when content is the same</returns>
         public static bool EqualTo(this StringBuilder builder, StringBuilder other)
         {
-            if (builder.Length != other.Length)
+            var builderLength = builder.Length;
+            if (builderLength != other.Length)
                 return false;
 
-            for (int x = 0; x < builder.Length; ++x)
+            for (int x = 0; x < builderLength; ++x)
             {
                 if (builder[x] != other[x])
                 {
@@ -419,19 +422,45 @@ namespace NLog.Internal
                 case TypeCode.Single:
                     {
                         float floatValue = value.ToSingle(CultureInfo.InvariantCulture);
-                        AppendFloatInvariant(sb, floatValue);
+#if NETSTANDARD
+                        if (!float.IsNaN(floatValue) && !float.IsInfinity(floatValue) && value is IFormattable formattable)
+                        {
+                            AppendDecimalInvariant(sb, formattable, "{0:R}");
+                        }
+                        else
+#endif
+                        {
+                            AppendFloatInvariant(sb, floatValue);
+                        }
                     }
                     break;
                 case TypeCode.Double:
                     {
                         double doubleValue = value.ToDouble(CultureInfo.InvariantCulture);
-                        AppendDoubleInvariant(sb, doubleValue);
+#if NETSTANDARD
+                        if (!double.IsNaN(doubleValue) && !double.IsInfinity(doubleValue) && value is IFormattable formattable)
+                        {
+                            AppendDecimalInvariant(sb, formattable, "{0:R}");
+                        }
+                        else
+#endif
+                        {
+                            AppendDoubleInvariant(sb, doubleValue);
+                        }
                     }
                     break;
                 case TypeCode.Decimal:
                     {
-                        decimal decimalValue = value.ToDecimal(CultureInfo.InvariantCulture);
-                        AppendDecimalInvariant(sb, decimalValue);
+#if NETSTANDARD
+                        if (value is IFormattable formattable)
+                        {
+                            AppendDecimalInvariant(sb, formattable, "{0}");
+                        }
+                        else
+#endif
+                        {
+                            AppendDecimalInvariant(sb, value.ToDecimal(CultureInfo.InvariantCulture));
+                        }
                     }
                     break;
                 default:
@@ -439,6 +468,21 @@ namespace NLog.Internal
                     break;
             }
         }
+
+#if NETSTANDARD
+        private static void AppendDecimalInvariant(StringBuilder sb, IFormattable formattable, string format)
+        {
+            int orgLength = sb.Length;
+            sb.AppendFormat(CultureInfo.InvariantCulture, format, formattable); // Support ISpanFormattable
+            for (int i = sb.Length - 1; i > orgLength; --i)
+            {
+                if (!char.IsDigit(sb[i]))
+                    return;
+            }
+            sb.Append('.');
+            sb.Append('0');
+        }
+#endif
 
         private static void AppendDecimalInvariant(StringBuilder sb, decimal decimalValue)
         {

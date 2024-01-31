@@ -33,6 +33,7 @@
 
 namespace NLog.UnitTests.Conditions
 {
+    using System;
     using NLog.Internal;
     using NLog.Conditions;
     using NLog.Config;
@@ -196,29 +197,31 @@ namespace NLog.UnitTests.Conditions
         {
             var result = ConditionParser.ParseExpression("starts-with(logger, 'x${message}')") as ConditionMethodExpression;
             Assert.NotNull(result);
+            Assert.Equal("starts-with", result.MethodName);
             Assert.Equal("starts-with(logger, 'x${message}')", result.ToString());
-            Assert.Equal("StartsWith", result.MethodInfo.Name);
-            Assert.Equal(typeof(ConditionMethods), result.MethodInfo.DeclaringType);
+            Assert.Equal(2, result.MethodParameters.Count);
         }
 
         [Fact]
         public void CustomNLogFactoriesTest()
         {
             var configurationItemFactory = new ConfigurationItemFactory();
-            configurationItemFactory.LayoutRenderers.RegisterDefinition("foo", typeof(FooLayoutRenderer));
-            configurationItemFactory.ConditionMethods.RegisterDefinition("check", typeof(MyConditionMethods).GetMethod("CheckIt"));
+            configurationItemFactory.LayoutRendererFactory.RegisterType<FooLayoutRenderer>("foo");
+            configurationItemFactory.ConditionMethodFactory.RegisterDefinition("check", typeof(MyConditionMethods).GetMethod("CheckIt"));
 
-            ConditionParser.ParseExpression("check('${foo}')", configurationItemFactory);
+            var result = ConditionParser.ParseExpression("check('${foo}')", configurationItemFactory);
+            Assert.NotNull(result);
         }
 
         [Fact]
         public void MethodNameWithUnderscores()
         {
             var configurationItemFactory = new ConfigurationItemFactory();
-            configurationItemFactory.LayoutRenderers.RegisterDefinition("foo", typeof(FooLayoutRenderer));
-            configurationItemFactory.ConditionMethods.RegisterDefinition("__check__", typeof(MyConditionMethods).GetMethod("CheckIt"));
+            configurationItemFactory.LayoutRendererFactory.RegisterType<FooLayoutRenderer>("foo");
+            configurationItemFactory.ConditionMethodFactory.RegisterDefinition("__check__", typeof(MyConditionMethods).GetMethod("CheckIt"));
 
-            ConditionParser.ParseExpression("__check__('${foo}')", configurationItemFactory);
+            var result = ConditionParser.ParseExpression("__check__('${foo}')", configurationItemFactory);
+            Assert.NotNull(result);
         }
 
         [Fact]
@@ -300,7 +303,7 @@ namespace NLog.UnitTests.Conditions
             Assert.Throws<ConditionParseException>(() => tokenizer.GetNextToken());
         }
 
-        private void RelationalOperatorTestInner(string op, string result)
+        private static void RelationalOperatorTestInner(string op, string result)
         {
             string operand1 = "3";
             string operand2 = "7";

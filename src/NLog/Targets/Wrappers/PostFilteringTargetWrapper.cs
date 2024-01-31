@@ -43,35 +43,29 @@ namespace NLog.Targets.Wrappers
     /// <summary>
     /// Filters buffered log entries based on a set of conditions that are evaluated on a group of events.
     /// </summary>
-    /// <seealso href="https://github.com/nlog/nlog/wiki/PostFilteringWrapper-target">Documentation on NLog Wiki</seealso>
     /// <remarks>
-    /// PostFilteringWrapper must be used with some type of buffering target or wrapper, such as
-    /// AsyncTargetWrapper, BufferingWrapper or ASPNetBufferingWrapper.
+    /// <a href="https://github.com/nlog/nlog/wiki/PostFilteringWrapper-target">See NLog Wiki</a>
     /// </remarks>
+    /// <seealso href="https://github.com/nlog/nlog/wiki/PostFilteringWrapper-target">Documentation on NLog Wiki</seealso>
     /// <example>
     /// <p>
     /// This example works like this. If there are no Warn,Error or Fatal messages in the buffer
     /// only Info messages are written to the file, but if there are any warnings or errors, 
-    /// the output includes detailed trace (levels &gt;= Debug). You can plug in a different type
-    /// of buffering wrapper (such as ASPNetBufferingWrapper) to achieve different
-    /// functionality.
+    /// the output includes detailed trace (levels &gt;= Debug).
     /// </p>
     /// <p>
-    /// To set up the target in the <a href="config.html">configuration file</a>, 
+    /// To set up the target in the <a href="https://github.com/NLog/NLog/wiki/Configuration-file">configuration file</a>, 
     /// use the following syntax:
     /// </p>
     /// <code lang="XML" source="examples/targets/Configuration File/PostFilteringWrapper/NLog.config" />
     /// <p>
-    /// The above examples assume just one target and a single rule. See below for
-    /// a programmatic configuration that's equivalent to the above config file:
+    /// To set up the log target programmatically use code like this:
     /// </p>
     /// <code lang="C#" source="examples/targets/Configuration API/PostFilteringWrapper/Simple/Example.cs" />
     /// </example>
     [Target("PostFilteringWrapper", IsWrapper = true)]
     public class PostFilteringTargetWrapper : WrapperTargetBase
     {
-        private static object boxedTrue = true;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="PostFilteringTargetWrapper" /> class.
         /// </summary>
@@ -84,7 +78,7 @@ namespace NLog.Targets.Wrappers
         /// Initializes a new instance of the <see cref="PostFilteringTargetWrapper" /> class.
         /// </summary>
         public PostFilteringTargetWrapper(Target wrappedTarget)
-            : this(null, wrappedTarget)
+            : this(string.IsNullOrEmpty(wrappedTarget?.Name) ? null : (wrappedTarget.Name + "_wrapped"), wrappedTarget)
         {
         }
 
@@ -95,9 +89,8 @@ namespace NLog.Targets.Wrappers
         /// <param name="wrappedTarget">The wrapped target.</param>
         public PostFilteringTargetWrapper(string name, Target wrappedTarget)
         {
-            Name = name;
+            Name = name ?? Name;
             WrappedTarget = wrappedTarget;
-            Rules = new List<FilteringRule>();
         }
 
         /// <summary>
@@ -113,7 +106,7 @@ namespace NLog.Targets.Wrappers
         /// </summary>
         /// <docgen category='Filtering Rules' order='10' />
         [ArrayParameter(typeof(FilteringRule), "when")]
-        public IList<FilteringRule> Rules { get; private set; }
+        public IList<FilteringRule> Rules { get; } = new List<FilteringRule>();
 
         /// <inheritdoc/>
         protected override void Write(AsyncLogEventInfo logEvent)
@@ -133,14 +126,14 @@ namespace NLog.Targets.Wrappers
             InternalLogger.Trace("{0}: Running on {1} events", this, logEvents.Count);
 
             var resultFilter = EvaluateAllRules(logEvents) ?? DefaultFilter;
-            if (resultFilter == null)
+            if (resultFilter is null)
             {
                 WrappedTarget.WriteAsyncLogEvents(logEvents);
             }
             else
             {
                 InternalLogger.Trace("{0}: Filter to apply: {1}", this, resultFilter);
-                var resultBuffer = logEvents.Filter(resultFilter, (logEvent, filter) => ApplyFilter(logEvent, filter));
+                var resultBuffer = logEvents.Filter(resultFilter, (logEvent, filter) => ShouldLogEvent(logEvent, filter));
                 InternalLogger.Trace("{0}: After filtering: {1} events.", this, resultBuffer.Count);
                 if (resultBuffer.Count > 0)
                 {
@@ -150,10 +143,10 @@ namespace NLog.Targets.Wrappers
             }
         }
 
-        private static bool ApplyFilter(AsyncLogEventInfo logEvent, ConditionExpression resultFilter)
+        private static bool ShouldLogEvent(AsyncLogEventInfo logEvent, ConditionExpression resultFilter)
         {
             object v = resultFilter.Evaluate(logEvent.LogEvent);
-            if (boxedTrue.Equals(v))
+            if (ConditionExpression.BoxedTrue.Equals(v))
             {
                 return true;
             }
@@ -180,7 +173,7 @@ namespace NLog.Targets.Wrappers
                 {
                     var rule = Rules[j];
                     object v = rule.Exists.Evaluate(logEvents[i].LogEvent);
-                    if (boxedTrue.Equals(v))
+                    if (ConditionExpression.BoxedTrue.Equals(v))
                     {
                         InternalLogger.Trace("{0}: Rule matched: {1}", this, rule.Exists);
                         return rule.Filter;

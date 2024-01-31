@@ -45,13 +45,14 @@ namespace NLog.LayoutRenderers
     [LayoutRenderer("appdomain")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class AppDomainLayoutRenderer : LayoutRenderer
     {
         private const string ShortFormat = "{0:00}";
         private const string LongFormat = "{0:0000}:{1}";
+        private const string FriendlyFormat = "{1}";
         private const string LongFormatCode = "Long";
         private const string ShortFormatCode = "Short";
+        private const string FriendlyFormatCode = "Friendly";
 
         private readonly IAppEnvironment _currentAppEnvironment;
 
@@ -69,7 +70,6 @@ namespace NLog.LayoutRenderers
         internal AppDomainLayoutRenderer(IAppEnvironment appEnvironment)
         {
             _currentAppEnvironment = appEnvironment;
-            Format = LongFormatCode;
         }
 
         /// <summary>
@@ -77,10 +77,9 @@ namespace NLog.LayoutRenderers
         /// The first parameter is the AppDomain.Id, the second the second the AppDomain.FriendlyName
         /// This string is used in <see cref="string.Format(string,object[])"/>
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [DefaultParameter]
-        [DefaultValue(LongFormatCode)]
-        public string Format { get; set; }
+        public string Format { get; set; } = LongFormatCode;
 
         /// <inheritdoc/>
         protected override void InitializeLayoutRenderer()
@@ -101,10 +100,10 @@ namespace NLog.LayoutRenderers
         /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
-            if (_assemblyName == null)
+            if (_assemblyName is null)
             {
                 var formattingString = GetFormattingString(Format);
-                _assemblyName = string.Format(formattingString, _currentAppEnvironment.AppDomainId, _currentAppEnvironment.AppDomainFriendlyName);
+                _assemblyName = string.Format(System.Globalization.CultureInfo.InvariantCulture, formattingString, _currentAppEnvironment.AppDomainId, _currentAppEnvironment.AppDomainFriendlyName);
             }
             builder.Append(_assemblyName);
         }
@@ -112,13 +111,17 @@ namespace NLog.LayoutRenderers
         private static string GetFormattingString(string format)
         {
             string formattingString;
-            if (format.Equals(LongFormatCode, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(format, LongFormatCode, StringComparison.OrdinalIgnoreCase))
             {
                 formattingString = LongFormat;
             }
-            else if (format.Equals(ShortFormatCode, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(format, ShortFormatCode, StringComparison.OrdinalIgnoreCase))
             {
                 formattingString = ShortFormat;
+            }
+            else if (string.Equals(format, FriendlyFormatCode, StringComparison.OrdinalIgnoreCase))
+            {
+                formattingString = FriendlyFormat;
             }
             else
             {

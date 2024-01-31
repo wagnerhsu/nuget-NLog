@@ -35,7 +35,7 @@ namespace NLog.Targets
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
+    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -44,6 +44,35 @@ namespace NLog.Targets
     /// <summary>
     /// Represents target that supports context capture of <see cref="ScopeContext"/> Properties + Nested-states
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/NLog/NLog/wiki/How-to-write-a-custom-target-for-structured-logging">See NLog Wiki</a>
+    /// </remarks>
+    /// <example><code>
+    /// [Target("MyFirst")]
+    /// public sealed class MyFirstTarget : TargetWithContext
+    /// {
+    ///    public MyFirstTarget()
+    ///    {
+    ///        this.Host = "localhost";
+    ///    }
+    ///     
+    ///    [RequiredParameter]
+    ///    public Layout Host { get; set; }
+    ///
+    ///    protected override void Write(LogEventInfo logEvent) 
+    ///    {
+    ///        string logMessage = this.RenderLogEvent(this.Layout, logEvent);
+    ///        string hostName = this.RenderLogEvent(this.Host, logEvent);
+    ///        return SendTheMessageToRemoteHost(hostName, logMessage);
+    ///    }
+    ///
+    ///    private void SendTheMessageToRemoteHost(string hostName, string message)
+    ///    {
+    ///        // To be implemented
+    ///    }
+    /// }
+    /// </code></example>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/How-to-write-a-custom-target-for-structured-logging">Documentation on NLog Wiki</seealso>
     public abstract class TargetWithContext : TargetWithLayout, IIncludeContext
     {
         /// <inheritdoc/>
@@ -53,44 +82,66 @@ namespace NLog.Targets
             get => _contextLayout;
             set
             {
-                if (_contextLayout != null)
-                    _contextLayout.TargetLayout = value;
-                else
+                if (_contextLayout is null)
                     _contextLayout = new TargetWithContextLayout(this, value);
+                else
+                    _contextLayout.TargetLayout = value;
             }
         }
         private TargetWithContextLayout _contextLayout;
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets the option to include all properties from the log events
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
         public bool IncludeEventProperties { get => _contextLayout.IncludeEventProperties; set => _contextLayout.IncludeEventProperties = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets whether to include the contents of the <see cref="ScopeContext"/> properties-dictionary.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
         public bool IncludeScopeProperties { get => _contextLayout.IncludeScopeProperties; set => _contextLayout.IncludeScopeProperties = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Gets or sets whether to include the contents of the <see cref="ScopeContext"/> nested-state-stack.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
-        public bool IncludeScopeNestedStates { get => _contextLayout.IncludeScopeNestedStates; set => _contextLayout.IncludeScopeNestedStates = value; }
+        public bool IncludeScopeNested { get => _contextLayout.IncludeScopeNested; set => _contextLayout.IncludeScopeNested = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeProperties"/> with NLog v5.
+        /// Gets or sets whether to include the contents of the <see cref="MappedDiagnosticsContext"/>-dictionary.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
         [Obsolete("Replaced by IncludeScopeProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeMdc { get => _contextLayout.IncludeMdc; set => _contextLayout.IncludeMdc = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeNested"/> with NLog v5.
+        /// Gets or sets whether to include the contents of the <see cref="NestedDiagnosticsContext"/>-stack.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
-        [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by IncludeScopeNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeNdc { get => _contextLayout.IncludeNdc; set => _contextLayout.IncludeNdc = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeProperties"/> with NLog v5.
+        /// Gets or sets whether to include the contents of the <see cref="MappedDiagnosticsLogicalContext"/>-properties.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
         [Obsolete("Replaced by IncludeScopeProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeMdlc { get => _contextLayout.IncludeMdlc; set => _contextLayout.IncludeMdlc = value; }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeNested"/> with NLog v5.
+        /// Gets or sets whether to include the contents of the <see cref="NestedDiagnosticsLogicalContext"/>-stack.
+        /// </summary>
         /// <docgen category='Layout Options' order='10' />
-        [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by IncludeScopeNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeNdlc { get => _contextLayout.IncludeNdlc; set => _contextLayout.IncludeNdlc = value; }
 
         /// <summary>
@@ -118,12 +169,15 @@ namespace NLog.Targets
         [ArrayParameter(typeof(TargetPropertyWithContext), "contextproperty")]
         public virtual IList<TargetPropertyWithContext> ContextProperties { get; } = new List<TargetPropertyWithContext>();
 
-        private IPropertyTypeConverter PropertyTypeConverter
-        {
-            get => _propertyTypeConverter ?? (_propertyTypeConverter = ResolveService<IPropertyTypeConverter>());
-            set => _propertyTypeConverter = value;
-        }
-        private IPropertyTypeConverter _propertyTypeConverter;
+        /// <summary>
+        /// List of property names to exclude when <see cref="IncludeEventProperties"/> is true
+        /// </summary>
+        /// <docgen category='Layout Options' order='50' />
+#if !NET35
+        public ISet<string> ExcludeProperties { get; set; }
+#else
+        public HashSet<string> ExcludeProperties { get; set; }        
+#endif
 
         /// <summary>
         /// Constructor
@@ -131,13 +185,7 @@ namespace NLog.Targets
         protected TargetWithContext()
         {
             _contextLayout = _contextLayout ?? new TargetWithContextLayout(this, base.Layout);
-        }
-
-        /// <inheritdoc/>
-        protected override void CloseTarget()
-        {
-            PropertyTypeConverter = null;
-            base.CloseTarget();
+            ExcludeProperties = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -211,22 +259,26 @@ namespace NLog.Targets
                 // TODO Make Dictionary-Lazy-adapter for PropertiesDictionary to skip extra Dictionary-allocation
                 combinedProperties = combinedProperties ?? CreateNewDictionary(logEvent.Properties.Count + (ContextProperties?.Count ?? 0));
                 bool checkForDuplicates = combinedProperties.Count > 0;
+                bool checkExcludeProperties = ExcludeProperties.Count > 0;
                 foreach (var property in logEvent.Properties)
                 {
-                    string propertyKey = property.Key.ToString();
-                    if (string.IsNullOrEmpty(propertyKey))
+                    string propertyName = property.Key.ToString();
+                    if (string.IsNullOrEmpty(propertyName))
                         continue;
 
-                    AddContextProperty(logEvent, propertyKey, property.Value, checkForDuplicates, combinedProperties);
+                    if (checkExcludeProperties && ExcludeProperties.Contains(propertyName))
+                        continue;
+
+                    AddContextProperty(logEvent, propertyName, property.Value, checkForDuplicates, combinedProperties);
                 }
             }
             combinedProperties = GetContextProperties(logEvent, combinedProperties);
-            return combinedProperties ?? new Dictionary<string, object>();
+            return combinedProperties ?? new Dictionary<string, object>(StringComparer.Ordinal);
         }
 
         private static IDictionary<string, object> CreateNewDictionary(int initialCapacity)
         {
-            return new Dictionary<string, object>(Math.Max(initialCapacity, 3));
+            return new Dictionary<string, object>(Math.Max(initialCapacity, 3), StringComparer.Ordinal);
         }
 
         /// <summary>
@@ -239,16 +291,7 @@ namespace NLog.Targets
         /// <returns>New (unique) value (or null to skip value). If the same value is used then the item will be overwritten</returns>
         protected virtual string GenerateUniqueItemName(LogEventInfo logEvent, string itemName, object itemValue, IDictionary<string, object> combinedProperties)
         {
-            itemName = itemName ?? string.Empty;
-
-            int newNameIndex = 1;
-            var newItemName = string.Concat(itemName, "_1");
-            while (combinedProperties.ContainsKey(newItemName))
-            {
-                newItemName = string.Concat(itemName, "_", (++newNameIndex).ToString());
-            }
-
-            return newItemName;
+            return PropertiesDictionary.GenerateUniquePropertyName(itemName, combinedProperties, (newKey, props) => props.ContainsKey(newKey));
         }
 
         private bool CombineProperties(LogEventInfo logEvent, Layout contextLayout, ref IDictionary<string, object> combinedProperties)
@@ -276,24 +319,26 @@ namespace NLog.Targets
             return true;
         }
 
-        private void AddContextProperty(LogEventInfo logEvent, string itemName, object itemValue, bool checkForDuplicates, IDictionary<string, object> combinedProperties)
+        private void AddContextProperty(LogEventInfo logEvent, string propertyName, object propertyValue, bool checkForDuplicates, IDictionary<string, object> combinedProperties)
         {
-            if (checkForDuplicates && combinedProperties.ContainsKey(itemName))
+            if (checkForDuplicates && combinedProperties.ContainsKey(propertyName))
             {
-                itemName = GenerateUniqueItemName(logEvent, itemName, itemValue, combinedProperties);
-                if (itemName == null)
+                propertyName = GenerateUniqueItemName(logEvent, propertyName, propertyValue, combinedProperties);
+                if (propertyName is null)
                     return;
             }
 
-            combinedProperties[itemName] = itemValue;
+            combinedProperties[propertyName] = propertyValue;
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="GetScopeContextProperties"/> with NLog v5.
         /// Returns the captured snapshot of <see cref="MappedDiagnosticsContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Dictionary with MDC context if any, else null</returns>
         [Obsolete("Replaced by GetScopeContextProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected IDictionary<string, object> GetContextMdc(LogEventInfo logEvent)
         {
             if (logEvent.TryGetCachedLayoutValue(_contextLayout.ScopeContextPropertiesLayout, out object value))
@@ -318,11 +363,13 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="GetScopeContextProperties"/> with NLog v5.
         /// Returns the captured snapshot of <see cref="MappedDiagnosticsLogicalContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Dictionary with MDLC context if any, else null</returns>
         [Obsolete("Replaced by GetScopeContextProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected IDictionary<string, object> GetContextMdlc(LogEventInfo logEvent)
         {
             if (logEvent.TryGetCachedLayoutValue(_contextLayout.ScopeContextPropertiesLayout, out object value))
@@ -333,11 +380,13 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="GetScopeContextNested"/> with NLog v5.
         /// Returns the captured snapshot of <see cref="NestedDiagnosticsContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection with NDC context if any, else null</returns>
-        [Obsolete("Replaced by GetScopeContextNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by GetScopeContextNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected IList<object> GetContextNdc(LogEventInfo logEvent)
         {
             if (logEvent.TryGetCachedLayoutValue(_contextLayout.ScopeContextNestedStatesLayout, out object value))
@@ -352,21 +401,23 @@ namespace NLog.Targets
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection of nested state objects if any, else null</returns>
-        protected IList<object> GetScopeContextNestedStates(LogEventInfo logEvent)
+        protected IList<object> GetScopeContextNested(LogEventInfo logEvent)
         {
             if (logEvent.TryGetCachedLayoutValue(_contextLayout.ScopeContextNestedStatesLayout, out object value))
             {
                 return value as IList<object>;
             }
-            return CaptureScopeContextNestedStates(logEvent);
+            return CaptureScopeContextNested(logEvent);
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="GetScopeContextNested"/> with NLog v5.
         /// Returns the captured snapshot of <see cref="NestedDiagnosticsLogicalContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection with NDLC context if any, else null</returns>
-        [Obsolete("Replaced by GetScopeContextNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by GetScopeContextNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected IList<object> GetContextNdlc(LogEventInfo logEvent)
         {
             if (logEvent.TryGetCachedLayoutValue(_contextLayout.ScopeContextNestedStatesLayout, out object value))
@@ -382,7 +433,7 @@ namespace NLog.Targets
             for (int i = 0; i < ContextProperties.Count; ++i)
             {
                 var contextProperty = ContextProperties[i];
-                if (string.IsNullOrEmpty(contextProperty?.Name) || contextProperty.Layout == null)
+                if (string.IsNullOrEmpty(contextProperty?.Name) || contextProperty.Layout is null)
                     continue;
 
                 try
@@ -404,45 +455,14 @@ namespace NLog.Targets
             return combinedProperties;
         }
 
-        private bool TryGetContextPropertyValue(LogEventInfo logEvent, TargetPropertyWithContext contextProperty, out object propertyValue)
+        private static bool TryGetContextPropertyValue(LogEventInfo logEvent, TargetPropertyWithContext contextProperty, out object propertyValue)
         {
-            var propertyType = contextProperty.PropertyType ?? typeof(string);
-
-            var isStringType = propertyType == typeof(string);
-            if (!isStringType && contextProperty.Layout.TryGetRawValue(logEvent, out var rawValue))
+            propertyValue = contextProperty.RenderValue(logEvent);
+            if (!contextProperty.IncludeEmptyValue && (propertyValue is null || string.Empty.Equals(propertyValue)))
             {
-                if (propertyType == typeof(object))
-                {
-                    propertyValue = rawValue;
-                    return contextProperty.IncludeEmptyValue || propertyValue != null;
-                }
-                else if (rawValue?.GetType() == propertyType)
-                {
-                    propertyValue = rawValue;
-                    return true;
-                }
-            }
-
-            var propertyStringValue = RenderLogEvent(contextProperty.Layout, logEvent) ?? string.Empty;
-            if (!contextProperty.IncludeEmptyValue && string.IsNullOrEmpty(propertyStringValue))
-            {
-                propertyValue = null;
                 return false;
             }
 
-            if (isStringType)
-            {
-                propertyValue = propertyStringValue;
-                return true;
-            }
-
-            if (string.IsNullOrEmpty(propertyStringValue) && propertyType.IsValueType())
-            {
-                propertyValue = Activator.CreateInstance(propertyType);
-                return true;
-            }
-
-            propertyValue = PropertyTypeConverter.Convert(propertyStringValue, propertyType, null, CultureInfo.InvariantCulture);
             return true;
         }
 
@@ -460,8 +480,15 @@ namespace NLog.Targets
 
             contextProperties = contextProperties ?? CreateNewDictionary(globalNames.Count);
             bool checkForDuplicates = contextProperties.Count > 0;
+            bool checkExcludeProperties = ExcludeProperties.Count > 0;
             foreach (string propertyName in globalNames)
             {
+                if (string.IsNullOrEmpty(propertyName))
+                    continue;
+
+                if (checkExcludeProperties && ExcludeProperties.Contains(propertyName))
+                    continue;
+
                 var propertyValue = GlobalDiagnosticsContext.GetObject(propertyName);
                 if (SerializeItemValue(logEvent, propertyName, propertyValue, out propertyValue))
                 {
@@ -473,12 +500,14 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="CaptureScopeContextProperties"/> with NLog v5.
         /// Takes snapshot of <see cref="MappedDiagnosticsContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <param name="contextProperties">Optional pre-allocated dictionary for the snapshot</param>
         /// <returns>Dictionary with MDC context if any, else null</returns>
         [Obsolete("Replaced by CaptureScopeContextProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual IDictionary<string, object> CaptureContextMdc(LogEventInfo logEvent, IDictionary<string, object> contextProperties)
         {
             var names = MappedDiagnosticsContext.GetNames();
@@ -499,6 +528,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="SerializeScopeContextProperty"/> with NLog v5.
         /// Take snapshot of a single object value from <see cref="MappedDiagnosticsContext"/>
         /// </summary>
         /// <param name="logEvent">Log event</param>
@@ -507,6 +537,7 @@ namespace NLog.Targets
         /// <param name="serializedValue">Snapshot of MDC value</param>
         /// <returns>Include object value in snapshot</returns>
         [Obsolete("Replaced by SerializeScopeContextProperty. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual bool SerializeMdcItem(LogEventInfo logEvent, string name, object value, out object serializedValue)
         {
             if (string.IsNullOrEmpty(name))
@@ -519,12 +550,14 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="CaptureScopeContextProperties"/> with NLog v5.
         /// Takes snapshot of <see cref="MappedDiagnosticsLogicalContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <param name="contextProperties">Optional pre-allocated dictionary for the snapshot</param>
         /// <returns>Dictionary with MDLC context if any, else null</returns>
         [Obsolete("Replaced by CaptureScopeContextProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual IDictionary<string, object> CaptureContextMdlc(LogEventInfo logEvent, IDictionary<string, object> contextProperties)
         {
             return CaptureScopeContextProperties(logEvent, contextProperties);
@@ -541,18 +574,23 @@ namespace NLog.Targets
             using (var scopeEnumerator = ScopeContext.GetAllPropertiesEnumerator())
             {
                 bool checkForDuplicates = contextProperties?.Count > 0;
+                bool checkExcludeProperties = ExcludeProperties.Count > 0;
                 while (scopeEnumerator.MoveNext())
                 {
-                    contextProperties = contextProperties ?? CreateNewDictionary(0);
                     var scopeProperty = scopeEnumerator.Current;
-                    var name = scopeProperty.Key;
-                    if (string.IsNullOrEmpty(name))
+                    var propertyName = scopeProperty.Key;
+                    if (string.IsNullOrEmpty(propertyName))
                         continue;
 
-                    object value = scopeProperty.Value;
-                    if (SerializeScopeContextProperty(logEvent, name, value, out var serializedValue))
+                    if (checkExcludeProperties && ExcludeProperties.Contains(propertyName))
+                        continue;
+
+                    contextProperties = contextProperties ?? CreateNewDictionary(0);
+
+                    object propertyValue = scopeProperty.Value;
+                    if (SerializeScopeContextProperty(logEvent, propertyName, propertyValue, out var serializedValue))
                     {
-                        AddContextProperty(logEvent, name, serializedValue, checkForDuplicates, contextProperties);
+                        AddContextProperty(logEvent, propertyName, serializedValue, checkForDuplicates, contextProperties);
                     }
                 }
             }
@@ -561,6 +599,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="SerializeScopeContextProperty"/> with NLog v5.
         /// Take snapshot of a single object value from <see cref="MappedDiagnosticsLogicalContext"/>
         /// </summary>
         /// <param name="logEvent">Log event</param>
@@ -569,6 +608,7 @@ namespace NLog.Targets
         /// <param name="serializedValue">Snapshot of MDLC value</param>
         /// <returns>Include object value in snapshot</returns>
         [Obsolete("Replaced by SerializeScopeContextProperty. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected bool SerializeMdlcItem(LogEventInfo logEvent, string name, object value, out object serializedValue)
         {
             return SerializeScopeContextProperty(logEvent, name, value, out serializedValue);
@@ -594,11 +634,13 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="CaptureScopeContextNested"/> with NLog v5.
         /// Takes snapshot of <see cref="NestedDiagnosticsContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection with NDC context if any, else null</returns>
-        [Obsolete("Replaced by CaptureScopeContextNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by CaptureScopeContextNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual IList<object> CaptureContextNdc(LogEventInfo logEvent)
         {
             var stack = NestedDiagnosticsContext.GetAllObjects();
@@ -618,7 +660,7 @@ namespace NLog.Targets
                 }
                 else
                 {
-                    if (filteredStack == null)
+                    if (filteredStack is null)
                     {
                         filteredStack = new List<object>(stack.Length);
                         for (int j = 0; j < i; ++j)
@@ -630,6 +672,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="SerializeScopeContextNestedState"/> with NLog v5.
         /// Take snapshot of a single object value from <see cref="NestedDiagnosticsContext"/>
         /// </summary>
         /// <param name="logEvent">Log event</param>
@@ -637,20 +680,23 @@ namespace NLog.Targets
         /// <param name="serializedValue">Snapshot of NDC value</param>
         /// <returns>Include object value in snapshot</returns>
         [Obsolete("Replaced by SerializeScopeContextNestedState. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual bool SerializeNdcItem(LogEventInfo logEvent, object value, out object serializedValue)
         {
             return SerializeItemValue(logEvent, null, value, out serializedValue);
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="CaptureScopeContextNested"/> with NLog v5.
         /// Takes snapshot of <see cref="NestedDiagnosticsLogicalContext"/> for the <see cref="LogEventInfo"/>
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection with NDLC context if any, else null</returns>
-        [Obsolete("Replaced by CaptureScopeContextNestedStates. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by CaptureScopeContextNested. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual IList<object> CaptureContextNdlc(LogEventInfo logEvent)
         {
-            return CaptureScopeContextNestedStates(logEvent);
+            return CaptureScopeContextNested(logEvent);
         }
 
         /// <summary>
@@ -658,14 +704,14 @@ namespace NLog.Targets
         /// </summary>
         /// <param name="logEvent"></param>
         /// <returns>Collection with <see cref="ScopeContext"/> stack items if any, else null</returns>
-        protected virtual IList<object> CaptureScopeContextNestedStates(LogEventInfo logEvent)
+        protected virtual IList<object> CaptureScopeContextNested(LogEventInfo logEvent)
         {
-            var stack = ScopeContext.GetAllNestedStates();
-            if (stack.Length == 0)
+            var stack = ScopeContext.GetAllNestedStateList();
+            if (stack.Count == 0)
                 return stack;
 
             IList<object> filteredStack = null;
-            for (int i = 0; i < stack.Length; ++i)
+            for (int i = 0; i < stack.Count; ++i)
             {
                 var ndcValue = stack[i];
                 if (SerializeScopeContextNestedState(logEvent, ndcValue, out var serializedValue))
@@ -677,9 +723,9 @@ namespace NLog.Targets
                 }
                 else
                 {
-                    if (filteredStack == null)
+                    if (filteredStack is null)
                     {
-                        filteredStack = new List<object>(stack.Length);
+                        filteredStack = new List<object>(stack.Count);
                         for (int j = 0; j < i; ++j)
                             filteredStack.Add(stack[j]);
                     }
@@ -689,6 +735,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="SerializeScopeContextNestedState"/> with NLog v5.
         /// Take snapshot of a single object value from <see cref="NestedDiagnosticsLogicalContext"/>
         /// </summary>
         /// <param name="logEvent">Log event</param>
@@ -696,6 +743,7 @@ namespace NLog.Targets
         /// <param name="serializedValue">Snapshot of NDLC value</param>
         /// <returns>Include object value in snapshot</returns>
         [Obsolete("Replaced by SerializeScopeContextNestedState. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual bool SerializeNdlcItem(LogEventInfo logEvent, object value, out object serializedValue)
         {
             return SerializeScopeContextNestedState(logEvent, value, out serializedValue);
@@ -723,13 +771,13 @@ namespace NLog.Targets
         /// <returns>Include object value in snapshot</returns>
         protected virtual bool SerializeItemValue(LogEventInfo logEvent, string name, object value, out object serializedValue)
         {
-            if (value == null)
+            if (value is null)
             {
                 serializedValue = null;
                 return true;
             }
 
-            if (value is string || Convert.GetTypeCode(value) != TypeCode.Object || value is Guid || value is TimeSpan || value is DateTimeOffset)
+            if (value is string || Convert.GetTypeCode(value) != TypeCode.Object || value.GetType().IsValueType())
             {
                 serializedValue = value;    // Already immutable, snapshot is not needed
                 return true;
@@ -740,9 +788,8 @@ namespace NLog.Targets
             return true;
         }
 
-        [ThreadSafe]
         [ThreadAgnostic]
-        private class TargetWithContextLayout : Layout, IIncludeContext, IUsesStackTrace
+        internal sealed class TargetWithContextLayout : Layout, IIncludeContext, IUsesStackTrace
         {
             public Layout TargetLayout { get => _targetLayout; set => _targetLayout = ReferenceEquals(this, value) ? _targetLayout : value; }
             private Layout _targetLayout;
@@ -763,12 +810,12 @@ namespace NLog.Targets
             }
             private bool? _includeScopeProperties;
 
-            public bool IncludeScopeNestedStates
+            public bool IncludeScopeNested
             {
-                get => _includeScopeNestedStates ?? ScopeContextNestedStatesLayout.IsActive;
-                set => _includeScopeNestedStates = ScopeContextNestedStatesLayout.IsActive = value;
+                get => _includeScopeNested ?? ScopeContextNestedStatesLayout.IsActive;
+                set => _includeScopeNested = ScopeContextNestedStatesLayout.IsActive = value;
             }
-            private bool? _includeScopeNestedStates;
+            private bool? _includeScopeNested;
 
             [Obsolete("Replaced by IncludeScopeProperties. Marked obsolete on NLog 5.0")]
             public bool IncludeMdc
@@ -794,26 +841,26 @@ namespace NLog.Targets
             }
             private bool? _includeMdlc;
 
-            [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+            [Obsolete("Replaced by IncludeScopeNested. Marked obsolete on NLog 5.0")]
             public bool IncludeNdc
             {
                 get => _includeNdc ?? false;
                 set
                 {
                     _includeNdc = value;
-                    ScopeContextNestedStatesLayout.IsActive = _includeScopeNestedStates ?? (_includeNdlc == true || value);
+                    ScopeContextNestedStatesLayout.IsActive = _includeScopeNested ?? (_includeNdlc == true || value);
                 }
             }
             private bool? _includeNdc;
 
-            [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+            [Obsolete("Replaced by IncludeScopeNested. Marked obsolete on NLog 5.0")]
             public bool IncludeNdlc
             {
                 get => _includeNdlc ?? false;
                 set
                 {
                     _includeNdlc = value;
-                    ScopeContextNestedStatesLayout.IsActive = _includeScopeNestedStates ?? (_includeNdc == true || value);
+                    ScopeContextNestedStatesLayout.IsActive = _includeScopeNested ?? (_includeNdc == true || value);
                 }
             }
             private bool? _includeNdlc;
@@ -846,7 +893,7 @@ namespace NLog.Targets
             protected override void InitializeLayout()
             {
                 base.InitializeLayout();
-                if (IncludeScopeProperties || IncludeScopeNestedStates)
+                if (IncludeScopeProperties || IncludeScopeNested)
                     ThreadAgnostic = false;
                 if (IncludeEventProperties)
                     MutableUnsafe = true;   // TODO Need to convert Properties to an immutable state
@@ -891,7 +938,7 @@ namespace NLog.Targets
             {
                 if (IncludeScopeProperties)
                     ScopeContextPropertiesLayout.Precalculate(logEvent);
-                if (IncludeScopeNestedStates)
+                if (IncludeScopeNested)
                     ScopeContextNestedStatesLayout.Precalculate(logEvent);
             }
 
@@ -902,10 +949,9 @@ namespace NLog.Targets
 
             protected override void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
             {
-                TargetLayout?.RenderAppendBuilder(logEvent, target, false);
+                TargetLayout?.Render(logEvent, target);
             }
 
-            [ThreadSafe]
             public class LayoutScopeContextProperties : Layout
             {
                 private readonly TargetWithContext _owner;
@@ -930,7 +976,7 @@ namespace NLog.Targets
 
                 private void CaptureContext(LogEventInfo logEvent)
                 {
-                    if (IsActive)
+                    if (IsActive && !logEvent.TryGetCachedLayoutValue(this, out var _))
                     {
                         var scopeContextProperties = _owner.CaptureScopeContextProperties(logEvent, null);
                         logEvent.AddCachedLayoutValue(this, scopeContextProperties);
@@ -938,7 +984,6 @@ namespace NLog.Targets
                 }
             }
 
-            [ThreadSafe]
             public class LayoutScopeContextNestedStates : Layout
             {
                 private readonly TargetWithContext _owner;
@@ -963,9 +1008,9 @@ namespace NLog.Targets
 
                 private void CaptureContext(LogEventInfo logEvent)
                 {
-                    if (IsActive)
+                    if (IsActive && !logEvent.TryGetCachedLayoutValue(this, out var _))
                     {
-                        var nestedContext = _owner.CaptureScopeContextNestedStates(logEvent);
+                        var nestedContext = _owner.CaptureScopeContextNested(logEvent);
                         logEvent.AddCachedLayoutValue(this, nestedContext);
                     }
                 }

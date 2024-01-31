@@ -41,13 +41,12 @@ namespace NLog.LayoutRenderers
     /// Render a NLog Configuration variable assigned from API or loaded from config-file
     /// </summary>
     [LayoutRenderer("var")]
-    [ThreadSafe]
     public class VariableLayoutRenderer : LayoutRenderer
     {
         /// <summary>
         /// Gets or sets the name of the NLog variable.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [RequiredParameter]
         [DefaultParameter]
         public string Name { get; set; }
@@ -56,7 +55,7 @@ namespace NLog.LayoutRenderers
         /// Gets or sets the default value to be used when the variable is not set.
         /// </summary>
         /// <remarks>Not used if Name is <c>null</c></remarks>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public string Default { get; set; }
 
         /// <summary>
@@ -65,9 +64,7 @@ namespace NLog.LayoutRenderers
         /// <remarks>Mostly relevant for the scanning of active NLog Layouts (Ex. CallSite capture)</remarks>
         public Layout ActiveLayout => TryGetLayout(out var layout) ? layout : null;
 
-        /// <summary>
-        /// Initializes the layout renderer.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeLayoutRenderer()
         {
             if (TryGetLayout(out var layout) && layout != null)
@@ -89,11 +86,7 @@ namespace NLog.LayoutRenderers
             return Name != null && LoggingConfiguration?.TryLookupDynamicVariable(Name, out layout) == true;
         }
 
-        /// <summary>
-        /// Renders the specified variable and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             if (Name != null)
@@ -101,7 +94,7 @@ namespace NLog.LayoutRenderers
                 if (TryGetLayout(out var layout))
                 {
                     //ignore NULL, but it set, so don't use default.
-                    layout?.RenderAppendBuilder(logEvent, builder);
+                    layout?.Render(logEvent, builder);
                 }
                 else if (Default != null)
                 {

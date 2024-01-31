@@ -43,7 +43,6 @@ namespace NLog.LayoutRenderers
     /// </summary>
     [LayoutRenderer("message")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class MessageLayoutRenderer : LayoutRenderer, IStringValueRenderer
     {
         /// <summary>
@@ -95,21 +94,37 @@ namespace NLog.LayoutRenderers
 
             if (WithException && logEvent.Exception != null)
             {
-                var primaryException = logEvent.Exception;
-#if !NET35
-                if (logEvent.Exception is AggregateException aggregateException)
-                {
-                    aggregateException = aggregateException.Flatten();
-                    primaryException = aggregateException.InnerExceptions.Count == 1 ? aggregateException.InnerExceptions[0] : aggregateException;
-                }
-#endif
+                Exception primaryException = GetPrimaryException(logEvent.Exception);
                 if (!exceptionOnly)
                     builder.Append(ExceptionSeparator);
                 builder.Append(primaryException.ToString());
             }
         }
 
-        /// <inheritdoc/>
+        private static Exception GetPrimaryException(Exception exception)
+        {
+#if !NET35
+            if (exception is AggregateException aggregateException)
+            {
+                if (aggregateException.InnerExceptions?.Count == 1)
+                {
+                    var innerException = aggregateException.InnerExceptions[0];
+                    if (!(innerException is AggregateException))
+                        return innerException;  // Skip calling Flatten()
+                }
+
+                aggregateException = aggregateException.Flatten();
+                if (aggregateException.InnerExceptions?.Count == 1)
+                {
+                    return aggregateException.InnerExceptions[0];
+                }
+
+                return aggregateException;  // Matches ${exception} default behavior
+            }
+#endif
+            return exception;
+        }
+
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent)
         {
             if (WithException)

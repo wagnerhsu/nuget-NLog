@@ -335,7 +335,7 @@ namespace NLog.UnitTests.Contexts
             var logger = new LogFactory().GetCurrentClassLogger();
 
             // Act
-            using (logger.PushScopeState(expectedNestedState))
+            using (logger.PushScopeNested(expectedNestedState))
             {
                 topNestedState = ScopeContext.PeekNestedState();
                 allNestedStates = ScopeContext.GetAllNestedStates();
@@ -360,7 +360,7 @@ namespace NLog.UnitTests.Contexts
             var logger = new LogFactory().GetCurrentClassLogger();
 
             // Act
-            using (logger.PushScopeState(expectedNestedState))
+            using (logger.PushScopeNested(expectedNestedState))
             {
                 topNestedState = ScopeContext.PeekNestedState();
                 allNestedStates = ScopeContext.GetAllNestedStates();
@@ -413,7 +413,7 @@ namespace NLog.UnitTests.Contexts
         }
 
         [Fact]
-        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeState using ${scopenested}. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeNested using ${scopenested}. Marked obsolete on NLog 5.0")]
         public void LegacyNdlcPopShouldNotAffectProperties1()
         {
             // Arrange
@@ -435,7 +435,7 @@ namespace NLog.UnitTests.Contexts
         }
 
         [Fact]
-        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeState using ${scopenested}. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeNested using ${scopenested}. Marked obsolete on NLog 5.0")]
         public void LegacyNdlcPopShouldNotAffectProperties2()
         {
             // Arrange
@@ -461,7 +461,7 @@ namespace NLog.UnitTests.Contexts
         }
 
         [Fact]
-        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeState using ${scopenested}. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeNested using ${scopenested}. Marked obsolete on NLog 5.0")]
         public void LegacyNdlcPopShouldNotAffectProperties3()
         {
             // Arrange
@@ -502,7 +502,7 @@ namespace NLog.UnitTests.Contexts
         }
 
         [Fact]
-        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeState using ${scopenested}. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeNested using ${scopenested}. Marked obsolete on NLog 5.0")]
         public void LegacyNdlcClearShouldNotAffectProperties1()
         {
             // Arrange
@@ -524,7 +524,7 @@ namespace NLog.UnitTests.Contexts
         }
 
         [Fact]
-        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeState using ${scopenested}. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by ScopeContext.PushNestedState or Logger.PushScopeNested using ${scopenested}. Marked obsolete on NLog 5.0")]
         public void LegacyNdlcClearShouldNotAffectProperties2()
         {
             // Arrange
@@ -747,5 +747,96 @@ namespace NLog.UnitTests.Contexts
             Assert.False(success2);
             Assert.Null(propertyValue2);
         }
+
+        [Fact]
+        public void ScopeContextPushWithoutStackOverflow()
+        {
+            // Arrange
+            ScopeContext.Clear();
+            var scopeData = new[] { new KeyValuePair<string, object>("Hello", "World") };
+
+            // Act
+            ScopeContext.PushProperty(scopeData[0].Key, scopeData[0].Value);
+            for (int i = 0; i < 50000; ++i)
+            {
+                ScopeContext.PushNestedState(scopeData);
+            }
+            var scopeProperties = ScopeContext.GetAllProperties();
+
+            // Assert
+            Assert.Single(scopeProperties);
+            Assert.Equal(scopeData[0].Key, scopeProperties.First().Key);
+            Assert.Equal(scopeData[0].Value, scopeProperties.First().Value);
+        }
+
+        [Fact]
+        public void ScopeContextPushWithoutStackOverflow2()
+        {
+            // Arrange
+            ScopeContext.Clear();
+            var scopeData = new[] { new KeyValuePair<string, object>("Hello", "World") };
+
+            // Act
+            ScopeContext.PushNestedState(scopeData);
+            for (int i = 0; i < 50000; ++i)
+            {
+                ScopeContext.PushProperty(scopeData[0].Key, scopeData[0].Value);
+            }
+            var scopeProperties = ScopeContext.GetAllProperties();
+            var scopeNestedStates = ScopeContext.GetAllNestedStates();
+
+            // Assert
+            Assert.Single(scopeProperties);
+            Assert.Equal(scopeData[0].Key, scopeProperties.First().Key);
+            Assert.Equal(scopeData[0].Value, scopeProperties.First().Value);
+            Assert.Single(scopeNestedStates);
+            Assert.Equal(scopeData, scopeNestedStates[0]);
+        }
+
+#if !NET35 && !NET40
+        [Fact]
+        public void ScopeContextPushWithoutStackOverflow3()
+        {
+            // Arrange
+            ScopeContext.Clear();
+            var scopeData = new[] { new KeyValuePair<string, object>("Hello", "World") };
+
+            // Act
+            for (int i = 0; i < 50000; ++i)
+            {
+                ScopeContext.PushNestedStateProperties(scopeData, scopeData);
+            }
+            var scopeProperties = ScopeContext.GetAllProperties();
+
+            // Assert
+            Assert.Single(scopeProperties);
+            Assert.Equal(scopeData[0].Key, scopeProperties.First().Key);
+            Assert.Equal(scopeData[0].Value, scopeProperties.First().Value);
+        }
+
+        [Fact]
+        public void ScopeContextPushWithoutStackOverflow4()
+        {
+            // Arrange
+            ScopeContext.Clear();
+            var scopeData = new[] { new KeyValuePair<string, object>("Hello", "World") };
+
+            // Act
+            ScopeContext.PushNestedState(scopeData);
+            for (int i = 0; i < 50000; ++i)
+            {
+                ScopeContext.PushNestedStateProperties(null, scopeData);
+            }
+            var scopeProperties = ScopeContext.GetAllProperties();
+            var scopeNestedStates = ScopeContext.GetAllNestedStates();
+
+            // Assert
+            Assert.Single(scopeProperties);
+            Assert.Equal(scopeData[0].Key, scopeProperties.First().Key);
+            Assert.Equal(scopeData[0].Value, scopeProperties.First().Value);
+            Assert.Single(scopeNestedStates);
+            Assert.Equal(scopeData, scopeNestedStates[0]);
+        }
+#endif
     }
 }

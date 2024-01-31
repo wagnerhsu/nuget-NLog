@@ -47,7 +47,6 @@ namespace NLog.Layouts
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [ThreadAgnostic]
-    [ThreadSafe]
     [AppDomainFixedOutput]
     public sealed class Layout<T> : Layout, ITypedLayout, IEquatable<T>
     {
@@ -61,7 +60,7 @@ namespace NLog.Layouts
         /// <summary>
         /// Is fixed value?
         /// </summary>
-        public bool IsFixed => ReferenceEquals(_innerLayout, null);
+        public bool IsFixed => _innerLayout is null;
 
         /// <summary>
         /// Fixed value
@@ -94,31 +93,14 @@ namespace NLog.Layouts
         /// <param name="layout">Dynamic NLog Layout</param>
         /// <param name="parseValueFormat">Format used for parsing string-value into result value type</param>
         /// <param name="parseValueCulture">Culture used for parsing string-value into result value type</param>
-        internal Layout(Layout layout, string parseValueFormat, CultureInfo parseValueCulture)
+        public Layout(Layout layout, string parseValueFormat, CultureInfo parseValueCulture)
         {
             if (PropertyTypeConverter.IsComplexType(typeof(T)))
             {
                 throw new NLogConfigurationException($"Layout<{typeof(T).ToString()}> not supported. Immutable value type is recommended");
             }
 
-            if (layout is SimpleLayout simpleLayout && simpleLayout.IsFixedText)
-            {
-                if (TryParseValueFromString(simpleLayout.FixedText, parseValueFormat, parseValueCulture, out var value) && value != null)
-                {
-                    _fixedValue = (T)value;
-                }
-                else
-                {
-                    _innerLayout = simpleLayout;
-                    _parseFormat = parseValueFormat;
-                    _parseFormatCulture = parseValueCulture;
-                }
-            }
-            else if (ReferenceEquals(layout, null))
-            {
-                _fixedValue = default(T);
-            }
-            else
+            if (!TryParseFixedValue(layout, parseValueFormat, parseValueCulture, ref _fixedValue))
             {
                 _innerLayout = layout;
                 _parseFormat = parseValueFormat;
@@ -176,20 +158,20 @@ namespace NLog.Layouts
             return Convert.ToString(value, formatProvider);
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void InitializeLayout()
         {
             base.InitializeLayout();
             _innerLayout?.Initialize(LoggingConfiguration ?? _innerLayout.LoggingConfiguration);
-            ThreadSafe = _innerLayout?.ThreadSafe ?? true;
             ThreadAgnostic = _innerLayout?.ThreadAgnostic ?? true;
             MutableUnsafe = _innerLayout?.MutableUnsafe ?? false;
+            StackTraceUsage = _innerLayout?.StackTraceUsage ?? StackTraceUsage.None;
             _valueTypeConverter = null;
             _previousStringValue = null;
             _previousValue = null;
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void CloseLayout()
         {
             _innerLayout?.Close();
@@ -199,13 +181,13 @@ namespace NLog.Layouts
             base.CloseLayout();
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override void Precalculate(LogEventInfo logEvent)
         {
             PrecalculateInnerLayout(logEvent, null);
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         internal override void PrecalculateBuilder(LogEventInfo logEvent, StringBuilder target)
         {
             PrecalculateInnerLayout(logEvent, target);
@@ -224,20 +206,23 @@ namespace NLog.Layouts
 
         private TValueType RenderTypedValue<TValueType>(LogEventInfo logEvent, StringBuilder stringBuilder, TValueType defaultValue)
         {
+            if (logEvent is null)
+                return defaultValue;
+
             if (logEvent.TryGetCachedLayoutValue(this, out var cachedValue))
             {
-                if (cachedValue != null)
-                    return (TValueType)cachedValue;
-                else
+                if (cachedValue is null)
                     return defaultValue;
+                else
+                    return (TValueType)cachedValue;
             }
 
             if (TryRenderObjectValue(logEvent, stringBuilder, out var value))
             {
-                if (value != null)
-                    return (TValueType)value;
-                else
+                if (value is null)
                     return defaultValue;
+                else
+                    return (TValueType)value;
             }
 
             return defaultValue;
@@ -261,7 +246,7 @@ namespace NLog.Layouts
                 }
                 else
                 {
-                    if (ReferenceEquals(rawValue, null))
+                    if (rawValue is null)
                     {
                         value = null;
                         return true;
@@ -297,15 +282,14 @@ namespace NLog.Layouts
 
         private string RenderStringValue(LogEventInfo logEvent, StringBuilder stringBuilder, string previousStringValue)
         {
-            SimpleLayout simpleLayout = _innerLayout as SimpleLayout;
-            if (simpleLayout != null && simpleLayout.IsSimpleStringText)
+            if (_innerLayout is SimpleLayout simpleLayout && simpleLayout.IsSimpleStringText)
             {
                 return simpleLayout.Render(logEvent);
             }
 
             if (stringBuilder?.Length == 0)
             {
-                _innerLayout.RenderAppendBuilder(logEvent, stringBuilder);
+                _innerLayout.Render(logEvent, stringBuilder);
                 if (stringBuilder.Length == 0)
                     return string.Empty;
                 else if (!string.IsNullOrEmpty(previousStringValue) && stringBuilder.EqualTo(previousStringValue))
@@ -317,6 +301,45 @@ namespace NLog.Layouts
             {
                 return _innerLayout.Render(logEvent);
             }
+        }
+
+        private bool TryParseFixedValue(Layout layout, string parseValueFormat, CultureInfo parseValueCulture, ref T fixedValue)
+        {
+            if (layout is SimpleLayout simpleLayout && simpleLayout.IsFixedText)
+            {
+                if (!string.IsNullOrEmpty(simpleLayout.FixedText))
+                {
+                    try
+                    {
+                        fixedValue = (T)ParseValueFromObject(simpleLayout.FixedText, parseValueFormat, parseValueCulture);
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        var configException = new NLogConfigurationException($"Failed converting into type {typeof(T)}. Value='{simpleLayout.FixedText}'", ex);
+                        if (configException.MustBeRethrown())
+                            throw configException;
+                    }
+                }
+                else if (typeof(T) == typeof(string))
+                {
+                    fixedValue = (T)(object)simpleLayout.FixedText;
+                    return true;
+                }
+                else if (Nullable.GetUnderlyingType(typeof(T)) != null)
+                {
+                    fixedValue = default(T);
+                    return true;
+                }
+            }
+            else if (layout is null)
+            {
+                fixedValue = default(T);
+                return true;
+            }
+
+            fixedValue = default(T);
+            return false;
         }
 
         private bool TryParseValueFromString(string stringValue, string parseValueFormat, CultureInfo parseValueCulture, out object parsedValue)
@@ -339,7 +362,7 @@ namespace NLog.Layouts
         {
             try
             {
-                parsedValue = ValueTypeConverter.Convert(rawValue, typeof(T), parseValueFormat, parseValueCulture);
+                parsedValue = ParseValueFromObject(rawValue, parseValueFormat, parseValueCulture);
                 return true;
             }
             catch (Exception ex)
@@ -350,13 +373,18 @@ namespace NLog.Layouts
             }
         }
 
-        /// <inheritdoc />
+        private object ParseValueFromObject(object rawValue, string parseValueFormat, CultureInfo parseValueCulture)
+        {
+            return ValueTypeConverter.Convert(rawValue, typeof(T), parseValueFormat, parseValueCulture);
+        }
+
+        /// <inheritdoc/>
         public override string ToString()
         {
             return IsFixed ? (FixedObjectValue?.ToString() ?? "null") : (_innerLayout?.ToString() ?? base.ToString());
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override bool Equals(object obj)
         {
             if (IsFixed)
@@ -384,7 +412,7 @@ namespace NLog.Layouts
             return IsFixed && object.Equals(FixedObjectValue, other);
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public override int GetHashCode()
         {
             if (IsFixed)
@@ -399,7 +427,7 @@ namespace NLog.Layouts
         /// <param name="value">Text to be converted.</param>
         public static implicit operator Layout<T>(T value)
         {
-            if (value == null && !typeof(T).IsValueType()) return null;
+            if (object.Equals(value, default(T)) && !typeof(T).IsValueType()) return null;
 
             return new Layout<T>(value);
         }
@@ -410,7 +438,7 @@ namespace NLog.Layouts
         /// <param name="layout">Text to be converted.</param>
         public static implicit operator Layout<T>([Localizable(false)] string layout)
         {
-            if (layout == null) return null;
+            if (layout is null) return null;
 
             return new Layout<T>(layout);
         }
@@ -420,7 +448,7 @@ namespace NLog.Layouts
         /// </summary>
         public static bool operator ==(Layout<T> left, T right)
         {
-            return left?.Equals(right) == true || (ReferenceEquals(left, null) && object.Equals(right, default(T)));
+            return left?.Equals(right) == true || (left is null && object.Equals(right, default(T)));
         }
 
         /// <summary>
@@ -428,7 +456,7 @@ namespace NLog.Layouts
         /// </summary>
         public static bool operator !=(Layout<T> left, T right)
         {
-            return left?.Equals(right) != true && !(ReferenceEquals(left, null) && object.Equals(right, default(T)));
+            return left?.Equals(right) != true && !(left is null && object.Equals(right, default(T)));
         }
     }
 

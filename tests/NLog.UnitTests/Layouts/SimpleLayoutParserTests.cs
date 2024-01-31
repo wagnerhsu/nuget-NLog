@@ -31,23 +31,20 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using NLog.Config;
-using NLog.Filters;
-
 namespace NLog.UnitTests.Layouts
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Globalization;
+    using System.Linq;
+    using System.Text;
+    using NLog.Config;
+    using NLog.Filters;
     using NLog.LayoutRenderers;
     using NLog.LayoutRenderers.Wrappers;
     using NLog.Layouts;
     using NLog.Targets;
-    using System;
     using Xunit;
-    using static Config.TargetConfigurationTests;
 
     public class SimpleLayoutParserTests : NLogTestBase
     {
@@ -62,7 +59,32 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void UnclosedTest()
         {
-            new SimpleLayout("${message");
+            var l = new SimpleLayout("${message");
+            Assert.Single(l.Renderers);
+        }
+
+        [Fact]
+        public void UnknownLayoutRenderer()
+        {
+            Assert.Throws<NLogConfigurationException>(() => new SimpleLayout("'${{unknown-type}}'"));
+        }
+
+        [Fact]
+        public void UnknownLayoutRendererProperty()
+        {
+            Assert.Throws<NLogConfigurationException>(() => new SimpleLayout("${message:unknown_item=${unknown-value}}"));
+        }
+
+        [Fact]
+        public void UnknownConditionLayoutRenderer()
+        {
+            Assert.Throws<NLogConfigurationException>(() => new SimpleLayout("${when:when=Levl==LogLevel.Info:inner=Unknown}"));
+        }
+
+        [Fact]
+        public void UnknownLayoutRendererPropertyValue()
+        {
+            Assert.Throws<NLogConfigurationException>(() => new SimpleLayout("'${message:withexception=${unknown-value}}'"));
         }
 
         [Fact]
@@ -442,8 +464,6 @@ namespace NLog.UnitTests.Layouts
             Assert.Equal("Log_{#}.log", l.Render(le));
         }
 
-
-
         [Fact]
         public void InnerLayoutWithHashTest_need_escape()
         {
@@ -533,7 +553,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void InvalidLayoutWithExistingRenderer_WillThrowIfExceptionThrowingIsOn()
         {
-            ConfigurationItemFactory.Default.LayoutRenderers.RegisterDefinition("layoutrenderer-with-list", typeof(LayoutRendererWithListParam));
+            ConfigurationItemFactory.Default.LayoutRendererFactory.RegisterType<LayoutRendererWithListParam>("layoutrenderer-with-list");
             LogManager.ThrowConfigExceptions = true;
             Assert.Throws<NLogConfigurationException>(() =>
             {
@@ -545,7 +565,7 @@ namespace NLog.UnitTests.Layouts
         [Fact]
         public void UnknownPropertyInLayout_WillThrowIfExceptionThrowingIsOn()
         {
-            ConfigurationItemFactory.Default.LayoutRenderers.RegisterDefinition("layoutrenderer-with-list", typeof(LayoutRendererWithListParam));
+            ConfigurationItemFactory.Default.LayoutRendererFactory.RegisterType<LayoutRendererWithListParam>("layoutrenderer-with-list");
             LogManager.ThrowConfigExceptions = true;
 
             Assert.Throws<NLogConfigurationException>(() =>
@@ -594,7 +614,7 @@ namespace NLog.UnitTests.Layouts
 #endif
         public void LayoutWithListParamTest(string input, string propname, string expected)
         {
-            ConfigurationItemFactory.Default.LayoutRenderers.RegisterDefinition("layoutrenderer-with-list", typeof(LayoutRendererWithListParam));
+            ConfigurationItemFactory.Default.LayoutRendererFactory.RegisterType<LayoutRendererWithListParam>("layoutrenderer-with-list");
             SimpleLayout l = $@"${{layoutrenderer-with-list:{propname}={input}}}";
 
             var le = LogEventInfo.Create(LogLevel.Info, "logger", "message");
@@ -611,7 +631,7 @@ namespace NLog.UnitTests.Layouts
             //note flags enum already supported
 
             //can;t convert empty to int
-            ConfigurationItemFactory.Default.LayoutRenderers.RegisterDefinition("layoutrenderer-with-list", typeof(LayoutRendererWithListParam));
+            ConfigurationItemFactory.Default.LayoutRendererFactory.RegisterType<LayoutRendererWithListParam>("layoutrenderer-with-list");
             Assert.Throws<NLogConfigurationException>(() =>
             {
                 SimpleLayout l = $@"${{layoutrenderer-with-list:{propname}={input}}}";
@@ -633,7 +653,21 @@ namespace NLog.UnitTests.Layouts
         }
 
         [Fact]
-        void FuncLayoutRendererRegisterTest1()
+        public void FuncLayoutRendererRegisterTest1()
+        {
+            var theAnswer = "42";
+
+            var logFactory = new LogFactory().Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer("the-answer", (evt) => theAnswer))
+                .LoadConfiguration(builder => builder.ForLogger().WriteTo(new DebugTarget() { Name = "Debug", Layout = "${the-answer}" })).LogFactory;
+
+            logFactory.GetCurrentClassLogger().Info("Hello World");
+
+            AssertDebugLastMessage("Debug", theAnswer, logFactory);
+        }
+
+        [Fact]
+        [Obsolete("Instead override type-creation by calling NLog.LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        public void FuncLayoutRendererRegisterTest1_Legacy()
         {
             LayoutRenderer.Register("the-answer", (info) => "42");
             Layout l = "${the-answer}";
@@ -642,20 +676,7 @@ namespace NLog.UnitTests.Layouts
         }
 
         [Fact]
-        void FuncLayoutRendererFluentMethod_ThreadSafe_Test()
-        {
-            // Arrange
-            var layout = Layout.FromMethod(l => "42", LayoutRenderOptions.ThreadSafe);
-            // Act
-            var result = layout.Render(LogEventInfo.CreateNullEvent());
-            // Assert
-            Assert.Equal("42", result);
-            Assert.True(layout.ThreadSafe);
-            Assert.False(layout.ThreadAgnostic);
-        }
-
-        [Fact]
-        void FuncLayoutRendererFluentMethod_ThreadAgnostic_Test()
+        public void FuncLayoutRendererFluentMethod_ThreadAgnostic_Test()
         {
             // Arrange
             var layout = Layout.FromMethod(l => "42", LayoutRenderOptions.ThreadAgnostic);
@@ -663,12 +684,11 @@ namespace NLog.UnitTests.Layouts
             var result = layout.Render(LogEventInfo.CreateNullEvent());
             // Assert
             Assert.Equal("42", result);
-            Assert.True(layout.ThreadSafe);
             Assert.True(layout.ThreadAgnostic);
         }
 
         [Fact]
-        void FuncLayoutRendererFluentMethod_ThreadUnsafe_Test()
+        public void FuncLayoutRendererFluentMethod_Test()
         {
             // Arrange
             var layout = Layout.FromMethod(l => "42", LayoutRenderOptions.None);
@@ -676,19 +696,37 @@ namespace NLog.UnitTests.Layouts
             var result = layout.Render(LogEventInfo.CreateNullEvent());
             // Assert
             Assert.Equal("42", result);
-            Assert.False(layout.ThreadSafe);
             Assert.False(layout.ThreadAgnostic);
         }
 
         [Fact]
-        void FuncLayoutRendererFluentMethod_NullThrows_Test()
+        public void FuncLayoutRendererFluentMethod_NullThrows_Test()
         {
             // Arrange
             Assert.Throws<ArgumentNullException>(() => Layout.FromMethod(null));
         }
 
         [Fact]
-        void FuncLayoutRendererRegisterTest1WithXML()
+        public void FuncLayoutRendererRegisterTest1WithXML()
+        {
+            var logFactory = new LogFactory().Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer("the-answer", (evt) => 42))
+                .LoadConfigurationFromXml(
+@"<nlog throwExceptions='true'>          
+                <targets>
+                    <target name='debug' type='Debug' layout= 'TheAnswer=${the-answer:Format=D3}' /></targets>
+                <rules>
+                    <logger name='*' minlevel='Debug' writeTo='debug' />
+                </rules>
+            </nlog>").LogFactory;
+
+            logFactory.GetCurrentClassLogger().Info("test1");
+
+            AssertDebugLastMessage("debug", "TheAnswer=042", logFactory);
+        }
+
+        [Fact]
+        [Obsolete("Instead use LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        public void FuncLayoutRendererRegisterTest1WithXML_Legacy()
         {
             LayoutRenderer.Register("the-answer", (info) => 42);
 
@@ -708,7 +746,19 @@ namespace NLog.UnitTests.Layouts
         }
 
         [Fact]
-        void FuncLayoutRendererRegisterTest2()
+        public void FuncLayoutRendererRegisterTest2()
+        {
+            var logFactory = new LogFactory().Setup().SetupExtensions(ext => ext.RegisterLayoutRenderer("message-length", (evt) => evt.Message.Length))
+                .LoadConfiguration(builder => builder.ForLogger().WriteTo(new DebugTarget() { Name = "Debug", Layout = "${message-length" })).LogFactory;
+
+            logFactory.GetCurrentClassLogger().Info("1234567890");
+
+            AssertDebugLastMessage("Debug", "10", logFactory);
+        }
+
+        [Fact]
+        [Obsolete("Instead use LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        public void FuncLayoutRendererRegisterTest2_Legacy()
         {
             LayoutRenderer.Register("message-length", (info) => info.Message.Length);
             Layout l = "${message-length}";
@@ -717,13 +767,13 @@ namespace NLog.UnitTests.Layouts
         }
 
         [Fact]
-        void SimpleLayout_FromString_ThrowConfigExceptions()
+        public void SimpleLayout_FromString_ThrowConfigExceptions()
         {
             Assert.Throws<NLogConfigurationException>(() => Layout.FromString("${evil}", true));
         }
 
         [Fact]
-        void SimpleLayout_FromString_NoThrowConfigExceptions()
+        public void SimpleLayout_FromString_NoThrowConfigExceptions()
         {
             Assert.NotNull(Layout.FromString("${evil}", false));
         }
@@ -733,6 +783,7 @@ namespace NLog.UnitTests.Layouts
         [InlineData(null, true)]
         [InlineData("'a'", true)]
         [InlineData("${gdc:a}", false)]
+        [InlineData("${threadname}", false)]
         public void FromString_isFixedText(string input, bool expected)
         {
             // Act
@@ -748,14 +799,15 @@ namespace NLog.UnitTests.Layouts
         [InlineData(null, true)]
         [InlineData("'a'", true)]
         [InlineData("${gdc:a}", true)]
-        public void FromString_isThreadSafe(string input, bool expected)
+        [InlineData("${threadname}", false)]
+        public void FromString_isThreadAgnostic(string input, bool expected)
         {
             // Act
             var layout = (SimpleLayout)Layout.FromString(input);
             layout.Initialize(null);
 
             // Assert
-            Assert.Equal(expected, layout.ThreadSafe);
+            Assert.Equal(expected, layout.ThreadAgnostic);
         }
 
         [Theory]
@@ -773,7 +825,6 @@ namespace NLog.UnitTests.Layouts
             // Assert
             Assert.Equal(expected, result);
         }
-
 
         [Fact]
         public void Parse_AppDomainFixedOutput_ConvertToLiteral()
@@ -813,14 +864,13 @@ namespace NLog.UnitTests.Layouts
             var layout = (SimpleLayout)Layout.FromString(input);
 
             // Assert
+            Assert.True(layout.IsFixedText);
             var single = Assert.Single(layout.Renderers);
-            var singleRaw = Assert.IsType<LiteralWithRawValueLayoutRenderer>(single);
-            var succeeded = singleRaw.TryGetRawValue(LogEventInfo.CreateNullEvent(), out var rawValue);
-            Assert.True(succeeded);
+            Assert.IsType<LiteralWithRawValueLayoutRenderer>(single);
+            var succeeded = layout.TryGetRawValue(LogEventInfo.CreateNullEvent(), out var rawValue);
             var rawValueInt = Assert.IsType<int>(rawValue);
+            Assert.True(succeeded);
             Assert.True(rawValueInt > 0);
-
-
         }
 
         /// <summary>
@@ -848,7 +898,7 @@ namespace NLog.UnitTests.Layouts
 
             public List<FilterResult> Enums { get; set; }
 
-            public List<MyFlagsEnum> FlagEnums { get; set; }
+            public List<Config.TargetConfigurationTests.MyFlagsEnum> FlagEnums { get; set; }
 
             public List<int> Numbers { get; set; }
 
@@ -903,12 +953,12 @@ namespace NLog.UnitTests.Layouts
                 AppendFormattable(builder, HashSetNumber);
             }
 
-            private void Append<T>(StringBuilder builder, IEnumerable<T> items)
+            private static void Append<T>(StringBuilder builder, IEnumerable<T> items)
             {
                 if (items != null) builder.Append(string.Join("-", items.ToArray()));
             }
 
-            private void AppendFormattable<T>(StringBuilder builder, IEnumerable<T> items)
+            private static void AppendFormattable<T>(StringBuilder builder, IEnumerable<T> items)
                 where T : IFormattable
             {
                 if (items != null) builder.Append(string.Join("-", items.Select(it => it.ToString(null, CultureInfo.InvariantCulture)).ToArray()));

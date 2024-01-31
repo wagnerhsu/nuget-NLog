@@ -42,13 +42,13 @@ namespace NLog.LayoutRenderers
     /// The environment variable.
     /// </summary>
     [LayoutRenderer("environment")]
-    [ThreadSafe]
+    [ThreadAgnostic]
     public class EnvironmentLayoutRenderer : LayoutRenderer, IStringValueRenderer
     {
         /// <summary>
         /// Gets or sets the name of the environment variable.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [RequiredParameter]
         [DefaultParameter]
         public string Variable { get; set; }
@@ -56,7 +56,7 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Gets or sets the default value to be used when the environment variable is not set.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public string Default { get; set; }
 
         private System.Collections.Generic.KeyValuePair<string, SimpleLayout> _cachedValue;
@@ -64,14 +64,13 @@ namespace NLog.LayoutRenderers
         /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
-            GetSimpleLayout()?.RenderAppendBuilder(logEvent, builder);
+            GetSimpleLayout()?.Render(logEvent, builder);
         }
 
-        /// <inheritdoc/>
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent)
         {
             var simpleLayout = GetSimpleLayout();
-            if (simpleLayout == null)
+            if (simpleLayout is null)
                 return string.Empty;
             if (simpleLayout.IsFixedText || simpleLayout.IsSimpleStringText)
                 return simpleLayout.Render(logEvent);

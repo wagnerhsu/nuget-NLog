@@ -123,12 +123,13 @@ namespace NLog
         void Trace(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Trace</c> level.
+        /// Obsolete and replaced by <see cref="Trace(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Trace</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Trace(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Trace(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void TraceException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -145,7 +146,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Trace(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Trace</c> level.
@@ -155,7 +156,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Trace(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified parameters and formatting them with the supplied format provider.
@@ -164,7 +165,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Trace(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level.
@@ -178,15 +179,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace([Localizable(false)] string message, params object[] args);
+        void Trace([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Trace</c> level.
+        /// Obsolete and replaced by <see cref="Trace(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Trace</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Trace(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Trace(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Trace([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -197,7 +199,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Trace<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified parameter.
@@ -206,7 +208,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Trace<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified arguments formatting it with the supplied format provider.
@@ -218,7 +220,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Trace<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified parameters.
@@ -229,7 +231,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Trace<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified arguments formatting it with the supplied format provider.
@@ -243,7 +245,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Trace<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Trace</c> level using the specified parameters.
@@ -256,7 +258,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Trace<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Trace<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 
@@ -287,12 +289,13 @@ namespace NLog
         void Debug(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Debug</c> level.
+        /// Obsolete and replaced by <see cref="Debug(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Debug</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Debug(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Debug(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void DebugException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -309,7 +312,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Debug(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Debug</c> level.
@@ -319,7 +322,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Debug(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified parameters and formatting them with the supplied format provider.
@@ -328,7 +331,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Debug(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level.
@@ -342,15 +345,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug([Localizable(false)] string message, params object[] args);
+        void Debug([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Debug</c> level.
+        /// Obsolete and replaced by <see cref="Debug(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Debug</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Debug(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Debug(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Debug([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -361,7 +365,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Debug<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified parameter.
@@ -370,7 +374,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Debug<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified arguments formatting it with the supplied format provider.
@@ -382,7 +386,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Debug<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified parameters.
@@ -393,7 +397,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Debug<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified arguments formatting it with the supplied format provider.
@@ -407,7 +411,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Debug<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Debug</c> level using the specified parameters.
@@ -420,7 +424,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Debug<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Debug<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 
@@ -451,12 +455,13 @@ namespace NLog
         void Info(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Info</c> level.
+        /// Obsolete and replaced by <see cref="Info(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Info</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Info(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Info(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void InfoException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -473,7 +478,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Info(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Info</c> level.
@@ -483,7 +488,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Info(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified parameters and formatting them with the supplied format provider.
@@ -492,7 +497,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Info(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level.
@@ -506,15 +511,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info([Localizable(false)] string message, params object[] args);
+        void Info([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Info</c> level.
+        /// Obsolete and replaced by <see cref="Info(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Info</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Info(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Info(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Info([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -525,7 +531,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Info<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified parameter.
@@ -534,7 +540,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Info<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified arguments formatting it with the supplied format provider.
@@ -546,7 +552,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Info<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified parameters.
@@ -557,7 +563,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Info<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified arguments formatting it with the supplied format provider.
@@ -571,7 +577,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Info<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Info</c> level using the specified parameters.
@@ -584,7 +590,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Info<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Info<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 
@@ -615,12 +621,13 @@ namespace NLog
         void Warn(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Warn</c> level.
+        /// Obsolete and replaced by <see cref="Warn(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Warn</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Warn(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Warn(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void WarnException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -637,7 +644,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Warn(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Warn</c> level.
@@ -647,7 +654,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Warn(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified parameters and formatting them with the supplied format provider.
@@ -656,7 +663,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Warn(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level.
@@ -670,15 +677,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn([Localizable(false)] string message, params object[] args);
+        void Warn([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Warn</c> level.
+        /// Obsolete and replaced by <see cref="Warn(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Warn</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Warn(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Warn(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Warn([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -689,7 +697,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Warn<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified parameter.
@@ -698,7 +706,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Warn<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified arguments formatting it with the supplied format provider.
@@ -710,7 +718,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Warn<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified parameters.
@@ -721,7 +729,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Warn<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified arguments formatting it with the supplied format provider.
@@ -735,7 +743,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Warn<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Warn</c> level using the specified parameters.
@@ -748,7 +756,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Warn<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Warn<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 
@@ -779,12 +787,13 @@ namespace NLog
         void Error(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Error</c> level.
+        /// Obsolete and replaced by <see cref="Error(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Error</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Error(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Error(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void ErrorException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -801,7 +810,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Error(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Error</c> level.
@@ -811,7 +820,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Error(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
 
         /// <summary>
@@ -821,7 +830,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Error(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level.
@@ -835,15 +844,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error([Localizable(false)] string message, params object[] args);
+        void Error([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Error</c> level.
+        /// Obsolete and replaced by <see cref="Error(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Error</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Error(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Error(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Error([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -854,7 +864,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Error<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level using the specified parameter.
@@ -863,7 +873,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Error<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level using the specified arguments formatting it with the supplied format provider.
@@ -875,7 +885,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Error<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level using the specified parameters.
@@ -886,7 +896,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Error<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level using the specified arguments formatting it with the supplied format provider.
@@ -900,7 +910,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Error<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Error</c> level using the specified parameters.
@@ -913,7 +923,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Error<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Error<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 
@@ -944,12 +954,13 @@ namespace NLog
         void Fatal(LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Fatal</c> level.
+        /// Obsolete and replaced by <see cref="Fatal(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Fatal</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Fatal(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Fatal(Exception exception, string message) method instead. Marked obsolete with v4.3.11 (Only here because of LibLog)")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void FatalException([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -966,7 +977,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal(Exception exception, [Localizable(false)] string message, params object[] args);
+        void Fatal(Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the <c>Fatal</c> level.
@@ -976,7 +987,7 @@ namespace NLog
         /// <param name="exception">An exception to be logged.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal(Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Fatal(Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified parameters and formatting them with the supplied format provider.
@@ -985,7 +996,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal(IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Fatal(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level.
@@ -999,15 +1010,16 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal([Localizable(false)] string message, params object[] args);
+        void Fatal([Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the <c>Fatal</c> level.
+        /// Obsolete and replaced by <see cref="Fatal(Exception, string)"/> - Writes the diagnostic message and exception at the <c>Fatal</c> level.
         /// </summary>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Fatal(Exception exception, string message, params object[] args) method instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Fatal(Exception exception, string message) method instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Fatal([Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -1018,7 +1030,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Fatal<TArgument>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified parameter.
@@ -1027,7 +1039,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument>([Localizable(false)] string message, TArgument argument);
+        void Fatal<TArgument>([Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified arguments formatting it with the supplied format provider.
@@ -1039,7 +1051,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Fatal<TArgument1, TArgument2>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified parameters.
@@ -1050,7 +1062,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument1, TArgument2>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Fatal<TArgument1, TArgument2>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified arguments formatting it with the supplied format provider.
@@ -1064,7 +1076,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Fatal<TArgument1, TArgument2, TArgument3>(IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the <c>Fatal</c> level using the specified parameters.
@@ -1077,7 +1089,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Fatal<TArgument1, TArgument2, TArgument3>([Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Fatal<TArgument1, TArgument2, TArgument3>([Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
 

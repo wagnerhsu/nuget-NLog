@@ -51,12 +51,32 @@ namespace NLog.UnitTests
             Assert.Equal(message, debugTarget.LastMessage);
         }
 
+        public static void AssertDebugLastMessageContains(this LogFactory logFactory, string message)
+        {
+            AssertDebugLastMessageContains(logFactory, "Debug", message);
+        }
+
+        public static void AssertDebugLastMessageContains(this LogFactory logFactory, string targetName, string message)
+        {
+            var debugTarget = GetDebugTarget(targetName, logFactory.Configuration);
+            Assert.True(debugTarget.LastMessage.Contains(message),
+                $"Expected to find '{message}' in last message value on '{targetName}', but found '{debugTarget.LastMessage}'");
+        }
+
+        public static string AssertDebugLastMessageNotEmpty(this LogFactory logFactory)
+        {
+            var debugTarget = GetDebugTarget("Debug", logFactory.Configuration);
+            var lastMessage = debugTarget.LastMessage;
+            Assert.False(string.IsNullOrEmpty(lastMessage));
+            return lastMessage;
+        }
+
         public static DebugTarget GetDebugTarget(string targetName, LoggingConfiguration configuration)
         {
             var debugTarget = configuration.FindTargetByName<DebugTarget>(targetName);
-            if (debugTarget == null)
+            if (debugTarget is null)
             {
-                throw new Exception($"debugtarget with name {targetName} not found in configuration");
+                throw new Exception($"DebugTarget(Name={targetName}) not found in configuration");
             }
             return debugTarget;
         }

@@ -80,17 +80,6 @@ namespace NLog.Internal
         }
 
 #if !NET35 && !NET40
-        public static Dictionary<string, object> CloneScopePropertiesToDictionary(IReadOnlyCollection<KeyValuePair<string, TValue>> parentContext, int initialCapacity)
-        {
-            var propertyCount = parentContext.Count;
-            var scopeProperties = new Dictionary<string, object>(propertyCount + initialCapacity, ScopeContext.DefaultComparer);
-            if (propertyCount > 0)
-            {
-                CopyScopePropertiesToDictionary(parentContext, scopeProperties);
-            }
-            return scopeProperties;
-        }
-
         public static void CopyScopePropertiesToDictionary(IReadOnlyCollection<KeyValuePair<string, TValue>> parentContext, Dictionary<string, object> scopeDictionary)
         {
             using (var propertyEnumerator = new ScopeContextPropertyEnumerator<TValue>(parentContext))
@@ -158,7 +147,7 @@ namespace NLog.Internal
                 }
                 else
 #endif
-                    if (_scopeEnumerator != null)
+                if (_scopeEnumerator != null)
                 {
                     return _scopeEnumerator.Current;
                 }
@@ -177,7 +166,7 @@ namespace NLog.Internal
                 _scopeEnumerator.Dispose();
             else
 #if !NET35 && !NET40
-            if (_scopeList == null)
+            if (_scopeList is null)
 #endif
                 _dicationaryEnumerator.Dispose();
         }
@@ -196,7 +185,7 @@ namespace NLog.Internal
             }
             else
 #endif
-                if (_scopeEnumerator != null)
+            if (_scopeEnumerator != null)
             {
                 return _scopeEnumerator.MoveNext();
             }
@@ -215,7 +204,7 @@ namespace NLog.Internal
             }
             else
 #endif
-                if (_scopeEnumerator != null)
+            if (_scopeEnumerator != null)
             {
                 _scopeEnumerator.Reset();
             }

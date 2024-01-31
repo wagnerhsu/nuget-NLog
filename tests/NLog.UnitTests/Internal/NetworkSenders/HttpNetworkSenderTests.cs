@@ -49,13 +49,17 @@ namespace NLog.UnitTests.Internal.NetworkSenders
         /// Test <see cref="HttpNetworkSender"/> via <see cref="NetworkTarget"/>
         /// </summary>
         [Fact]
+        [Obsolete("WebRequest is obsolete. Use HttpClient instead.")]
         public void HttpNetworkSenderViaNetworkTargetTest()
         {
             // Arrange
             var networkTarget = new NetworkTarget("target1")
             {
                 Address = "http://test.with.mock",
-                Layout = "${logger}|${message}|${exception}"
+                Layout = "${logger}|${message}|${exception}",
+                MaxQueueSize = 1234,
+                OnQueueOverflow = NetworkTargetQueueOverflowAction.Block,
+                MaxMessageSize = 0,
             };
 
             var webRequestMock = new WebRequestMock();
@@ -82,20 +86,24 @@ namespace NLog.UnitTests.Internal.NetworkSenders
             Assert.Equal("HttpHappyPathTestLogger|test message1|", requestedString);
             Assert.Equal("POST", mock.Method);
 
-            networkSenderFactoryMock.Received(1).Create("http://test.with.mock", 0, SslProtocols.None, new TimeSpan());
+            networkSenderFactoryMock.Received(1).Create("http://test.with.mock", 1234, NetworkTargetQueueOverflowAction.Block, 0, SslProtocols.None, new TimeSpan());
 
             // Cleanup
             mock.Dispose();
         }
 
         [Fact]
+        [Obsolete("WebRequest is obsolete. Use HttpClient instead.")]
         public void HttpNetworkSenderViaNetworkTargetRecoveryTest()
         {
             // Arrange
             var networkTarget = new NetworkTarget("target1")
             {
                 Address = "http://test.with.mock",
-                Layout = "${logger}|${message}|${exception}"
+                Layout = "${logger}|${message}|${exception}",
+                MaxQueueSize = 1234,
+                OnQueueOverflow = NetworkTargetQueueOverflowAction.Block,
+                MaxMessageSize = 0,
             };
 
             var webRequestMock = new WebRequestMock();
@@ -124,18 +132,18 @@ namespace NLog.UnitTests.Internal.NetworkSenders
             Assert.Equal("HttpHappyPathTestLogger|test message2|", requestedString);
             Assert.Equal("POST", mock.Method);
 
-            networkSenderFactoryMock.Received(1).Create("http://test.with.mock", 0, SslProtocols.None, new TimeSpan()); // Only created one HttpNetworkSender
+            networkSenderFactoryMock.Received(1).Create("http://test.with.mock", 1234, NetworkTargetQueueOverflowAction.Block, 0, SslProtocols.None, new TimeSpan()); // Only created one HttpNetworkSender
 
             // Cleanup
             mock.Dispose();
         }
 
-
+        [Obsolete("WebRequest is obsolete. Use HttpClient instead.")]
         private static INetworkSenderFactory CreateNetworkSenderFactoryMock(WebRequestMock webRequestMock)
         {
             var networkSenderFactoryMock = Substitute.For<INetworkSenderFactory>();
 
-            networkSenderFactoryMock.Create(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<SslProtocols>(), Arg.Any<TimeSpan>())
+            networkSenderFactoryMock.Create(Arg.Any<string>(), Arg.Any<int>(), Arg.Any<NetworkTargetQueueOverflowAction>(), Arg.Any<int>(), Arg.Any<SslProtocols>(), Arg.Any<TimeSpan>())
                 .Returns(url => new HttpNetworkSender(url.Arg<string>())
                 {
                     HttpRequestFactory = new WebRequestFactoryMock(webRequestMock)

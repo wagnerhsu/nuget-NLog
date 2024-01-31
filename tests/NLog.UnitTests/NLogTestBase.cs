@@ -43,7 +43,6 @@ namespace NLog.UnitTests
     using System.Runtime.CompilerServices;
     using System.Text;
     using NLog.Common;
-    using NLog.Config;
     using NLog.Layouts;
     using NLog.Targets;
     using Xunit;
@@ -53,12 +52,20 @@ namespace NLog.UnitTests
 
     public abstract class NLogTestBase
     {
+        protected static int CurrentProcessId => _currentProcessId != 0 ? _currentProcessId : (_currentProcessId = System.Diagnostics.Process.GetCurrentProcess().Id);
+        private static int _currentProcessId;
+        protected static string CurrentProcessPath => _currentProcessPath != null ? _currentProcessPath : (_currentProcessPath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName);
+        private static string _currentProcessPath;
+        protected static int CurrentManagedThreadId => System.Environment.CurrentManagedThreadId; // System.Threading.Thread.CurrentThread.ManagedThreadId
+
         protected NLogTestBase()
         {
             //reset before every test
             LogManager.ThrowExceptions = false; // Ignore any errors triggered by closing existing config
             LogManager.Configuration = null;    // Will close any existing config
+#pragma warning disable CS0618 // Type or member is obsolete
             LogManager.LogFactory.ResetCandidateConfigFilePath();
+#pragma warning restore CS0618 // Type or member is obsolete
 
             InternalLogger.Reset();
             InternalLogger.LogLevel = LogLevel.Off;
@@ -70,44 +77,49 @@ namespace NLog.UnitTests
 #endif
         }
 
-        protected void AssertDebugCounter(string targetName, int val)
+        protected static void AssertDebugCounter(string targetName, int val)
         {
             Assert.Equal(val, GetDebugTarget(targetName).Counter);
         }
 
-        protected void AssertDebugLastMessage(string targetName, string msg)
+        protected static void AssertDebugLastMessage(string targetName, string msg)
         {
             Assert.Equal(msg, GetDebugLastMessage(targetName));
         }
 
-        protected void AssertDebugLastMessageContains(string targetName, string msg)
+        protected static void AssertDebugLastMessage(string targetName, string msg, LogFactory logFactory)
+        {
+            Assert.Equal(msg, GetDebugLastMessage(targetName, logFactory));
+        }
+
+        protected static void AssertDebugLastMessageContains(string targetName, string msg)
         {
             string debugLastMessage = GetDebugLastMessage(targetName);
             Assert.True(debugLastMessage.Contains(msg),
                 $"Expected to find '{msg}' in last message value on '{targetName}', but found '{debugLastMessage}'");
         }
 
-        protected string GetDebugLastMessage(string targetName)
+        protected static string GetDebugLastMessage(string targetName)
         {
-            return GetDebugLastMessage(targetName, LogManager.Configuration);
+            return GetDebugLastMessage(targetName, LogManager.LogFactory);
         }
 
-        protected string GetDebugLastMessage(string targetName, LoggingConfiguration configuration)
+        protected static string GetDebugLastMessage(string targetName, LogFactory logFactory)
         {
-            return GetDebugTarget(targetName, configuration).LastMessage;
+            return GetDebugTarget(targetName, logFactory).LastMessage;
         }
 
-        public DebugTarget GetDebugTarget(string targetName)
+        public static DebugTarget GetDebugTarget(string targetName)
         {
-            return GetDebugTarget(targetName, LogManager.Configuration);
+            return GetDebugTarget(targetName, LogManager.LogFactory);
         }
 
-        protected DebugTarget GetDebugTarget(string targetName, LoggingConfiguration configuration)
+        protected static DebugTarget GetDebugTarget(string targetName, LogFactory logFactory)
         {
-            return LogFactoryTestExtensions.GetDebugTarget(targetName, configuration);
+            return LogFactoryTestExtensions.GetDebugTarget(targetName, logFactory.Configuration);
         }
 
-        protected void AssertFileContentsStartsWith(string fileName, string contents, Encoding encoding)
+        protected static void AssertFileContentsStartsWith(string fileName, string contents, Encoding encoding)
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
@@ -127,7 +139,7 @@ namespace NLog.UnitTests
             }
         }
 
-        protected void AssertFileContentsEndsWith(string fileName, string contents, Encoding encoding)
+        protected static void AssertFileContentsEndsWith(string fileName, string contents, Encoding encoding)
         {
             if (!File.Exists(fileName))
                 Assert.True(false, "File '" + fileName + "' doesn't exist.");
@@ -137,7 +149,7 @@ namespace NLog.UnitTests
             Assert.Equal(contents, fileText.Substring(fileText.Length - contents.Length));
         }
 
-        protected class CustomFileCompressor : IArchiveFileCompressor
+        protected sealed class CustomFileCompressor : IArchiveFileCompressor
         {
             public void CompressFile(string fileName, string archiveFileName)
             {
@@ -159,7 +171,7 @@ namespace NLog.UnitTests
         }
 
 #if NET35 || NET40
-        protected void AssertZipFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
+        protected static void AssertZipFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
         {
             if (!File.Exists(fileName))
                 Assert.True(false, "File '" + fileName + "' doesn't exist.");
@@ -184,7 +196,7 @@ namespace NLog.UnitTests
             }
         }
 #else
-        protected void AssertZipFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
+        protected static void AssertZipFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
@@ -212,17 +224,17 @@ namespace NLog.UnitTests
         }
 #endif
 
-        protected void AssertFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
+        protected static void AssertFileContents(string fileName, string expectedEntryName, string contents, Encoding encoding)
         {
             AssertFileContents(fileName, contents, encoding, false);
         }
 
-        protected void AssertFileContents(string fileName, string contents, Encoding encoding)
+        protected static void AssertFileContents(string fileName, string contents, Encoding encoding)
         {
             AssertFileContents(fileName, contents, encoding, false);
         }
 
-        protected void AssertFileContents(string fileName, string contents, Encoding encoding, bool addBom)
+        protected static void AssertFileContents(string fileName, string contents, Encoding encoding, bool addBom)
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
@@ -268,7 +280,7 @@ namespace NLog.UnitTests
             }
         }
 
-        protected void AssertFileContains(string fileName, string contentToCheck, Encoding encoding)
+        protected static void AssertFileContains(string fileName, string contentToCheck, Encoding encoding)
         {
             if (contentToCheck.Contains(Environment.NewLine))
                 Assert.True(false, "Please use only single line string to check.");
@@ -290,7 +302,7 @@ namespace NLog.UnitTests
             Assert.True(false, "File doesn't contains '" + contentToCheck + "'");
         }
 
-        protected void AssertFileNotContains(string fileName, string contentToCheck, Encoding encoding)
+        protected static void AssertFileNotContains(string fileName, string contentToCheck, Encoding encoding)
         {
             if (contentToCheck.Contains(Environment.NewLine))
                 Assert.True(false, "Please use only single line string to check.");
@@ -310,7 +322,7 @@ namespace NLog.UnitTests
             }
         }
 
-        protected string StringRepeat(int times, string s)
+        protected static string StringRepeat(int times, string s)
         {
             StringBuilder sb = new StringBuilder(s.Length * times);
             for (int i = 0; i < times; ++i)
@@ -343,7 +355,8 @@ namespace NLog.UnitTests
         /// <summary>
         /// Get line number of previous line.
         /// </summary>
-        protected int GetPrevLineNumber([CallerLineNumber] int callingFileLineNumber = 0)
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        protected static int GetPrevLineNumber([CallerLineNumber] int callingFileLineNumber = 0)
         {
             return callingFileLineNumber - 1;
         }
@@ -358,13 +371,25 @@ namespace NLog.UnitTests
         }
 #endif
 
-        protected string RunAndCaptureInternalLog(SyncAction action, LogLevel internalLogLevel)
+        protected static string RunAndCaptureInternalLog(SyncAction action, LogLevel internalLogLevel)
         {
             var stringWriter = new Logger();
-            InternalLogger.LogWriter = stringWriter;
-            InternalLogger.LogLevel = LogLevel.Trace;
-            InternalLogger.IncludeTimestamp = false;
-            action();
+            var orgWriter = InternalLogger.LogWriter;
+            var orgTimestamp = InternalLogger.IncludeTimestamp;
+            var orgLevel = InternalLogger.LogLevel;
+            try
+            {
+                InternalLogger.LogWriter = stringWriter;
+                InternalLogger.IncludeTimestamp = false;
+                InternalLogger.LogLevel = internalLogLevel;
+                action();
+            }
+            finally
+            {
+                InternalLogger.LogWriter = orgWriter;
+                InternalLogger.IncludeTimestamp = orgTimestamp;
+                InternalLogger.LogLevel = orgLevel;
+            }
 
             return stringWriter.ToString();
         }
@@ -373,7 +398,7 @@ namespace NLog.UnitTests
         /// </summary>
         /// <param name="tries"></param>
         /// <param name="action"></param>
-        protected void RetryingIntegrationTest(int tries, Action action)
+        protected static void RetryingIntegrationTest(int tries, Action action)
         {
             int tried = 0;
             while (tried < tries)
@@ -403,7 +428,7 @@ namespace NLog.UnitTests
         /// this is a simple wrapper that just locks access to the writer so only one thread can access
         /// it at a time.
         /// </summary>
-        private class Logger : TextWriter
+        private sealed class Logger : TextWriter
         {
             private readonly StringWriter writer = new StringWriter();
 
@@ -479,7 +504,7 @@ namespace NLog.UnitTests
 
         public delegate void SyncAction();
 
-        public class NoThrowNLogExceptions : IDisposable
+        public sealed class NoThrowNLogExceptions : IDisposable
         {
             private readonly bool throwExceptions;
 
@@ -495,7 +520,7 @@ namespace NLog.UnitTests
             }
         }
 
-        public class InternalLoggerScope : IDisposable
+        public sealed class InternalLoggerScope : IDisposable
         {
             private readonly TextWriter oldConsoleOutputWriter;
             public StringWriter ConsoleOutputWriter { get; private set; }
@@ -524,24 +549,6 @@ namespace NLog.UnitTests
                 globalThreshold = LogManager.GlobalThreshold;
                 throwExceptions = LogManager.ThrowExceptions;
                 throwConfigExceptions = LogManager.ThrowConfigExceptions;
-            }
-
-            public void SetConsoleError(StringWriter consoleErrorWriter)
-            {
-                if (ConsoleOutputWriter == null || consoleErrorWriter == null)
-                    throw new InvalidOperationException("Initialize with redirectConsole=true");
-
-                ConsoleErrorWriter = consoleErrorWriter;
-                Console.SetError(consoleErrorWriter);
-            }
-
-            public void SetConsoleOutput(StringWriter consoleOutputWriter)
-            {
-                if (ConsoleOutputWriter == null || consoleOutputWriter == null)
-                    throw new InvalidOperationException("Initialize with redirectConsole=true");
-
-                ConsoleOutputWriter = consoleOutputWriter;
-                Console.SetOut(consoleOutputWriter);
             }
 
             public void Dispose()

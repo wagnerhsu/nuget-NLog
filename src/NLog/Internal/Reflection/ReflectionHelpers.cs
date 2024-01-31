@@ -40,50 +40,12 @@ namespace NLog.Internal
     using System.Linq;
     using System.Linq.Expressions;
     using System.Reflection;
-    using NLog.Common;
 
     /// <summary>
     /// Reflection helpers.
     /// </summary>
     internal static class ReflectionHelpers
     {
-        /// <summary>
-        /// Gets all usable exported types from the given assembly.
-        /// </summary>
-        /// <param name="assembly">Assembly to scan.</param>
-        /// <returns>Usable types from the given assembly.</returns>
-        /// <remarks>Types which cannot be loaded are skipped.</remarks>
-        public static Type[] SafeGetTypes(this Assembly assembly)
-        {
-            try
-            {
-                return assembly.GetTypes();
-            }
-            catch (ReflectionTypeLoadException typeLoadException)
-            {
-                foreach (var ex in typeLoadException.LoaderExceptions)
-                {
-                    InternalLogger.Warn(ex, "Type load exception.");
-                }
-
-                var loadedTypes = new List<Type>();
-                foreach (var t in typeLoadException.Types)
-                {
-                    if (t != null)
-                    {
-                        loadedTypes.Add(t);
-                    }
-                }
-
-                return loadedTypes.ToArray();
-            }
-            catch (Exception ex)
-            {
-                InternalLogger.Warn(ex, "Type load exception.");
-                return ArrayHelper.Empty<Type>();
-            }
-        }
-
         /// <summary>
         /// Is this a static class?
         /// </summary>
@@ -103,8 +65,6 @@ namespace NLog.Internal
         /// <param name="target">Object instance, use null for static methods.</param>
         /// <param name="arguments">Complete list of parameters that matches the method, including optional/default parameters.</param>
         public delegate object LateBoundMethod(object target, object[] arguments);
-
-        public delegate object LateBoundMethodSingle(object target, object argument);
 
         /// <summary>
         /// Optimized delegate for calling a constructor
@@ -149,43 +109,6 @@ namespace NLog.Internal
         }
 
         /// <summary>
-        /// Creates an optimized delegate for calling the MethodInfo using Expression-Trees
-        /// </summary>
-        /// <param name="methodInfo">Method to optimize</param>
-        /// <returns>Optimized delegate for invoking the MethodInfo</returns>
-        public static LateBoundMethodSingle CreateLateBoundMethodSingle(MethodInfo methodInfo)
-        {
-            // parameters to execute
-            var instanceParameter = Expression.Parameter(typeof(object), "instance");
-            var parametersParameter = Expression.Parameter(typeof(object), "parameters");
-
-            var parameterExpressions = BuildParameterListSingle(methodInfo, parametersParameter);
-            var methodCall = BuildMethodCall(methodInfo, instanceParameter, parameterExpressions);
-
-            // ((TInstance)instance).Method((T0)parameters[0], (T1)parameters[1], ...)
-            if (methodCall.Type == typeof(void))
-            {
-                var lambda = Expression.Lambda<Action<object, object>>(
-                    methodCall, instanceParameter, parametersParameter);
-
-                Action<object, object> execute = lambda.Compile();
-                return (instance, parameters) =>
-                {
-                    execute(instance, parameters);
-                    return null;    // There is no return-type, so we return null-object
-                };
-            }
-            else
-            {
-                var castMethodCall = Expression.Convert(methodCall, typeof(object));
-                var lambda = Expression.Lambda<LateBoundMethodSingle>(
-                    castMethodCall, instanceParameter, parametersParameter);
-
-                return lambda.Compile();
-            }
-        }
-
-        /// <summary>
         /// Creates an optimized delegate for calling the constructors using Expression-Trees
         /// </summary>
         /// <param name="constructor">Constructor to optimize</param>
@@ -220,18 +143,6 @@ namespace NLog.Internal
             return parameterExpressions;
         }
 
-        private static IEnumerable<Expression> BuildParameterListSingle(MethodInfo methodInfo, ParameterExpression parameterParameter)
-        {
-            var parameterExpressions = new List<Expression>();
-            var paramInfos = methodInfo.GetParameters().Single();
-            {
-                // (Ti)parameters[i]
-                var parameterExpression = CreateParameterExpression(paramInfos, parameterParameter);
-                parameterExpressions.Add(parameterExpression);
-            }
-            return parameterExpressions;
-        }
-
         private static MethodCallExpression BuildMethodCall(MethodInfo methodInfo, ParameterExpression instanceParameter, IEnumerable<Expression> parameterExpressions)
         {
             // non-instance for static method, or ((TInstance)instance)
@@ -250,6 +161,15 @@ namespace NLog.Internal
 
             var valueCast = Expression.Convert(expression, parameterType);
             return valueCast;
+        }
+
+        public static bool IsPublic(this Type type)
+        {
+#if !NETSTANDARD1_3 && !NETSTANDARD1_5
+            return type.IsPublic;
+#else
+            return type.GetTypeInfo().IsPublic;
+#endif
         }
 
         public static bool IsEnum(this Type type)
@@ -369,7 +289,7 @@ namespace NLog.Internal
 
         public static bool IsValidPublicProperty(this PropertyInfo p)
         {
-            return p.CanRead && p.GetIndexParameters().Length == 0 && p.GetGetMethod() != null;
+            return p != null && p.CanRead && p.GetIndexParameters().Length == 0 && p.GetGetMethod() != null;
         }
 
         public static object GetPropertyValue(this PropertyInfo p, object instance)

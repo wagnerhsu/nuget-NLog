@@ -38,20 +38,17 @@ namespace NLog.Conditions
     /// </summary>
     internal sealed class ConditionExceptionExpression : ConditionExpression
     {
-        /// <summary>
-        /// Returns a string representation of this expression.
-        /// </summary>
-        /// <returns>The '<b>message</b>' string.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return "exception";
         }
 
         /// <summary>
-        /// Evaluates to the logger message.
+        /// Evaluates the current <see cref="LogEventInfo.Exception"/>.
         /// </summary>
         /// <param name="context">Evaluation context.</param>
-        /// <returns>The logger message.</returns>
+        /// <returns>The <see cref="LogEventInfo.Exception"/> object.</returns>
         protected override object EvaluateNode(LogEventInfo context)
         {
             return context.Exception;

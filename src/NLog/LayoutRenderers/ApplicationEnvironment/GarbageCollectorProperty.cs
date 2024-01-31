@@ -31,8 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if !MONO
-
 namespace NLog.LayoutRenderers
 {
     /// <summary>
@@ -71,5 +69,3 @@ namespace NLog.LayoutRenderers
         MaxGeneration,
     }
 }
-
-#endif

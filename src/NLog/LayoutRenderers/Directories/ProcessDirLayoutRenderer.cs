@@ -49,21 +49,20 @@ namespace NLog.LayoutRenderers
     [LayoutRenderer("processdir")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class ProcessDirLayoutRenderer : LayoutRenderer
     {
         private readonly string _processDir;
 
         /// <summary>
-        /// Gets or sets the name of the file to be Path.Combine()'d with with the process directory.
+        /// Gets or sets the name of the file to be Path.Combine()'d with the process directory.
         /// </summary>
-        /// <docgen category='Advanced Options' order='10' />
+        /// <docgen category='Advanced Options' order='50' />
         public string File { get; set; }
 
         /// <summary>
-        /// Gets or sets the name of the directory to be Path.Combine()'d with with the process directory.
+        /// Gets or sets the name of the directory to be Path.Combine()'d with the process directory.
         /// </summary>
-        /// <docgen category='Advanced Options' order='10' />
+        /// <docgen category='Advanced Options' order='50' />
         public string Dir { get; set; }
 
         /// <summary>

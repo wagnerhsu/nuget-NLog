@@ -31,15 +31,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using NLog.Layouts;
-
 namespace NLog.UnitTests.Internal
 {
-    using NLog.Targets;
-
-    using Xunit;
-    using Xunit.Extensions;
+    using NLog.Layouts;
     using NLog.Internal;
+    using NLog.Targets;
+    using Xunit;
 
     public class FilePathLayoutTests // Not needed as not using NLog-Core -> : NLogTestBase
     {
@@ -77,7 +74,7 @@ ${level}/test ", FilePathKind.Relative)]
         [InlineData(@"dir${level}/test ", FilePathKind.Relative)]
         public void DetectFilePathKind(string path, FilePathKind expected)
         {
-            Layout layout = path;
+            SimpleLayout layout = path;
             var result = FilePathLayout.DetectFilePathKind(layout);
             Assert.Equal(expected, result);
         }
@@ -97,7 +94,7 @@ ${level}/test ", FilePathKind.Relative)]
             if (System.IO.Path.DirectorySeparatorChar != '\\')
                 return; //no backward-slash on linux
 
-            Layout layout = path;
+            SimpleLayout layout = path;
             var result = FilePathLayout.DetectFilePathKind(layout);
             Assert.Equal(expected, result);
         }

@@ -34,14 +34,16 @@
 namespace NLog.Targets.Wrappers
 {
     using System;
-    using System.ComponentModel;
-    using Common;
-    using Time;
-
+    using NLog.Common;
+    using NLog.Layouts;
 
     /// <summary>
     /// Limits the number of messages written per timespan to the wrapped target.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/nlog/nlog/wiki/LimitingWrappers-target">See NLog Wiki</a>
+    /// </remarks>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/LimitingWrapper-target">Documentation on NLog Wiki</seealso>
     [Target("LimitingWrapper", IsWrapper = true)]
     public class LimitingTargetWrapper : WrapperTargetBase
     {
@@ -63,7 +65,7 @@ namespace NLog.Targets.Wrappers
         public LimitingTargetWrapper(string name, Target wrappedTarget) 
             : this(wrappedTarget, 1000, TimeSpan.FromHours(1))
         {
-            Name = name;
+            Name = name ?? Name;
         }
 
         /// <summary>
@@ -83,9 +85,10 @@ namespace NLog.Targets.Wrappers
         /// <param name="interval">Interval in which the maximum number of messages can be written.</param>
         public LimitingTargetWrapper(Target wrappedTarget, int messageLimit, TimeSpan interval)
         {
+            Name = string.IsNullOrEmpty(wrappedTarget?.Name) ? Name : (wrappedTarget.Name + "_wrapped");
+            WrappedTarget = wrappedTarget;
             MessageLimit = messageLimit;
             Interval = interval;
-            WrappedTarget = wrappedTarget;
         }
 
         /// <summary>
@@ -95,8 +98,7 @@ namespace NLog.Targets.Wrappers
         /// Messages received after <see cref="MessageLimit"/> has been reached in the current <see cref="Interval"/> will be discarded.
         /// </remarks>
         /// <docgen category='General Options' order='10' />
-        [DefaultValue(1000)]
-        public int MessageLimit { get; set; }
+        public Layout<int> MessageLimit { get; set; }
 
         /// <summary>
         /// Gets or sets the interval in which messages will be written up to the <see cref="MessageLimit"/> number of messages.
@@ -105,14 +107,7 @@ namespace NLog.Targets.Wrappers
         /// Messages received after <see cref="MessageLimit"/> has been reached in the current <see cref="Interval"/> will be discarded.
         /// </remarks>
         /// <docgen category='General Options' order='10' />
-        [DefaultValue(typeof(TimeSpan), "01:00")]
-        public TimeSpan Interval { get; set; }
-
-        /// <summary>
-        /// Gets the <c>DateTime</c> when the current <see cref="Interval"/> will be reset.
-        /// </summary>
-        /// <docgen category='General Options' order='10' />
-        public DateTime IntervalResetsAt => _firstWriteInInterval + Interval;
+        public Layout<TimeSpan> Interval { get; set; }
 
         /// <summary>
         /// Gets the number of <see cref="AsyncLogEventInfo"/> written in the current <see cref="Interval"/>.
@@ -125,13 +120,12 @@ namespace NLog.Targets.Wrappers
         ///  </summary>
         protected override void InitializeTarget()
         {
-            if(MessageLimit<=0)
+            if (MessageLimit.IsFixed && MessageLimit.FixedValue <= 0)
                 throw new NLogConfigurationException("The LimitingTargetWrapper\'s MessageLimit property must be > 0.");
-            if(Interval<=TimeSpan.Zero)
+            if (Interval.IsFixed && Interval.FixedValue <= TimeSpan.Zero)
                 throw new NLogConfigurationException("The LimitingTargetWrapper\'s property Interval must be > 0.");
-
             base.InitializeTarget();
-            ResetInterval();
+            ResetInterval(DateTime.MinValue);
             InternalLogger.Trace("{0}: Initialized with MessageLimit={1} and Interval={2}.", this, MessageLimit, Interval);
         }
 
@@ -144,13 +138,16 @@ namespace NLog.Targets.Wrappers
         /// <param name="logEvent">Log event to be written out.</param>
         protected override void Write(AsyncLogEventInfo logEvent)
         {
-            if (IsIntervalExpired())
+            var messageLimit = RenderLogEvent(MessageLimit, logEvent.LogEvent);
+            var interval = RenderLogEvent(Interval, logEvent.LogEvent);
+
+            if ((logEvent.LogEvent.TimeStamp - _firstWriteInInterval) > interval)
             {
-                ResetInterval();
-                InternalLogger.Debug("{0}: New interval of '{1}' started.", this, Interval);
+                ResetInterval(logEvent.LogEvent.TimeStamp);
+                InternalLogger.Debug("{0}: New interval of '{1}' started.", this, interval);
             }
 
-            if (MessagesWrittenCount < MessageLimit)
+            if (messageLimit <= 0 || MessagesWrittenCount < messageLimit)
             {
                 WrappedTarget.WriteAsyncLogEvent(logEvent);
                 MessagesWrittenCount++;
@@ -158,20 +155,14 @@ namespace NLog.Targets.Wrappers
             else
             {
                 logEvent.Continuation(null);
-                InternalLogger.Trace("{0}: Discarded event, because MessageLimit of '{1}' was reached.", this, MessageLimit);
+                InternalLogger.Trace("{0}: Discarded event, because MessageLimit of '{1}' was reached.", this, messageLimit);
             }
         }
 
-        private void ResetInterval()
+        private void ResetInterval(DateTime timestamp)
         {
-            _firstWriteInInterval = TimeSource.Current.Time;
+            _firstWriteInInterval = timestamp;
             MessagesWrittenCount = 0;
         }
-
-        private bool IsIntervalExpired()
-        {
-            return TimeSource.Current.Time - _firstWriteInInterval > Interval;
-        }
-
     }
 }

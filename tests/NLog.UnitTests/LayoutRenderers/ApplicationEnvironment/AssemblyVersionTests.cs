@@ -38,7 +38,7 @@ namespace NLog.UnitTests.LayoutRenderers
     using NLog.Config;
     using NLog.LayoutRenderers;
     using Xunit;
-	using Xunit.Abstractions;
+    using Xunit.Abstractions;
 
     public class AssemblyVersionTests : NLogTestBase
     {
@@ -57,10 +57,20 @@ namespace NLog.UnitTests.LayoutRenderers
         public void EntryAssemblyVersionTest()
         {
             var assembly = Assembly.GetEntryAssembly();
-            var assemblyVersion = assembly == null
+            var assemblyVersion = assembly is null
                 ? $"Could not find value for entry assembly and version type {nameof(AssemblyVersionType.Assembly)}"
                 : assembly.GetName().Version.ToString();
             AssertLayoutRendererOutput("${assembly-version}", assemblyVersion);
+        }
+
+        [Fact]
+        public void EntryAssemblyVersionDefaultTest()
+        {
+            var assembly = Assembly.GetEntryAssembly();
+            var assemblyVersion = assembly is null
+                ? "1.2.3.4"
+                : assembly.GetName().Version.ToString();
+            AssertLayoutRendererOutput("${assembly-version:default=1.2.3.4}", assemblyVersion);
         }
 
         [Fact]
@@ -68,6 +78,14 @@ namespace NLog.UnitTests.LayoutRenderers
         {
             AssertLayoutRendererOutput("${assembly-version:NLogAutoLoadExtension}", "2.0.0.0");
         }
+
+        [Fact]
+        public void AssemblyNameUnknownVersionTest()
+        {
+            using (new NoThrowNLogExceptions())
+                AssertLayoutRendererOutput("${assembly-version:FooBar:default=1.2.3.4}", "1.2.3.4");
+        }
+
 
         [Fact]
         public void AssemblyNameVersionTypeTest()
@@ -241,7 +259,7 @@ namespace NLog.UnitTests.LayoutRenderers
             {
                 GenerateInMemory = true,
                 GenerateExecutable = false,
-                ReferencedAssemblies = {"NLog.dll"}
+                ReferencedAssemblies = { "NLog.dll" }
             };
             System.CodeDom.Compiler.CompilerResults results = provider.CompileAssemblyFromSource(parameters, code);
             var compiledAssembly = results.CompiledAssembly;

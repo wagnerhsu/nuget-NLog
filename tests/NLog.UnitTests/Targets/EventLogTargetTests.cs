@@ -31,7 +31,7 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if  !MONO && !NETSTANDARD
+#if !MONO && !NETSTANDARD
 
 namespace NLog.UnitTests.Targets
 {
@@ -41,6 +41,7 @@ namespace NLog.UnitTests.Targets
     using System.Linq;
     using System.Diagnostics;
     using NLog.Config;
+    using NLog.Internal;
     using NLog.Layouts;
     using NLog.Targets;
     using Xunit;
@@ -477,7 +478,8 @@ namespace NLog.UnitTests.Targets
             var target = CreateEventLogTarget("NLog.UnitTests" + Guid.NewGuid().ToString("N"), EventLogTargetOverflowAction.Split, maxMessageLength);
             target.Layout = new SimpleLayout("${message}");
             target.Source = new SimpleLayout("${event-properties:item=DynamicSource}");
-            SimpleConfigurator.ConfigureForTargetLogging(target, LogLevel.Trace);
+
+            LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(target));
 
             var logger = LogManager.GetLogger("WriteEventLogEntry");
 
@@ -514,7 +516,7 @@ namespace NLog.UnitTests.Targets
             var target = CreateEventLogTarget("NLog.UnitTests" + Guid.NewGuid().ToString("N"), EventLogTargetOverflowAction.Truncate, 5000);
             target.EventId = eventId;
             target.Category = (short)category;
-            SimpleConfigurator.ConfigureForTargetLogging(target, LogLevel.Trace);
+            LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(target));
             var logger = LogManager.GetLogger("WriteEventLogEntry");
             logger.Log(LogLevel.Error, "Simple Test Message");
             var eventLog = new EventLog(target.Log);
@@ -539,7 +541,7 @@ namespace NLog.UnitTests.Targets
             var target = CreateEventLogTarget("NLog.UnitTests" + Guid.NewGuid().ToString("N"), EventLogTargetOverflowAction.Truncate, 5000);
             target.EventId = "${event-properties:EventId}";
             target.Category = "${event-properties:Category}";
-            SimpleConfigurator.ConfigureForTargetLogging(target, LogLevel.Trace);
+            LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(target));
             var logger = LogManager.GetLogger("WriteEventLogEntry");
             LogEventInfo theEvent = new LogEventInfo(LogLevel.Error, "TestLoggerName", "Simple Message");
             theEvent.Properties["EventId"] = eventId;
@@ -571,7 +573,7 @@ namespace NLog.UnitTests.Targets
             var target = new EventLogTarget(eventLogMock, null);
             InitializeEventLogTarget(target, sourceName, overflowAction, maxMessageLength, entryType);
 
-            SimpleConfigurator.ConfigureForTargetLogging(target, LogLevel.Trace);
+            LogManager.Setup().LoadConfiguration(c => c.ForLogger().WriteTo(target));
 
             var logger = LogManager.GetLogger("WriteEventLogEntry");
             logger.Log(logLevel, logMessage);
@@ -626,7 +628,8 @@ namespace NLog.UnitTests.Targets
 
             if (entryType != null)
             {
-                target.EntryType = new Layout<EventLogEntryType>(entryType);
+                using (new NoThrowNLogExceptions())
+                    target.EntryType = new Layout<EventLogEntryType>(entryType);
             }
 
             return target;
@@ -681,10 +684,10 @@ namespace NLog.UnitTests.Targets
                 Func<string, string, string> logNameFromSourceNameFunction,
                 Action<EventSourceCreationData> createEventSourceFunction)
             {
-                DeleteEventSourceFunction = deleteEventSourceFunction ?? throw new ArgumentNullException(nameof(deleteEventSourceFunction));
-                SourceExistsFunction = sourceExistsFunction ?? throw new ArgumentNullException(nameof(sourceExistsFunction));
-                LogNameFromSourceNameFunction = logNameFromSourceNameFunction ?? throw new ArgumentNullException(nameof(logNameFromSourceNameFunction));
-                CreateEventSourceFunction = createEventSourceFunction ?? throw new ArgumentNullException(nameof(createEventSourceFunction));
+                DeleteEventSourceFunction = Guard.ThrowIfNull(deleteEventSourceFunction);
+                SourceExistsFunction = Guard.ThrowIfNull(sourceExistsFunction);
+                LogNameFromSourceNameFunction = Guard.ThrowIfNull(logNameFromSourceNameFunction);
+                CreateEventSourceFunction = Guard.ThrowIfNull(createEventSourceFunction);
             }
 
             private Action<string, string> DeleteEventSourceFunction { get; }
@@ -705,19 +708,19 @@ namespace NLog.UnitTests.Targets
 
             internal List<EventRecord> WrittenEntries { get; } = new List<EventRecord>();
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public string Source { get; set; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public string Log { get; set; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public string MachineName { get; set; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public long MaximumKilobytes { get; set; } = EventLogDefaultMaxKilobytes;
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public void WriteEntry(string message, EventLogEntryType entryType, int eventId, short category)
             {
                 if (!IsEventLogAssociated)
@@ -735,10 +738,10 @@ namespace NLog.UnitTests.Targets
                 });
             }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public bool IsEventLogAssociated { get; private set; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public void AssociateNewEventLog(string logName, string machineName, string source)
             {
                 Log = logName;
@@ -751,16 +754,16 @@ namespace NLog.UnitTests.Targets
                 }
             }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public void DeleteEventSource(string source, string machineName) => DeleteEventSourceFunction(source, machineName);
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public bool SourceExists(string source, string machineName) => SourceExistsFunction(source, machineName);
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public string LogNameFromSourceName(string source, string machineName) => LogNameFromSourceNameFunction(source, machineName);
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public void CreateEventSource(EventSourceCreationData sourceData) => CreateEventSourceFunction(sourceData);
         }
     }

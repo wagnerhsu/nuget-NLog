@@ -62,6 +62,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void GetCandidateConfigTest()
         {
             var candidateConfigFilePaths = XmlLoggingConfiguration.GetCandidateConfigFilePaths();
@@ -71,6 +72,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void GetCandidateConfigTest_list_is_readonly()
         {
             Assert.Throws<NotSupportedException>(() =>
@@ -84,6 +86,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void SetCandidateConfigTest()
         {
             var list = new List<string> { "c:\\global\\temp.config" };
@@ -95,6 +98,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void ResetCandidateConfigTest()
         {
             var countBefore = XmlLoggingConfiguration.GetCandidateConfigFilePaths().Count();
@@ -178,6 +182,33 @@ namespace NLog.UnitTests
 
             // Assert base-directory + entry-directory + nlog-assembly-directory
             AssertResult(tmpDir, "EntryDir", "EntryDir", "Entry", result);
+        }
+
+        [Fact]
+        public void LoadConfigFile_NetCorePublished_UseBaseDirectory()
+        {
+            // Arrange
+            var tmpDir = Path.GetTempPath();
+            var appEnvMock = new AppEnvironmentMock(f => true, f => null)
+            {
+                AppDomainBaseDirectory = Path.Combine(tmpDir, "BaseDir"),
+#if NETSTANDARD
+                AppDomainConfigurationFile = string.Empty,                  // .NET 6 single-publish-style
+#else
+                AppDomainConfigurationFile = Path.Combine(tmpDir, "BaseDir", "Entry.exe.config"),
+#endif
+                CurrentProcessFilePath = Path.Combine(tmpDir, "ProcessDir", "Entry.exe"),
+                EntryAssemblyLocation = string.Empty,                       // .NET 6 single-publish-style
+                EntryAssemblyFileName = "Entry.dll",
+            };
+
+            var fileLoader = new LoggingConfigurationFileLoader(appEnvMock);
+
+            // Act
+            var result = fileLoader.GetDefaultCandidateConfigFilePaths().ToList();
+
+            // Assert base-directory + process-directory + nlog-assembly-directory
+            AssertResult(tmpDir, "BaseDir", null, "Entry", result);
         }
 
         [Fact]
@@ -269,14 +300,63 @@ namespace NLog.UnitTests
             AssertResult(tmpDir, "TempProcessDir", "ProcessDir", "Entry", result);
         }
 
+        [Fact]
+        public void ValueWithVariableMustNotCauseInfiniteRecursion()
+        {
+            // Header will be printed during initialization, before config fully loaded, verify config is not loaded again
+            var nlogConfigXml = @"<nlog throwExceptions='true'>
+                <variable name='hello' value='header' />
+                <targets>
+                    <target name='debug' type='DebugSystem' header='${var:hello}' />
+                </targets>
+                <rules>
+                    <logger name='*' minLevel='trace' writeTo='debug' />
+                </rules>
+            </nlog>";
+
+            // Arrange
+            var appEnvMock = new AppEnvironmentMock(f => true, f => throw new NLogConfigurationException("Never allow loading config"));
+            var fileLoader = new LoggingConfigurationFileLoader(appEnvMock);
+            var logFactory = new LogFactory(fileLoader).Setup().LoadConfigurationFromXml(nlogConfigXml).LogFactory;
+
+            // Assert
+            Assert.NotNull(logFactory.Configuration.FindTargetByName("debug"));
+        }
+
+        [Fact]
+        public void CandidateConfigurationFileOnlyLoadedInitially()
+        {
+            // Arrange
+            var intialLoad = true;
+            var appEnvMock = new AppEnvironmentMock(f => true, f => {
+                if (intialLoad)
+                    throw new System.IO.IOException("File not found");  // Non-fatal mock failure
+                else
+                    throw new NLogConfigurationException("Never allow loading config"); // Fatal mock failure
+            });
+            var fileLoader = new LoggingConfigurationFileLoader(appEnvMock);
+            var logFactory = new LogFactory(fileLoader);
+
+            // Act
+            var firstLogger = logFactory.GetLogger("FirstLogger");
+            var configuration = logFactory.Configuration;
+            intialLoad = false; // Change mock to fail fatally, if trying to load NLog config again
+            var secondLogger = logFactory.GetLogger("SecondLogger");
+
+            // Assert
+            Assert.Null(configuration);
+        }
+
         private static void AssertResult(string tmpDir, string appDir, string processDir, string appName, List<string> result)
         {
 #if NETSTANDARD
-            Assert.Contains(Path.Combine(tmpDir, processDir, appName + ".exe.nlog"), result, StringComparer.OrdinalIgnoreCase);
+            Assert.Contains(Path.Combine(tmpDir, processDir ?? appDir, appName + ".exe.nlog"), result, StringComparer.OrdinalIgnoreCase);
             Assert.Contains(Path.Combine(tmpDir, appDir, "Entry.dll.nlog"), result, StringComparer.OrdinalIgnoreCase);
             if (NLog.Internal.PlatformDetector.IsWin32)
             {
-                if (appDir != processDir)
+                if (processDir is null)
+                    Assert.Equal(4, result.Count);  // Single File Publish on .NET 6 - Case insensitive
+                else if (appDir != processDir)
                     Assert.Equal(6, result.Count);  // Single File Publish on NetCore 3.1 - Case insensitive
                 else
                     Assert.Equal(5, result.Count);  // Case insensitive
@@ -288,7 +368,12 @@ namespace NLog.UnitTests
 #else
             Assert.Equal(Path.Combine(tmpDir, appDir, appName + ".exe.nlog"), result.First(), StringComparer.OrdinalIgnoreCase);
             if (NLog.Internal.PlatformDetector.IsWin32)
-                Assert.Equal(4, result.Count);  // Case insensitive
+            {
+                if (processDir is null)
+                    Assert.Equal(3, result.Count);  // Case insensitive - No Assembly/Process-Directory
+                else
+                    Assert.Equal(4, result.Count);  // Case insensitive
+            }
 #endif
             Assert.Contains(Path.Combine(tmpDir, "BaseDir", "NLog.config"), result, StringComparer.OrdinalIgnoreCase);
             Assert.Contains(Path.Combine(tmpDir, appDir, "NLog.config"), result, StringComparer.OrdinalIgnoreCase);

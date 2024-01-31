@@ -31,9 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using NLog.Layouts;
 using NLog.Targets;
@@ -75,7 +72,7 @@ namespace NLog.UnitTests.Common
 
             if (EventWritten != null)
             {
-                var rendered = Layout == null ? null : Layout.Render(logEvent);
+                var rendered = Layout is null ? null : Layout.Render(logEvent);
                 EventWritten.Invoke(logEvent, rendered, Thread.CurrentThread.ManagedThreadId);
             }
         }

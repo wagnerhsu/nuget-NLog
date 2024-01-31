@@ -51,7 +51,6 @@ namespace NLog.LayoutRenderers
     /// XML event description compatible with log4j, Chainsaw and NLogViewer.
     /// </summary>
     [LayoutRenderer("log4jxmlevent")]
-    [ThreadSafe]
     [MutableUnsafe]
     public class Log4JXmlEventLayoutRenderer : LayoutRenderer, IUsesStackTrace, IIncludeContext
     {
@@ -63,7 +62,7 @@ namespace NLog.LayoutRenderers
         private static readonly string dummyNLogNamespace = "http://nlog-project.org/dummynamespace/" + Guid.NewGuid();
         private static readonly string dummyNLogNamespaceRemover = " xmlns:nlog=\"" + dummyNLogNamespace + "\"";
 
-        private readonly ScopeContextNestedStatesLayoutRenderer _scopeNestedLayoutRenderer = new ScopeContextNestedStatesLayoutRenderer() { Separator = " " };
+        private readonly ScopeContextNestedStatesLayoutRenderer _scopeNestedLayoutRenderer = new ScopeContextNestedStatesLayoutRenderer();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Log4JXmlEventLayoutRenderer" /> class.
@@ -92,7 +91,7 @@ namespace NLog.LayoutRenderers
 
             try
             {
-                _machineName = EnvironmentHelper.GetMachineName();
+                _machineName = XmlHelper.XmlConvertToStringSafe(EnvironmentHelper.GetMachineName());
                 if (string.IsNullOrEmpty(_machineName))
                 {
                     InternalLogger.Info("MachineName is not available.");
@@ -110,9 +109,7 @@ namespace NLog.LayoutRenderers
             }
         }
 
-        /// <summary>
-        /// Initializes the layout renderer.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeLayoutRenderer()
         {
             base.InitializeLayoutRenderer();
@@ -131,147 +128,157 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Gets or sets a value indicating whether to include NLog-specific extensions to log4j schema.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Layout Options' order='10' />
         public bool IncludeNLogData { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the XML should use spaces for indentation.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='50' />
         public bool IndentXml { get; set; }
 
         /// <summary>
-        /// Gets or sets the AppInfo field. By default it's the friendly name of the current AppDomain.
+        /// Gets or sets the log4j:event logger-xml-attribute. Default: ${logger}
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
+        public Layout LoggerName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the log4j:event message-xml-element. Default: ${message}
+        /// </summary>
+        /// <docgen category='Layout Options' order='10' />
+        public Layout FormattedMessage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the log4j:event log4japp-xml-element. By default it's the friendly name of the current AppDomain.
+        /// </summary>
+        /// <docgen category='Layout Options' order='10' />
         public Layout AppInfo { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to include call site (class and method name) in the information sent over the network.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public bool IncludeCallSite { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to include source info (file name and line number) in the information sent over the network.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public bool IncludeSourceInfo { get; set; }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeProperties"/> with NLog v5.
+        /// 
         /// Gets or sets a value indicating whether to include contents of the <see cref="MappedDiagnosticsContext"/> dictionary.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [Obsolete("Replaced by IncludeScopeProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeMdc { get => _includeMdc ?? false; set => _includeMdc = value; }
         private bool? _includeMdc;
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeScopeProperties"/> with NLog v5.
+        /// 
         /// Gets or sets a value indicating whether to include contents of the <see cref="MappedDiagnosticsLogicalContext"/> dictionary.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [Obsolete("Replaced by IncludeScopeProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeMdlc { get => _includeMdlc ?? false; set => _includeMdlc = value; }
         private bool? _includeMdlc;
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeNdc"/> with NLog v5.
+        /// 
         /// Gets or sets a value indicating whether to include contents of the <see cref="NestedDiagnosticsLogicalContext"/> stack.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+        /// <docgen category='Layout Options' order='10' />
+        [Obsolete("Replaced by IncludeNdc. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeNdlc { get => _includeNdlc ?? false; set => _includeNdlc = value; }
         private bool? _includeNdlc;
 
         /// <summary>
-        /// Gets or sets a value indicating whether to include contents of the <see cref="NestedDiagnosticsContext"/> stack.
+        /// Gets or sets whether to include log4j:NDC in output from <see cref="ScopeContext"/> nested context.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [Obsolete("Replaced by IncludeScopeNestedStates. Marked obsolete on NLog 5.0")]
+        /// <docgen category='Layout Options' order='10' />
         public bool IncludeNdc { get => _includeNdc ?? false; set => _includeNdc = value; }
         private bool? _includeNdc;
 
         /// <summary>
         /// Gets or sets whether to include the contents of the <see cref="ScopeContext"/> properties-dictionary.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public bool IncludeScopeProperties { get => _includeScopeProperties ?? (_includeMdlc == true || _includeMdc == true); set => _includeScopeProperties = value; }
         private bool? _includeScopeProperties;
 
         /// <summary>
-        /// Gets or sets whether to include the contents of the <see cref="ScopeContext"/> operation-call-stack.
+        /// Gets or sets whether to include log4j:NDC in output from <see cref="ScopeContext"/> nested context.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        public bool IncludeScopeNestedStates { get => _includeScopeNestedStates ?? (_includeNdlc == true || _includeNdc == true); set => _includeScopeNestedStates = value; }
-        private bool? _includeScopeNestedStates;
+        /// <docgen category='Layout Options' order='10' />
+        public bool IncludeScopeNested { get => _includeScopeNested ?? (_includeNdlc == true || _includeNdc == true); set => _includeScopeNested = value; }
+        private bool? _includeScopeNested;
 
         /// <summary>
-        /// Gets or sets the stack separator for <see cref="ScopeContext"/> operation-call-stack.
+        /// Gets or sets the stack separator for log4j:NDC in output from <see cref="ScopeContext"/> nested context.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [DefaultValue(" ")]
-        public string ScopeNestedStateSeparator
+        /// <docgen category='Layout Options' order='10' />
+        public string ScopeNestedSeparator
         {
             get => _scopeNestedLayoutRenderer.Separator;
             set => _scopeNestedLayoutRenderer.Separator = value;
         }
 
         /// <summary>
-        /// Gets or sets the NDLC item separator.
+        /// Obsolete and replaced by <see cref="NdcItemSeparator"/> with NLog v5.
+        /// 
+        /// Gets or sets the stack separator for log4j:NDC in output from <see cref="ScopeContext"/> nested context.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [DefaultValue(" ")]
-        [Obsolete("Replaced by ScopeNestedStateSeparator. Marked obsolete on NLog 5.0")]
-        public string NdlcItemSeparator { get => ScopeNestedStateSeparator; set => ScopeNestedStateSeparator = value; }
+        /// <docgen category='Layout Options' order='10' />
+        [Obsolete("Replaced by NdcItemSeparator. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string NdlcItemSeparator { get => ScopeNestedSeparator; set => ScopeNestedSeparator = value; }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="IncludeEventProperties"/> with NLog v5.
+        /// 
         /// Gets or sets the option to include all properties from the log events
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         [Obsolete("Replaced by IncludeEventProperties. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool IncludeAllProperties { get => IncludeEventProperties; set => IncludeEventProperties = value; }
 
         /// <summary>
         /// Gets or sets the option to include all properties from the log events
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        public bool IncludeEventProperties { get; set; }
-
-        /// <summary>   
-        /// Gets or sets the NDC item separator.
-        /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        [Obsolete("Replaced by ScopeNestedStateSeparator. Marked obsolete on NLog 5.0")]
-        [DefaultValue(" ")]
-        public string NdcItemSeparator { get => ScopeNestedStateSeparator; set => ScopeNestedStateSeparator = value; }
+        /// <docgen category='Layout Options' order='10' />
+        public bool IncludeEventProperties { get; set; } = true;
 
         /// <summary>
-        /// Gets or sets the log4j:event logger-xml-attribute (Default ${logger})
+        /// Gets or sets the stack separator for log4j:NDC in output from <see cref="ScopeContext"/> nested context.
         /// </summary>
-        /// <docgen category='Payload Options' order='10' />
-        public Layout LoggerName { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public string NdcItemSeparator { get => ScopeNestedSeparator; set => ScopeNestedSeparator = value; }
 
         /// <summary>
         ///  Gets or sets whether the log4j:throwable xml-element should be written as CDATA
         /// </summary>
+        /// <docgen category='Layout Options' order='50' />
         public bool WriteThrowableCData { get; set; }
 
         private readonly string _machineName;
 
         private XmlWriterSettings _xmlWriterSettings;
 
-        /// <summary>
-        /// Gets the level of stack trace information required by the implementing class.
-        /// </summary>
+        /// <inheritdoc/>
         StackTraceUsage IUsesStackTrace.StackTraceUsage => (IncludeCallSite || IncludeSourceInfo) ? (StackTraceUsageUtils.GetStackTraceUsage(IncludeSourceInfo, 0, true) | StackTraceUsage.WithCallSiteClassName) : StackTraceUsage.None;
 
         internal IList<NLogViewerParameterInfo> Parameters { get; set; }
 
-        /// <summary>
-        /// Renders the XML logging event and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             StringBuilder sb = new StringBuilder();
@@ -283,12 +290,12 @@ namespace NLog.LayoutRenderers
                 {
                     xtw.WriteAttributeString("xmlns", "nlog", null, dummyNLogNamespace);
                 }
-                xtw.WriteAttributeSafeString("logger", LoggerName != null ? LoggerName.Render(logEvent) : logEvent.LoggerName);
+                xtw.WriteAttributeSafeString("logger", LoggerName?.Render(logEvent) ?? logEvent.LoggerName);
                 xtw.WriteAttributeString("level", logEvent.Level.Name.ToUpperInvariant());
                 xtw.WriteAttributeString("timestamp", Convert.ToString((long)(logEvent.TimeStamp.ToUniversalTime() - log4jDateBase).TotalMilliseconds, CultureInfo.InvariantCulture));
                 xtw.WriteAttributeString("thread", AsyncHelpers.GetManagedThreadId().ToString(CultureInfo.InvariantCulture));
 
-                xtw.WriteElementSafeString("log4j", "message", dummyNamespace, logEvent.FormattedMessage);
+                xtw.WriteElementSafeString("log4j", "message", dummyNamespace, FormattedMessage?.Render(logEvent) ?? logEvent.FormattedMessage);
                 if (logEvent.Exception != null)
                 {
                     if (WriteThrowableCData)
@@ -313,24 +320,19 @@ namespace NLog.LayoutRenderers
 
                 xtw.WriteStartElement("log4j", "properties", dummyNamespace);
 
-                AppendScopeContextProperties("log4j", dummyNamespaceRemover, xtw);
+                AppendScopeContextProperties(xtw);
 
                 if (IncludeEventProperties)
                 {
-                    AppendProperties("log4j", dummyNamespaceRemover, xtw, logEvent);
+                    AppendDataProperties("log4j", dummyNamespace, xtw, logEvent);
                 }
 
                 AppendParameters(logEvent, xtw);
 
-                xtw.WriteStartElement("log4j", "data", dummyNamespace);
-                xtw.WriteAttributeString("name", "log4japp");
-                xtw.WriteAttributeSafeString("value", AppInfo?.Render(logEvent) ?? string.Empty);
-                xtw.WriteEndElement();
+                var appInfo = XmlHelper.XmlConvertToStringSafe(AppInfo?.Render(logEvent) ?? string.Empty);
+                AppendDataProperty(xtw, "log4japp", appInfo, dummyNamespace);
 
-                xtw.WriteStartElement("log4j", "data", dummyNamespace);
-                xtw.WriteAttributeString("name", "log4jmachinename");
-                xtw.WriteAttributeSafeString("value", _machineName);
-                xtw.WriteEndElement();
+                AppendDataProperty(xtw, "log4jmachinename", _machineName, dummyNamespace);
 
                 xtw.WriteEndElement();  // properties
 
@@ -347,7 +349,7 @@ namespace NLog.LayoutRenderers
             }
         }
 
-        private void AppendScopeContextProperties(string prefix, string propertiesNamespace, XmlWriter xtw)
+        private void AppendScopeContextProperties(XmlWriter xtw)
         {
             if (IncludeScopeProperties)
             {
@@ -356,17 +358,16 @@ namespace NLog.LayoutRenderers
                     while (scopeEnumerator.MoveNext())
                     {
                         var scopeProperty = scopeEnumerator.Current;
-                        if (string.IsNullOrEmpty(scopeProperty.Key))
+
+                        string propertyKey = XmlHelper.XmlConvertToStringSafe(scopeProperty.Key);
+                        if (string.IsNullOrEmpty(propertyKey))
                             continue;
 
                         string propertyValue = XmlHelper.XmlConvertToStringSafe(scopeProperty.Value);
-                        if (propertyValue == null)
+                        if (propertyValue is null)
                             continue;
 
-                        xtw.WriteStartElement(prefix, "data", propertiesNamespace);
-                        xtw.WriteAttributeSafeString("name", scopeProperty.Key);
-                        xtw.WriteAttributeString("value", propertyValue);
-                        xtw.WriteEndElement();
+                        AppendDataProperty(xtw, propertyKey, propertyValue, dummyNamespace);
                     }
                 }
             }
@@ -374,7 +375,7 @@ namespace NLog.LayoutRenderers
 
         private void AppendScopeContextNestedStates(XmlWriter xtw, LogEventInfo logEvent)
         {
-            if (IncludeScopeNestedStates)
+            if (IncludeScopeNested)
             {
                 var nestedStates = _scopeNestedLayoutRenderer.Render(logEvent);
                 //NDLC and NDC should be in the same element
@@ -387,17 +388,16 @@ namespace NLog.LayoutRenderers
             for (int i = 0; i < Parameters?.Count; ++i)
             {
                 var parameter = Parameters[i];
-                if (string.IsNullOrEmpty(parameter?.Name))
+
+                string parameterName = parameter?.Name; // property-setter has ensured safe xml-string
+                if (string.IsNullOrEmpty(parameterName))
                     continue;
 
-                var parameterValue = parameter.Layout?.Render(logEvent) ?? string.Empty;
+                var parameterValue = XmlHelper.XmlConvertToStringSafe(parameter.Layout?.Render(logEvent) ?? string.Empty);
                 if (!parameter.IncludeEmptyValue && string.IsNullOrEmpty(parameterValue))
                     continue;
 
-                xtw.WriteStartElement("log4j", "data", dummyNamespace);
-                xtw.WriteAttributeSafeString("name", parameter.Name);
-                xtw.WriteAttributeSafeString("value", parameterValue);
-                xtw.WriteEndElement();
+                AppendDataProperty(xtw, parameterName, parameterValue, dummyNamespace);
             }
         }
 
@@ -435,12 +435,12 @@ namespace NLog.LayoutRenderers
                 xtw.WriteEndElement();
 
                 xtw.WriteStartElement("nlog", "properties", dummyNLogNamespace);
-                AppendProperties("nlog", dummyNLogNamespace, xtw, logEvent);
+                AppendDataProperties("nlog", dummyNLogNamespace, xtw, logEvent);
                 xtw.WriteEndElement();
             }
         }
 
-        private void AppendProperties(string prefix, string propertiesNamespace, XmlWriter xtw, LogEventInfo logEvent)
+        private static void AppendDataProperties(string prefix, string propertiesNamespace, XmlWriter xtw, LogEventInfo logEvent)
         {
             if (logEvent.HasProperties)
             {
@@ -451,15 +451,20 @@ namespace NLog.LayoutRenderers
                         continue;
 
                     string propertyValue = XmlHelper.XmlConvertToStringSafe(contextProperty.Value);
-                    if (propertyValue == null)
+                    if (propertyValue is null)
                         continue;
 
-                    xtw.WriteStartElement(prefix, "data", propertiesNamespace);
-                    xtw.WriteAttributeString("name", propertyKey);
-                    xtw.WriteAttributeString("value", propertyValue);
-                    xtw.WriteEndElement();
+                    AppendDataProperty(xtw, propertyKey, propertyValue, propertiesNamespace, prefix);
                 }
             }
+        }
+
+        private static void AppendDataProperty(XmlWriter xtw, string propertyKey, string propertyValue, string propertiesNamespace, string prefix = "log4j")
+        {
+            xtw.WriteStartElement(prefix, "data", propertiesNamespace);
+            xtw.WriteAttributeString("name", propertyKey);
+            xtw.WriteAttributeString("value", propertyValue);
+            xtw.WriteEndElement();
         }
     }
 }

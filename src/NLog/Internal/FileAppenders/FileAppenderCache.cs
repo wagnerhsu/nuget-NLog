@@ -31,10 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#if !NETSTANDARD1_3
-#define SupportsMutex
-#endif
-
 namespace NLog.Internal.FileAppenders
 {
     using System;
@@ -95,48 +91,38 @@ namespace NLog.Internal.FileAppenders
 #if !NETSTANDARD1_3
         private void ExternalFileArchivingWatcher_OnFileChanged(object sender, FileSystemEventArgs e)
         {
-            if (_logFileWasArchived || CheckCloseAppenders == null || _autoClosingTimer == null)
+            if (_logFileWasArchived || CheckCloseAppenders is null || _autoClosingTimer is null)
             {
                 return;
             }
 
-            if (FileAppenderFolderChanged(e.FullPath))
+            if ((e.ChangeType & (WatcherChangeTypes.Deleted | WatcherChangeTypes.Renamed)) != 0)
             {
-                if ((e.ChangeType & (WatcherChangeTypes.Deleted | WatcherChangeTypes.Renamed)) != 0)
-                    _logFileWasArchived = true;  // File Appender file deleted/renamed
+                _logFileWasArchived = true;  // File Appender file deleted/renamed
             }
-            else
+            else if ((e.ChangeType & (WatcherChangeTypes.Created)) != 0)
             {
-                if ((e.ChangeType & WatcherChangeTypes.Created) == WatcherChangeTypes.Created)
-                    _logFileWasArchived = true;  // Something was created in the archive folder
+                if (FileArchiveFolderChanged(e.FullPath))
+                {
+                    _logFileWasArchived = true; // Something was created in the archive folder
+                }
             }
 
-            if (_logFileWasArchived && _autoClosingTimer != null)
+            if (_logFileWasArchived)
             {
-                _autoClosingTimer.Change(50, Timeout.Infinite);
+                _autoClosingTimer?.Change(50, Timeout.Infinite);
             }
         }
 
-        private bool FileAppenderFolderChanged(string fullPath)
+        private bool FileArchiveFolderChanged(string fullPath)
         {
-            if (!string.IsNullOrEmpty(fullPath))
+            if (!string.IsNullOrEmpty(_archiveFilePatternToWatch) && !string.IsNullOrEmpty(fullPath))
             {
-                if (string.IsNullOrEmpty(_archiveFilePatternToWatch))
+                string archiveFolderPath = Path.GetDirectoryName(_archiveFilePatternToWatch);
+                string currentFolderPath = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(archiveFolderPath) && !string.IsNullOrEmpty(currentFolderPath))
                 {
-                    return true;
-                }
-                else
-                {
-                    string archiveFolderPath = Path.GetDirectoryName(_archiveFilePatternToWatch);
-                    if (!string.IsNullOrEmpty(archiveFolderPath))
-                    {
-                        string currentFolderPath = Path.GetDirectoryName(fullPath);
-                        return !string.Equals(archiveFolderPath, currentFolderPath, StringComparison.OrdinalIgnoreCase);
-                    }
-                    else
-                    {
-                        return true;
-                    }
+                    return string.Equals(Path.GetFullPath(archiveFolderPath), Path.GetFullPath(currentFolderPath), StringComparison.OrdinalIgnoreCase);
                 }
             }
 
@@ -155,9 +141,7 @@ namespace NLog.Internal.FileAppenders
                 {
                     if (!string.IsNullOrEmpty(_archiveFilePatternToWatch))
                     {
-                        string directoryPath = Path.GetDirectoryName(_archiveFilePatternToWatch);
-                        if (string.IsNullOrEmpty(directoryPath))
-                            _externalFileArchivingWatcher.StopWatching(directoryPath);
+                        _externalFileArchivingWatcher.StopWatching(_archiveFilePatternToWatch);
                     }
 
                     _archiveFilePatternToWatch = value;
@@ -216,9 +200,6 @@ namespace NLog.Internal.FileAppenders
         /// </summary>
         /// <param name="fileName">File name associated with a single appender.</param>
         /// <returns>The allocated appender.</returns>
-        /// <exception cref="NullReferenceException">
-        /// Thrown when <see cref="M:AllocateAppender"/> is called on an <c>Empty</c><see cref="FileAppenderCache"/> instance.
-        /// </exception>
         public BaseFileAppender AllocateAppender(string fileName)
         {
             //
@@ -236,7 +217,7 @@ namespace NLog.Internal.FileAppenders
             for (int i = 0; i < _appenders.Length; ++i)
             {
                 // Use empty slot in recent appender list, if there is one.
-                if (_appenders[i] == null)
+                if (_appenders[i] is null)
                 {
                     freeSpot = i;
                     break;
@@ -263,7 +244,7 @@ namespace NLog.Internal.FileAppenders
                 }
             }
 
-            if (appenderToWrite == null)
+            if (appenderToWrite is null)
             {
                 appenderToWrite = CreateAppender(fileName, freeSpot);
             }
@@ -276,7 +257,7 @@ namespace NLog.Internal.FileAppenders
             BaseFileAppender appenderToWrite;
             try
             {
-                InternalLogger.Debug("{0}: Creating file appender: {1}", CreateFileParameters, fileName);
+                InternalLogger.Debug("{0}: Creating file appender: '{1}'", CreateFileParameters, fileName);
                 BaseFileAppender newAppender = Factory.Open(fileName, CreateFileParameters);
 
                 if (_appenders[freeSpot] != null)
@@ -301,10 +282,13 @@ namespace NLog.Internal.FileAppenders
                     if (!string.IsNullOrEmpty(_archiveFilePatternToWatch))
                     {
                         string directoryPath = Path.GetDirectoryName(_archiveFilePatternToWatch);
-                        if (!Directory.Exists(directoryPath))
-                            Directory.CreateDirectory(directoryPath);
+                        if (!string.IsNullOrEmpty(directoryPath))
+                        {
+                            if (!Directory.Exists(directoryPath))
+                                Directory.CreateDirectory(directoryPath);
 
-                        _externalFileArchivingWatcher.Watch(_archiveFilePatternToWatch); // Always monitor the archive-folder
+                            _externalFileArchivingWatcher.Watch(_archiveFilePatternToWatch); // Always monitor the archive-folder
+                        }
                     }
                     _externalFileArchivingWatcher.Watch(appenderToWrite.FileName); // Monitor the active file-appender
                 }
@@ -331,7 +315,7 @@ namespace NLog.Internal.FileAppenders
             for (int i = startIndex; i < _appenders.Length; ++i)
             {
                 var oldAppender = _appenders[i];
-                if (oldAppender == null)
+                if (oldAppender is null)
                 {
                     break;
                 }
@@ -361,7 +345,7 @@ namespace NLog.Internal.FileAppenders
                 {
                     for (int i = 0; i < _appenders.Length; ++i)
                     {
-                        if (_appenders[i] == null)
+                        if (_appenders[i] is null)
                         {
                             break;
                         }
@@ -383,7 +367,7 @@ namespace NLog.Internal.FileAppenders
         {
             foreach (BaseFileAppender appender in _appenders)
             {
-                if (appender == null)
+                if (appender is null)
                 {
                     break;
                 }
@@ -406,7 +390,7 @@ namespace NLog.Internal.FileAppenders
             for (int i = 0; i < _appenders.Length; ++i)
             {
                 BaseFileAppender appender = _appenders[i];
-                if (appender == null)
+                if (appender is null)
                     break;
 
                 if (string.Equals(appender.FileName, fileName, StringComparison.OrdinalIgnoreCase))
@@ -517,7 +501,7 @@ namespace NLog.Internal.FileAppenders
             for (int i = 0; i < _appenders.Length; ++i)
             {
                 var oldAppender = _appenders[i];
-                if (oldAppender == null)
+                if (oldAppender is null)
                 {
                     break;
                 }
@@ -529,7 +513,7 @@ namespace NLog.Internal.FileAppenders
                         _appenders[j] = _appenders[j + 1];
                     }
                     _appenders[_appenders.Length - 1] = null;
-                    CloseAppender(oldAppender, "Invalidate", _appenders[0] == null);
+                    CloseAppender(oldAppender, "Invalidate", _appenders[0] is null);
                     return oldAppender; // Return without Dispose of Archive Mutex
                 }
             }
@@ -538,7 +522,7 @@ namespace NLog.Internal.FileAppenders
 
         private void CloseAppender(BaseFileAppender appender, string reason, bool lastAppender)
         {
-            InternalLogger.Debug("{0}: FileAppender Closing {1} - {2}", CreateFileParameters, reason, appender.FileName);
+            InternalLogger.Debug("{0}: FileAppender {1} Closing File: '{2}'", CreateFileParameters, reason, appender.FileName);
 
             if (lastAppender)
             {

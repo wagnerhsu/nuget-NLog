@@ -54,7 +54,7 @@ namespace NLog.Layouts
 
         internal static LayoutRenderer[] CompileLayout(string value, ConfigurationItemFactory configurationItemFactory, bool? throwConfigExceptions, out string text)
         {
-            if (value == null)
+            if (value is null)
             {
                 text = string.Empty;
                 return ArrayHelper.Empty<LayoutRenderer>();
@@ -122,12 +122,6 @@ namespace NLog.Layouts
                     AddLiteral(literalBuf, result);
 
                     LayoutRenderer newLayoutRenderer = ParseLayoutRenderer(configurationItemFactory, sr, throwConfigExceptions);
-                    if (CanBeConvertedToLiteral(newLayoutRenderer))
-                    {
-                        newLayoutRenderer = ConvertToLiteral(newLayoutRenderer);
-                    }
-
-                    // layout renderer
                     result.Add(newLayoutRenderer);
                 }
                 else
@@ -179,18 +173,38 @@ namespace NLog.Layouts
             }
 
             var parameterValue = new StringBuilder(parameterName);
-            ParseLayoutParameterValue(sr, parameterValue);
+            ParseLayoutParameterValue(sr, parameterValue, chr => EndOfLayout(chr) || chr == '=');
             return parameterValue.ToString();
         }
 
-        private static void ParseLayoutParameterValue(SimpleStringReader sr, StringBuilder parameterValue)
+        private static string ParseParameterStringValue(SimpleStringReader sr)
         {
+            var parameterName = sr.ReadUntilMatch(chr => EndOfLayout(chr) || chr == '$' || chr == '\\');
+            if (sr.Peek() != '$' && sr.Peek() != '\\')
+            {
+                return parameterName;
+            }
+
+            var parameterValue = new StringBuilder(parameterName);
+            bool containsUnicodeEscape = ParseLayoutParameterValue(sr, parameterValue, chr => EndOfLayout(chr));
+            if (!containsUnicodeEscape)
+                return parameterValue.ToString();
+
+            var unescapedValue = parameterValue.ToString();
+            parameterValue.ClearBuilder();
+            return EscapeUnicodeStringValue(unescapedValue, parameterValue);
+        }
+
+        private static bool ParseLayoutParameterValue(SimpleStringReader sr, StringBuilder parameterValue, Func<int, bool> endOfLayout)
+        {
+            bool containsUnicodeEscape = false;
+
             int ch;
             int nestLevel = 0;
 
             while ((ch = sr.Peek()) != -1)
             {
-                if ((ch == '=' || EndOfLayout(ch)) && nestLevel == 0)
+                if (endOfLayout(ch) && nestLevel == 0)
                 {
                     break;
                 }
@@ -218,12 +232,13 @@ namespace NLog.Layouts
                 {
                     sr.Read();
                     ch = sr.Peek();
-                    if (nestLevel == 0 && (EndOfLayout(ch) || ch == '$' || ch == '='))
+                    if (nestLevel == 0 && (endOfLayout(ch) || ch == '$' || ch == '='))
                     {
                         parameterValue.Append((char)sr.Read());
                     }
                     else if (ch != -1)
                     {
+                        containsUnicodeEscape = true;
                         parameterValue.Append('\\');
                         parameterValue.Append((char)sr.Read());
                     }
@@ -233,6 +248,8 @@ namespace NLog.Layouts
                 parameterValue.Append((char)ch);
                 sr.Read();
             }
+
+            return containsUnicodeEscape;
         }
 
         private static string ParseParameterValue(SimpleStringReader sr)
@@ -423,22 +440,22 @@ namespace NLog.Layouts
                     parameterName = parameterName.Trim();
                     LayoutRenderer parameterTarget = layoutRenderer;
 
-                    if (!PropertyHelper.TryGetPropertyInfo(layoutRenderer, parameterName, out var propertyInfo))
+                    if (!PropertyHelper.TryGetPropertyInfo(configurationItemFactory, layoutRenderer, parameterName, out var propertyInfo))
                     {
                         parameterTarget = LookupAmbientProperty(parameterName, configurationItemFactory, ref wrappers, ref orderedWrappers);
-                        if (parameterTarget == null || !PropertyHelper.TryGetPropertyInfo(parameterTarget, parameterName, out propertyInfo))
+                        if (parameterTarget is null || !PropertyHelper.TryGetPropertyInfo(configurationItemFactory, parameterTarget, parameterName, out propertyInfo))
                         {
                             parameterTarget = layoutRenderer;
                             propertyInfo = null;
                         }
                     }
 
-                    if (propertyInfo == null)
+                    if (propertyInfo is null)
                     {
                         var value = ParseParameterValue(stringReader);
                         if (!string.IsNullOrEmpty(parameterName) || !StringHelpers.IsNullOrWhiteSpace(value))
                         {
-                            var configException = new NLogConfigurationException($"Unknown property '{parameterName}=' for ${{{typeName}}} ({layoutRenderer?.GetType()})");
+                            var configException = new NLogConfigurationException($"${{{typeName}}} cannot assign unknown property '{parameterName}='");
                             if (throwConfigExceptions ?? configException.MustBeRethrown())
                             {
                                 throw configException;
@@ -447,22 +464,14 @@ namespace NLog.Layouts
                     }
                     else
                     {
-                        if (typeof(Layout).IsAssignableFrom(propertyInfo.PropertyType))
+                        var propertyValue = ParseLayoutRendererPropertyValue(configurationItemFactory, stringReader, throwConfigExceptions, typeName, propertyInfo);
+                        if (propertyValue is string propertyStringValue)
                         {
-                            LayoutRenderer[] renderers = CompileLayout(configurationItemFactory, stringReader, throwConfigExceptions, true, out var txt);
-
-                            var nestedLayout = new SimpleLayout(renderers, txt, configurationItemFactory);
-                            propertyInfo.SetValue(parameterTarget, nestedLayout, null);
+                            PropertyHelper.SetPropertyFromString(parameterTarget, propertyInfo, propertyStringValue, configurationItemFactory);
                         }
-                        else if (typeof(ConditionExpression).IsAssignableFrom(propertyInfo.PropertyType))
+                        else if (propertyValue != null)
                         {
-                            var conditionExpression = ConditionParser.ParseExpression(stringReader, configurationItemFactory);
-                            propertyInfo.SetValue(parameterTarget, conditionExpression, null);
-                        }
-                        else
-                        {
-                            string value = ParseParameterValue(stringReader);
-                            PropertyHelper.SetPropertyFromString(parameterTarget, parameterName, value, configurationItemFactory);
+                            PropertyHelper.SetPropertyValueForObject(parameterTarget, propertyValue, propertyInfo);
                         }
                     }
                 }
@@ -476,19 +485,71 @@ namespace NLog.Layouts
                 ch = stringReader.Read();
             }
 
+            return BuildCompleteLayoutRenderer(configurationItemFactory, layoutRenderer, orderedWrappers);
+        }
+
+        private static LayoutRenderer BuildCompleteLayoutRenderer(ConfigurationItemFactory configurationItemFactory, LayoutRenderer layoutRenderer, List<LayoutRenderer> orderedWrappers = null)
+        {
             if (orderedWrappers != null)
             {
                 layoutRenderer = ApplyWrappers(configurationItemFactory, layoutRenderer, orderedWrappers);
             }
+            
+            if (CanBeConvertedToLiteral(configurationItemFactory, layoutRenderer))
+            {
+                layoutRenderer = ConvertToLiteral(layoutRenderer);
+            }
 
             return layoutRenderer;
+        }
+
+        private static object ParseLayoutRendererPropertyValue(ConfigurationItemFactory configurationItemFactory, SimpleStringReader stringReader, bool? throwConfigExceptions, string targetTypeName, PropertyInfo propertyInfo)
+        {
+            if (typeof(Layout).IsAssignableFrom(propertyInfo.PropertyType))
+            {
+                LayoutRenderer[] renderers = CompileLayout(configurationItemFactory, stringReader, throwConfigExceptions, true, out var txt);
+                Layout nestedLayout = new SimpleLayout(renderers, txt, configurationItemFactory);
+
+                if (propertyInfo.PropertyType.IsGenericType() && propertyInfo.PropertyType.GetGenericTypeDefinition() == typeof(Layout<>))
+                {
+                    var concreteType = typeof(Layout<>).MakeGenericType(propertyInfo.PropertyType.GetGenericArguments());
+                    nestedLayout = (Layout)Activator.CreateInstance(concreteType, BindingFlags.Instance | BindingFlags.Public, null, new object[] { nestedLayout }, null);
+                }
+
+                return nestedLayout;
+            }
+            else if (typeof(ConditionExpression).IsAssignableFrom(propertyInfo.PropertyType))
+            {
+                try
+                {
+                    return ConditionParser.ParseExpression(stringReader, configurationItemFactory);
+                }
+                catch (ConditionParseException ex)
+                {
+                    var configException = new NLogConfigurationException($"${{{targetTypeName}}} cannot parse ConditionExpression for property '{propertyInfo.Name}='. Error: {ex.Message}", ex);
+                    if (throwConfigExceptions ?? configException.MustBeRethrown())
+                    {
+                        throw configException;
+                    }
+
+                    return null;
+                }
+            }
+            else if (typeof(string).IsAssignableFrom(propertyInfo.PropertyType))
+            {
+                return ParseParameterStringValue(stringReader);
+            }
+            else
+            {
+                return ParseParameterValue(stringReader);
+            }
         }
 
         private static string ValidatePreviousParameterName(string previousParameterName, string parameterName, LayoutRenderer layoutRenderer, bool? throwConfigExceptions)
         {
             if (parameterName?.Equals(previousParameterName, StringComparison.OrdinalIgnoreCase) == true)
             {
-                var configException = new NLogConfigurationException($"Same property '{parameterName}' assigned twice for {layoutRenderer?.GetType()} ");
+                var configException = new NLogConfigurationException($"'{layoutRenderer?.GetType()?.Name}' has same property '{parameterName}=' assigned twice");
                 if (throwConfigExceptions ?? configException.MustBeRethrown())
                 {
                     throw configException;
@@ -504,15 +565,16 @@ namespace NLog.Layouts
 
         private static LayoutRenderer LookupAmbientProperty(string propertyName, ConfigurationItemFactory configurationItemFactory, ref Dictionary<Type, LayoutRenderer> wrappers, ref List<LayoutRenderer> orderedWrappers)
         {
-            if (configurationItemFactory.AmbientProperties.TryGetDefinition(propertyName, out var wrapperType))
+            if (configurationItemFactory.AmbientRendererFactory.TryCreateInstance(propertyName, out var wrapperInstance))
             {
                 wrappers = wrappers ?? new Dictionary<Type, LayoutRenderer>();
                 orderedWrappers = orderedWrappers ?? new List<LayoutRenderer>();
+                var wrapperType = wrapperInstance.GetType();
                 if (!wrappers.TryGetValue(wrapperType, out var wrapperRenderer))
                 {
-                    wrapperRenderer = configurationItemFactory.AmbientProperties.CreateInstance(propertyName);
-                    wrappers[wrapperType] = wrapperRenderer;
-                    orderedWrappers.Add(wrapperRenderer);
+                    wrappers[wrapperType] = wrapperInstance;
+                    orderedWrappers.Add(wrapperInstance);
+                    wrapperRenderer = wrapperInstance;
                 }
                 return wrapperRenderer;
             }
@@ -522,41 +584,47 @@ namespace NLog.Layouts
 
         private static LayoutRenderer GetLayoutRenderer(string typeName, ConfigurationItemFactory configurationItemFactory, bool? throwConfigExceptions)
         {
-            LayoutRenderer layoutRenderer;
+            LayoutRenderer layoutRenderer = null;
+
             try
             {
-                layoutRenderer = configurationItemFactory.LayoutRenderers.CreateInstance(typeName);
+                layoutRenderer = configurationItemFactory.LayoutRendererFactory.CreateInstance(typeName);
+            }
+            catch (NLogConfigurationException ex)
+            {
+                if (throwConfigExceptions ?? ex.MustBeRethrown())
+                    throw;
             }
             catch (Exception ex)
             {
-                var configException = new NLogConfigurationException(ex, $"Error parsing layout {typeName}");
+                var configException = new NLogConfigurationException($"Failed to parse layout containing type: {typeName} - {ex.Message}", ex);
                 if (throwConfigExceptions ?? configException.MustBeRethrown())
                 {
                     throw configException;
                 }
-                // replace with empty values
-                layoutRenderer = new LiteralLayoutRenderer(string.Empty);
             }
-            return layoutRenderer;
+
+            return layoutRenderer
+                ?? new LiteralLayoutRenderer(string.Empty); // replace with empty values
         }
 
         private static string SetDefaultPropertyValue(string value, LayoutRenderer layoutRenderer, ConfigurationItemFactory configurationItemFactory, bool? throwConfigExceptions)
         {
             // what we've just read is not a parameterName, but a value
             // assign it to a default property (denoted by empty string)
-            if (PropertyHelper.TryGetPropertyInfo(layoutRenderer, string.Empty, out var propertyInfo))
+            if (PropertyHelper.TryGetPropertyInfo(configurationItemFactory, layoutRenderer, string.Empty, out var propertyInfo))
             {
                 if (!typeof(Layout).IsAssignableFrom(propertyInfo.PropertyType) && value.IndexOf('\\') >= 0)
                 {
                     value = EscapeUnicodeStringValue(value);
                 }
 
-                PropertyHelper.SetPropertyFromString(layoutRenderer, propertyInfo.Name, value, configurationItemFactory);
+                PropertyHelper.SetPropertyFromString(layoutRenderer, propertyInfo, value, configurationItemFactory);
                 return propertyInfo.Name;
             }
             else
             {
-                var configException = new NLogConfigurationException($"{layoutRenderer.GetType()} has no default property to assign value {value}");
+                var configException = new NLogConfigurationException($"'{layoutRenderer?.GetType()?.Name}' has no default property to assign value {value}");
                 if (throwConfigExceptions ?? configException.MustBeRethrown())
                 {
                     throw configException;
@@ -572,7 +640,7 @@ namespace NLog.Layouts
             {
                 var newRenderer = (WrapperLayoutRendererBase)orderedWrappers[i];
                 InternalLogger.Trace("Wrapping {0} with {1}", lr.GetType(), newRenderer.GetType());
-                if (CanBeConvertedToLiteral(lr))
+                if (CanBeConvertedToLiteral(configurationItemFactory, lr))
                 {
                     lr = ConvertToLiteral(lr);
                 }
@@ -584,9 +652,9 @@ namespace NLog.Layouts
             return lr;
         }
 
-        private static bool CanBeConvertedToLiteral(LayoutRenderer lr)
+        private static bool CanBeConvertedToLiteral(ConfigurationItemFactory configurationItemFactory, LayoutRenderer lr)
         {
-            foreach (IRenderable renderable in ObjectGraphScanner.FindReachableObjects<IRenderable>(true, lr))
+            foreach (IRenderable renderable in ObjectGraphScanner.FindReachableObjects<IRenderable>(configurationItemFactory, true, lr))
             {
                 var renderType = renderable.GetType();
                 if (renderType == typeof(SimpleLayout))

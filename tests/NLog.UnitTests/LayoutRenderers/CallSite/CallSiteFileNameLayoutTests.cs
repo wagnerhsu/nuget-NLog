@@ -31,14 +31,14 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.IO;
-using System.Threading.Tasks;
-using NLog.Config;
-using Xunit;
-
 namespace NLog.UnitTests.LayoutRenderers
 {
+    using System;
+    using System.IO;
+    using System.Threading.Tasks;
+    using NLog.Internal;
+    using Xunit;
+
     public class CallSiteFileNameLayoutTests : NLogTestBase
     {
 #if !MONO
@@ -48,18 +48,18 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void ShowFileNameOnlyTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:includeSourcePath=False}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
 
             logger.Debug("msg");
-            var lastMessage = GetDebugLastMessage("debug");
+            var lastMessage = GetDebugLastMessage("debug", logFactory);
             var lastMessageArray = lastMessage.Split('|');
             Assert.Equal("CallSiteFileNameLayoutTests.cs", lastMessageArray[0]);
             Assert.Equal("msg", lastMessageArray[1]);
@@ -73,19 +73,19 @@ namespace NLog.UnitTests.LayoutRenderers
         public void CallSiteFileNameNoCaptureStackTraceTest()
         {
             // Arrange
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:captureStackTrace=False}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
             // Act
-            LogManager.GetLogger("A").Debug("msg");
+            logFactory.GetLogger("A").Debug("msg");
 
             // Assert
-            AssertDebugLastMessage("debug", "|msg");
+            logFactory.AssertDebugLastMessage("|msg");
         }
 
 #if !MONO
@@ -96,21 +96,21 @@ namespace NLog.UnitTests.LayoutRenderers
         public void CallSiteFileNameNoCaptureStackTraceWithStackTraceTest()
         {
             // Arrange
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:captureStackTrace=False}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
             // Act
             var logEvent = new LogEventInfo(LogLevel.Info, null, "msg");
             logEvent.SetStackTrace(new System.Diagnostics.StackTrace(true), 0);
-            LogManager.GetLogger("A").Log(logEvent);
+            logFactory.GetLogger("A").Log(logEvent);
 
             // Assert
-            var lastMessage = GetDebugLastMessage("debug");
+            var lastMessage = GetDebugLastMessage("debug", logFactory);
             var lastMessageArray = lastMessage.Split('|');
             Assert.Contains("CallSiteFileNameLayoutTests.cs", lastMessageArray[0]);
             Assert.Equal("msg", lastMessageArray[1]);
@@ -123,18 +123,18 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void ShowFullPathTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:includeSourcePath=True}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
 
             logger.Debug("msg");
-            var lastMessage = GetDebugLastMessage("debug");
+            var lastMessage = GetDebugLastMessage("debug", logFactory);
             var lastMessageArray = lastMessage.Split('|');
             Assert.Contains("CallSiteFileNameLayoutTests.cs", lastMessageArray[0]);
             Assert.False(lastMessageArray[0].StartsWith("CallSiteFileNameLayoutTests.cs"));
@@ -149,17 +149,17 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void ShowFileNameOnlyAsyncTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:includeSourcePath=False}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            AsyncMethod().Wait();
+            AsyncMethod(logFactory).Wait();
 
-            var lastMessage = GetDebugLastMessage("debug");
+            var lastMessage = GetDebugLastMessage("debug", logFactory);
             var lastMessageArray = lastMessage.Split('|');
             Assert.Equal("CallSiteFileNameLayoutTests.cs", lastMessageArray[0]);
             Assert.Equal("msg", lastMessageArray[1]);
@@ -172,19 +172,19 @@ namespace NLog.UnitTests.LayoutRenderers
 #endif
         public void ShowFullPathAsyncTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog>
                 <targets><target name='debug' type='Debug' layout='${callsite-filename:includeSourcePath=True}|${message}' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
 
-            AsyncMethod().Wait();
+            AsyncMethod(logFactory).Wait();
 
-            var lastMessage = GetDebugLastMessage("debug");
+            var lastMessage = GetDebugLastMessage("debug", logFactory);
             var lastMessageArray = lastMessage.Split('|');
             Assert.Contains("CallSiteFileNameLayoutTests.cs", lastMessageArray[0]);
             Assert.False(lastMessageArray[0].StartsWith("CallSiteFileNameLayoutTests.cs"));
@@ -192,11 +192,11 @@ namespace NLog.UnitTests.LayoutRenderers
             Assert.Equal("msg", lastMessageArray[1]);
         }
 
-        private async Task AsyncMethod()
+        private async Task AsyncMethod(LogFactory logFactory)
         {
-            var logger = LogManager.GetCurrentClassLogger();
+            var logger = logFactory.GetCurrentClassLogger();
             logger.Warn("msg");
-            var reader = new StreamReader(new MemoryStream(new byte[0]));
+            var reader = new StreamReader(new MemoryStream(ArrayHelper.Empty<byte>()));
             await reader.ReadLineAsync();
         }
     }

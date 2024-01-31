@@ -34,6 +34,7 @@
 namespace NLog.LayoutRenderers
 {
     using System;
+    using System.Globalization;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -61,7 +62,7 @@ namespace NLog.LayoutRenderers
         /// <param name="renderMethod">Method that renders the layout.</param>
         public FuncLayoutRenderer(string layoutRendererName, Func<LogEventInfo, LoggingConfiguration, object> renderMethod)
         {
-            _renderMethod = renderMethod ?? throw new ArgumentNullException(nameof(renderMethod));
+            _renderMethod = Guard.ThrowIfNull(renderMethod);
             LayoutRendererName = layoutRendererName;
         }
 
@@ -80,18 +81,23 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Format string for conversion from object to string.
         /// </summary>
-        /// <docgen category='Rendering Options' order='50' />
+        /// <docgen category='Layout Options' order='50' />
         public string Format { get; set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Gets or sets the culture used for rendering. 
+        /// </summary>
+        /// <docgen category='Layout Options' order='100' />
+        public CultureInfo Culture { get; set; } = CultureInfo.InvariantCulture;
+
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             var value = RenderValue(logEvent);
-            var formatProvider = GetFormatProvider(logEvent, null);
+            var formatProvider = GetFormatProvider(logEvent, Culture);
             builder.AppendFormattedValue(value, Format, formatProvider, ValueFormatter);
         }
 
-        /// <inheritdoc/>
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent) => GetStringValue(logEvent);
 
         private string GetStringValue(LogEventInfo logEvent)
@@ -108,7 +114,7 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Render the value for this log event
         /// </summary>
-        /// <param name="logEvent">The event info.</param>
+        /// <param name="logEvent">The logging event.</param>
         /// <returns>The value.</returns>
         protected virtual object RenderValue(LogEventInfo logEvent)
         {

@@ -144,63 +144,31 @@ namespace NLog.Internal.FileAppenders
             }
         }
 
-        /// <summary>
-        /// Writes the specified bytes.
-        /// </summary>
-        /// <param name="bytes">The bytes array.</param>
-        /// <param name="offset">The bytes array offset.</param>
-        /// <param name="count">The number of bytes.</param>
+        /// <inheritdoc/>
         public override void Write(byte[] bytes, int offset, int count)
         {
-            if (_fileStream != null)
-            {
-                _fileStream.Write(bytes, offset, count);
-            }
+            _fileStream?.Write(bytes, offset, count);
         }
 
-        /// <summary>
-        /// Closes this instance.
-        /// </summary>
+        /// <inheritdoc/>
         public override void Close()
         {
-            if (_fileStream == null)
-            {
-                return;
-            }
-
-            InternalLogger.Trace("{0}: Closing '{1}'", CreateFileParameters, FileName);
-            try
-            {
-                _fileStream?.Dispose();
-            }
-            catch (Exception ex)
-            {
-                InternalLogger.Warn(ex, "{0}: Failed to close file '{1}'", CreateFileParameters, FileName);
-                Thread.Sleep(1);   // Artificial delay to avoid hammering a bad file location
-            }
-            finally
-            {
-                _fileStream = null;
-            }
+            CloseFileSafe(ref _fileStream, FileName);
         }
 
-        /// <summary>
-        /// Flushes this instance.
-        /// </summary>
+        /// <inheritdoc/>
         public override void Flush()
         {
             // do nothing, the file is written directly
         }
 
+        /// <inheritdoc/>
         public override DateTime? GetFileCreationTimeUtc()
         {
             return CreationTimeUtc; // File is kept open, so creation time is static
         }
 
-        /// <summary>
-        /// Gets the length in bytes of the file associated with the appender.
-        /// </summary>
-        /// <returns>A long value representing the length of the file in bytes.</returns>
+        /// <inheritdoc/>
         public override long? GetFileLength()
         {
             return _fileStream?.Length;
@@ -209,16 +177,9 @@ namespace NLog.Internal.FileAppenders
         /// <summary>
         /// Factory class.
         /// </summary>
-        private class Factory : IFileAppenderFactory
+        private sealed class Factory : IFileAppenderFactory
         {
-            /// <summary>
-            /// Opens the appender for given file name and parameters.
-            /// </summary>
-            /// <param name="fileName">Name of the file.</param>
-            /// <param name="parameters">Creation parameters.</param>
-            /// <returns>
-            /// Instance of <see cref="BaseFileAppender"/> which can be used to write to the file.
-            /// </returns>
+            /// <inheritdoc/>
             BaseFileAppender IFileAppenderFactory.Open(string fileName, ICreateFileParameters parameters)
             {
                 return new WindowsMultiProcessFileAppender(fileName, parameters);

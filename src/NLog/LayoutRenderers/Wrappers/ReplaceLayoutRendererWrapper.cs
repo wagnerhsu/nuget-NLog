@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Linq;
     using System.Text;
     using System.Text.RegularExpressions;
@@ -51,7 +50,6 @@ namespace NLog.LayoutRenderers.Wrappers
     [LayoutRenderer("replace")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class ReplaceLayoutRendererWrapper : WrapperLayoutRendererBase
     {
         private RegexHelper _regexHelper;
@@ -61,61 +59,53 @@ namespace NLog.LayoutRenderers.Wrappers
         /// Gets or sets the text to search for.
         /// </summary>
         /// <value>The text search for.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(null)]
+        /// <docgen category='Layout Options' order='10' />
+        [RequiredParameter]
         public string SearchFor { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether regular expressions should be used.
         /// </summary>
         /// <value>A value of <c>true</c> if regular expressions should be used otherwise, <c>false</c>.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Condition Options' order='10' />
         public bool Regex { get; set; }
 
         /// <summary>
         /// Gets or sets the replacement string.
         /// </summary>
         /// <value>The replacement string.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(null)]
-        public string ReplaceWith { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public string ReplaceWith { get; set; } = string.Empty;
 
         /// <summary>
         /// Gets or sets the group name to replace when using regular expressions.
         /// Leave null or empty to replace without using group name.
         /// </summary>
         /// <value>The group name.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(null)]
+        /// <docgen category='Condition Options' order='10' />
         public string ReplaceGroupName { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to ignore case.
         /// </summary>
         /// <value>A value of <c>true</c> if case should be ignored when searching; otherwise, <c>false</c>.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Condition Options' order='10' />
         public bool IgnoreCase { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to search for whole words.
         /// </summary>
         /// <value>A value of <c>true</c> if whole words should be searched for; otherwise, <c>false</c>.</value>
-        /// <docgen category='Search/Replace Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Condition Options' order='10' />
         public bool WholeWords { get; set; }
 
         /// <summary>
         /// Compile the <see cref="Regex"/>? This can improve the performance, but at the costs of more memory usage. If <c>false</c>, the Regex Cache is used.
         /// </summary>
-        /// <docgen category='Rule Matching Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Condition Options' order='10' />
         public bool CompileRegex { get; set; }
 
-        /// <summary>
-        /// Initializes the layout renderer.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeLayoutRenderer()
         {
             base.InitializeLayoutRenderer();
@@ -137,11 +127,7 @@ namespace NLog.LayoutRenderers.Wrappers
             }
         }
 
-        /// <summary>
-        /// Post-processes the rendered message. 
-        /// </summary>
-        /// <param name="text">The text to be post-processed.</param>
-        /// <returns>Post-processed text.</returns>
+        /// <inheritdoc/>
         protected override string Transform(string text)
         {
             if (string.IsNullOrEmpty(ReplaceGroupName))
@@ -150,7 +136,7 @@ namespace NLog.LayoutRenderers.Wrappers
             }
             else
             {
-                if (_groupMatchEvaluator == null)
+                if (_groupMatchEvaluator is null)
                     _groupMatchEvaluator = m => ReplaceNamedGroup(ReplaceGroupName, ReplaceWith, m);
                 return _regexHelper.Regex?.Replace(text, _groupMatchEvaluator) ?? text;
             }

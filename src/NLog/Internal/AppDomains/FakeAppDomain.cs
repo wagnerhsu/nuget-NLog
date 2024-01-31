@@ -47,7 +47,7 @@ namespace NLog.Internal.Fakeables
         private readonly System.Runtime.Loader.AssemblyLoadContext _defaultContext;
 #endif
 
-        /// <summary>Initializes a new instance of the <see cref="T:System.Object" /> class.</summary>
+        /// <summary>Initializes a new instance of the <see cref="FakeAppDomain" /> class.</summary>
         public FakeAppDomain()
         {
             BaseDirectory = AppContext.BaseDirectory;
@@ -126,7 +126,7 @@ namespace NLog.Internal.Fakeables
         /// <returns>A list of assemblies in this application domain.</returns>
         public IEnumerable<Assembly> GetAssemblies()
         {
-            return Internal.ArrayHelper.Empty<Assembly>();  // TODO NETSTANDARD1_6 has DependencyContext.RuntimeLibraries
+            return Internal.ArrayHelper.Empty<Assembly>();
         }
 
         /// <summary>

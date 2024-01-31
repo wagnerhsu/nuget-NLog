@@ -38,6 +38,7 @@ namespace NLog.UnitTests.Config
     using System.Text;
     using JetBrains.Annotations;
     using NLog.Config;
+    using NLog.Internal;
     using NLog.Targets;
     using Xunit;
 
@@ -176,6 +177,26 @@ namespace NLog.UnitTests.Config
         }
 
         [Fact]
+        public void HandleLayoutRendererDependency()
+        {
+            // Arrange
+            var logFactory = new LogFactory().Setup().SetupExtensions(ext =>
+            {
+                ext.RegisterLayoutRenderer<LayoutRendererUsingDependency>();
+                ext.RegisterServiceProvider(new ExternalServiceRepository(t => t == typeof(IMisingDependencyClass) ? new MisingDependencyClass() : null));
+            }).LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(new MemoryTarget() { Layout = "${NeedDependency}" });
+            }).LogFactory;
+
+            // Act
+            logFactory.GetLogger("Test").Info("Test");
+
+            // Assert
+            Assert.Equal("Success", (logFactory.Configuration.AllTargets[0] as MemoryTarget).Logs[0]);
+        }
+
+        [Fact]
         public void ResolveShouldCheckExternalServiceProvider()
         {
             // Arrange
@@ -241,7 +262,7 @@ namespace NLog.UnitTests.Config
         {
             public TargetWithInjection([NotNull] IJsonConverter jsonConverter)
             {
-                JsonConverter = jsonConverter ?? throw new ArgumentNullException(nameof(jsonConverter));
+                JsonConverter = Guard.ThrowIfNull(jsonConverter);
             }
 
             public IJsonConverter JsonConverter { get; }
@@ -251,16 +272,16 @@ namespace NLog.UnitTests.Config
         {
             public ClassWithInjection Helper { get; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public TargetWithNestedInjection([NotNull] ClassWithInjection helper)
             {
-                Helper = helper ?? throw new ArgumentNullException(nameof(helper));
+                Helper = Guard.ThrowIfNull(helper);
             }
         }
 
         private class TargetWithDirectCycleInjection : Target
         {
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public TargetWithDirectCycleInjection(TargetWithDirectCycleInjection cycle1)
             {
             }
@@ -268,7 +289,7 @@ namespace NLog.UnitTests.Config
 
         private class TargetWithIndirectCycleInjection : Target
         {
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public TargetWithIndirectCycleInjection(CycleHelperClass1 helper)
             {
             }
@@ -276,7 +297,7 @@ namespace NLog.UnitTests.Config
 
         private class CycleHelperClass1
         {
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public CycleHelperClass1(CycleHelperClass2 helper)
             {
             }
@@ -284,7 +305,7 @@ namespace NLog.UnitTests.Config
 
         private class CycleHelperClass2
         {
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public CycleHelperClass2(CycleHelperClass1 helper)
             {
             }
@@ -294,7 +315,7 @@ namespace NLog.UnitTests.Config
         {
             public IJsonConverter JsonConverter { get; }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public ClassWithInjection(IJsonConverter jsonConverter)
             {
                 JsonConverter = jsonConverter;
@@ -314,6 +335,23 @@ namespace NLog.UnitTests.Config
             protected override void Write(LogEventInfo logEvent)
             {
                 LastLogEvent = logEvent;
+            }
+        }
+
+        [NLog.LayoutRenderers.LayoutRenderer("needdependency")]
+        private class LayoutRendererUsingDependency : NLog.LayoutRenderers.LayoutRenderer
+        {
+            private object _wantedDependency;
+
+            protected override void InitializeLayoutRenderer()
+            {
+                _wantedDependency = ResolveService<IMisingDependencyClass>();
+                base.InitializeLayoutRenderer();
+            }
+
+            protected override void Append(StringBuilder builder, LogEventInfo logEvent)
+            {
+                builder.Append(_wantedDependency != null ? "Success" : "Failed");
             }
         }
 

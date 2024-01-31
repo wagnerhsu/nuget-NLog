@@ -35,50 +35,34 @@ namespace NLog.LayoutRenderers
 {
     using System;
     using System.Text;
-    using NLog.Config;
 
     /// <summary>
-    /// Render a Nested Diagnostic Logical Context item (Async scope)
-    /// See <see cref="NestedDiagnosticsLogicalContext"/>
+    /// Obsolete and replaced by <see cref="ScopeContextNestedStatesLayoutRenderer"/> with NLog v5.
+    /// Render Nested Diagnostic Context (NDLC) from <see cref="NestedDiagnosticsLogicalContext"/>
     /// </summary>
     [LayoutRenderer("ndlc")]
-    [ThreadSafe]
     [Obsolete("Replaced by ScopeContextNestedStatesLayoutRenderer ${scopenested}. Marked obsolete on NLog 5.0")]
     public class NdlcLayoutRenderer : LayoutRenderer
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="NdlcLayoutRenderer" /> class.
-        /// </summary>
-        public NdlcLayoutRenderer()
-        {
-            Separator = " ";
-            BottomFrames = -1;
-            TopFrames = -1;
-        }
-
-        /// <summary>
         /// Gets or sets the number of top stack frames to be rendered.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        public int TopFrames { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public int TopFrames { get; set; } = -1;
 
         /// <summary>
         /// Gets or sets the number of bottom stack frames to be rendered.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        public int BottomFrames { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public int BottomFrames { get; set; } = -1;
 
         /// <summary>
         /// Gets or sets the separator to be used for concatenating nested logical context output.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        public string Separator { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public string Separator { get; set; } = " ";
 
-        /// <summary>
-        /// Renders the specified Nested Logical Context item and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             if (TopFrames == 1)

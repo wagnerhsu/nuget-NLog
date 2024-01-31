@@ -131,7 +131,7 @@ namespace NLog.MessageTemplates
                 return true;
             }
 
-            if (value == null)
+            if (value is null)
             {
                 builder.Append("NULL");
                 return true;
@@ -221,7 +221,12 @@ namespace NLog.MessageTemplates
 
         private static void SerializeConvertToString(object value, IFormatProvider formatProvider, StringBuilder builder)
         {
-            builder.Append(Convert.ToString(value, formatProvider));
+#if NETSTANDARD
+            if (value is IFormattable)
+                builder.AppendFormat(formatProvider, "{0}", value); // Support ISpanFormattable
+            else
+#endif
+                builder.Append(Convert.ToString(value, formatProvider));
         }
 
         private static void SerializeStringObject(string stringValue, string format, StringBuilder builder)
@@ -276,7 +281,7 @@ namespace NLog.MessageTemplates
         /// "FirstOrder"=true, "Previous login"=20-12-2017 14:55:32, "number of tries"=1
         /// </example>
         /// <param name="dictionary"></param>
-        /// <param name="format">formatstring of an item</param>
+        /// <param name="format">format string of an item</param>
         /// <param name="formatProvider"></param>
         /// <param name="builder"></param>
         /// <param name="objectsInPath"></param>
@@ -293,7 +298,7 @@ namespace NLog.MessageTemplates
                 if (separator) builder.Append(", ");
 
                 SerializeCollectionItem(item.Key, format, formatProvider, builder, ref objectsInPath, depth);
-                builder.Append("=");
+                builder.Append('=');
                 SerializeCollectionItem(item.Value, format, formatProvider, builder, ref objectsInPath, depth);
                 separator = true;
             }
@@ -343,10 +348,14 @@ namespace NLog.MessageTemplates
             }
             else
             {
-                var formattable = value as IFormattable;
-                if (formattable != null)
+                if (value is IFormattable formattable)
                 {
-                    builder.Append(formattable.ToString(format, formatProvider));
+#if NETSTANDARD
+                    if (string.IsNullOrEmpty(format))
+                        builder.AppendFormat(formatProvider, "{0}", formattable); // Support ISpanFormattable
+                    else
+#endif
+                        builder.Append(formattable.ToString(format, formatProvider));
                 }
                 else
                 {

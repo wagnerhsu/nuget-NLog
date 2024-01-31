@@ -52,7 +52,6 @@ namespace NLog.LayoutRenderers
     /// </remarks>
     [LayoutRenderer("local-ip")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class LocalIpAddressLayoutRenderer : LayoutRenderer
     {
         private AddressFamily? _addressFamily;
@@ -61,16 +60,16 @@ namespace NLog.LayoutRenderers
         /// <summary>
         /// Get or set whether to prioritize IPv6 or IPv4 (default)
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public AddressFamily AddressFamily { get => _addressFamily ?? AddressFamily.InterNetwork; set => _addressFamily = value; }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         public LocalIpAddressLayoutRenderer()
         {
             _networkInterfaceRetriever = new NetworkInterfaceRetriever();
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         internal LocalIpAddressLayoutRenderer(INetworkInterfaceRetriever networkInterfaceRetriever)
         {
             _networkInterfaceRetriever = networkInterfaceRetriever;
@@ -118,7 +117,7 @@ namespace NLog.LayoutRenderers
             }
         }
 
-        private bool CheckOptimalNetworkScore(UnicastIPAddressInformation networkAddress, int networkScore, ref int currentNetworkScore, ref string currentIpAddress)
+        private static bool CheckOptimalNetworkScore(UnicastIPAddressInformation networkAddress, int networkScore, ref int currentNetworkScore, ref string currentIpAddress)
         {
             const int greatNetworkScore = 30;   // 16 = Good Address Family + 9 = Good NetworkStatus + 3 = Valid gateway + Extra Bonus Points
 
@@ -223,7 +222,7 @@ namespace NLog.LayoutRenderers
 
         private static bool IsLoopbackAddressValue(IPAddress ipAddress)
         {
-            if (ipAddress == null)
+            if (ipAddress is null)
                 return true;
 
             if (IPAddress.IsLoopback(ipAddress))

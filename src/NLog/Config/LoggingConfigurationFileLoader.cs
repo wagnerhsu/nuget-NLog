@@ -76,7 +76,9 @@ namespace NLog.Config
         
         private LoggingConfiguration TryLoadFromFilePaths(LogFactory logFactory, string filename)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var configFileNames = logFactory.GetCandidateConfigFilePaths(filename);
+#pragma warning restore CS0618 // Type or member is obsolete
             foreach (string configFile in configFileNames)
             {
                 if (TryLoadLoggingConfiguration(logFactory, configFile, out var config))
@@ -95,6 +97,10 @@ namespace NLog.Config
                     config = LoadXmlLoggingConfigurationFile(logFactory, configFile);
                     return true;    // File exists, and maybe the config is valid, stop search
                 }
+                else
+                {
+                    InternalLogger.Debug("No file exists at candidate config file location: {0}", configFile);
+                }
             }
             catch (IOException ex)
             {
@@ -111,10 +117,7 @@ namespace NLog.Config
             catch (Exception ex)
             {
                 InternalLogger.Error(ex, "Failed loading from config file location: {0}", configFile);
-                if (logFactory.ThrowConfigExceptions ?? logFactory.ThrowExceptions)
-                    throw;
-
-                if (ex.MustBeRethrown())
+                if ((logFactory.ThrowConfigExceptions ?? logFactory.ThrowExceptions) || ex.MustBeRethrown())
                     throw;
             }
 
@@ -124,7 +127,7 @@ namespace NLog.Config
 
         private LoggingConfiguration LoadXmlLoggingConfigurationFile(LogFactory logFactory, string configFile)
         {
-            InternalLogger.Debug("Loading config from {0}", configFile);
+            InternalLogger.Debug("Reading config from XML file: {0}", configFile);
 
             using (var xmlReader = _appEnvironment.LoadXmlFile(configFile))
             {
@@ -155,8 +158,9 @@ namespace NLog.Config
             }
             catch (Exception ex)
             {
-                if (ex.MustBeRethrownImmediately() || ex.MustBeRethrown() || (logFactory.ThrowConfigExceptions ?? logFactory.ThrowExceptions))
+                if (ex.MustBeRethrown() || (logFactory.ThrowConfigExceptions ?? logFactory.ThrowExceptions))
                     throw;
+
                 if (ThrowXmlConfigExceptions(configFile, xmlReader, logFactory, out var autoReload))
                     throw;
 
@@ -227,7 +231,7 @@ namespace NLog.Config
 #else
             string entryAssemblyLocation = string.Empty;
 #endif
-            if (filename == null)
+            if (filename is null)
             {
                 // Scan for process specific nlog-files
                 foreach (var filePath in GetAppSpecificNLogLocations(baseDirectory, entryAssemblyLocation))
@@ -261,19 +265,25 @@ namespace NLog.Config
             foreach (var filePath in GetPrivateBinPathNLogLocations(baseDirectory, nlogConfigFile, platformFileSystemCaseInsensitive ? nLogConfigFileLowerCase : string.Empty))
                 yield return filePath;
 
-            string nlogAssemblyLocation = filename != null ? null : LookupNLogAssemblyLocation();
-            if (nlogAssemblyLocation != null)
+            string nlogAssemblyLocation = filename is null ? LookupNLogAssemblyLocation() : null;
+            if (!string.IsNullOrEmpty(nlogAssemblyLocation))
                 yield return nlogAssemblyLocation + ".nlog";
         }
 
         private static string LookupNLogAssemblyLocation()
         {
-#if !NETSTANDARD1_3 && !NETSTANDARD1_5
-            // Get path to NLog.dll.nlog only if the assembly is not in the GAC
+#if !NETSTANDARD1_3
             var nlogAssembly = typeof(LogFactory).GetAssembly();
-            var nlogAssemblyLocation = nlogAssembly?.Location;
-            if (!string.IsNullOrEmpty(nlogAssemblyLocation) && !nlogAssembly.GlobalAssemblyCache)
+            // Get path to NLog.dll.nlog only if the assembly is not in the GAC
+            var nlogAssemblyLocation = nlogAssembly.Location;
+            if (!string.IsNullOrEmpty(nlogAssemblyLocation))
             {
+#if !NETSTANDARD
+                if (nlogAssembly.GlobalAssemblyCache)
+                {
+                    return null;
+                }
+#endif
                 return nlogAssemblyLocation;
             }
 #endif
@@ -306,7 +316,7 @@ namespace NLog.Config
 
                 if (PathHelpers.IsTempDir(entryAssemblyLocation, _appEnvironment.UserTempFilePath))
                 {
-                    // Handle Single File Published on NetCore 3.1 and loading side-by-side exe.nlog (Not relevant for Net5.0)
+                    // Handle Single File Published on NetCore 3.1 and loading side-by-side exe.nlog (Not relevant for Net5.0 and newer)
                     string processFilePath = _appEnvironment.CurrentProcessFilePath;
                     if (!string.IsNullOrEmpty(processFilePath))
                     {
@@ -319,10 +329,12 @@ namespace NLog.Config
                     string assemblyFileName = _appEnvironment.EntryAssemblyFileName;
                     if (!string.IsNullOrEmpty(assemblyFileName))
                     {
-                        // Handle unpublished .NET Core Application
                         var assemblyBaseName = Path.GetFileNameWithoutExtension(assemblyFileName);
                         if (!string.IsNullOrEmpty(assemblyBaseName))
+                        {
+                            // Handle unpublished .NET Core Application, where assembly-filename has dll-extension
                             yield return Path.Combine(entryAssemblyLocation, assemblyBaseName + ".exe.nlog");
+                        }
 
                         yield return Path.Combine(entryAssemblyLocation, assemblyFileName + ".nlog");
                     }

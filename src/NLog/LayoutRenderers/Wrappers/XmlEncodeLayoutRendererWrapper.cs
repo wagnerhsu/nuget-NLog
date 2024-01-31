@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -43,44 +42,31 @@ namespace NLog.LayoutRenderers.Wrappers
     /// Converts the result of another layout output to be XML-compliant.
     /// </summary>
     [LayoutRenderer("xml-encode")]
-    [AmbientProperty("XmlEncode")]
+    [AmbientProperty(nameof(XmlEncode))]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class XmlEncodeLayoutRendererWrapper : WrapperLayoutRendererBase
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="XmlEncodeLayoutRendererWrapper" /> class.
-        /// </summary>
-        public XmlEncodeLayoutRendererWrapper()
-        {
-            XmlEncode = true;
-        }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether to apply XML encoding.
+        /// Gets or sets whether output should be encoded with Xml-string escaping.
         /// </summary>
         /// <remarks>Ensures always valid XML, but gives a performance hit</remarks>
-        /// <docgen category="Transformation Options" order="10"/>
-        [DefaultValue(true)]
-        public bool XmlEncode { get; set; }
+        /// <docgen category="Layout Options" order="10"/>
+        public bool XmlEncode { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether to transform newlines (\r\n) into (&#13;&#10;)
         /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
-        [DefaultValue(false)]
+        /// <docgen category="Layout Options" order="10"/>
         public bool XmlEncodeNewlines { get; set; }
 
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            Inner.RenderAppendBuilder(logEvent, builder);
-            if (XmlEncode && RequiresXmlEncode(builder, orgLength))
+            Inner.Render(logEvent, builder);
+            if (XmlEncode)
             {
-                var str = builder.ToString(orgLength, builder.Length - orgLength);
-                builder.Length = orgLength;
-                XmlHelper.EscapeXmlString(str, XmlEncodeNewlines, builder);
+                XmlHelper.PerformXmlEscapeWhenNeeded(builder, orgLength, XmlEncodeNewlines);
             }
         }
 
@@ -92,28 +78,6 @@ namespace NLog.LayoutRenderers.Wrappers
                 return XmlHelper.EscapeXmlString(text, XmlEncodeNewlines);
             }
             return text;
-        }
-
-        private bool RequiresXmlEncode(StringBuilder target, int startPos = 0)
-        {
-            for (int i = startPos; i < target.Length; ++i)
-            {
-                switch (target[i])
-                {
-                    case '<':
-                    case '>':
-                    case '&':
-                    case '\'':
-                    case '"':
-                        return true;
-                    case '\r':
-                    case '\n':
-                        if (XmlEncodeNewlines)
-                            return true;
-                        break;
-                }
-            }
-            return false;
         }
     }
 }

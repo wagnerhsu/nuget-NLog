@@ -40,13 +40,27 @@ namespace NLog.Targets
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.IO;
-    using NLog.Config;
     using NLog.Common;
+    using NLog.Config;
 
     /// <summary>
     /// Writes log messages to the console with customizable coloring.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/nlog/nlog/wiki/ColoredConsole-target">See NLog Wiki</a>
+    /// </remarks>
     /// <seealso href="https://github.com/nlog/nlog/wiki/ColoredConsole-target">Documentation on NLog Wiki</seealso>
+    /// <example>
+    /// <p>
+    /// To set up the target in the <a href="https://github.com/NLog/NLog/wiki/Configuration-file">configuration file</a>, 
+    /// use the following syntax:
+    /// </p>
+    /// <code lang="XML" source="examples/targets/Configuration File/ColoredConsole/NLog.config" />
+    /// <p>
+    /// To set up the log target programmatically use code like this:
+    /// </p>
+    /// <code lang="C#" source="examples/targets/Configuration API/ColoredConsole/Simple/Example.cs" />
+    /// </example>
     [Target("ColoredConsole")]
     public sealed class ColoredConsoleTarget : TargetWithLayoutHeaderAndFooter
     {
@@ -60,7 +74,7 @@ namespace NLog.Targets
         ///
         /// Full error:
         ///   Error during session close: System.IndexOutOfRangeException: Probable I/ O race condition detected while copying memory.
-        ///   The I/ O package is not thread safe by default.In multithreaded applications,
+        ///   The I/ O package is not thread safe by default. In multi-threaded applications,
         ///   a stream must be accessed in a thread-safe way, such as a thread - safe wrapper returned by TextReader's or
         ///   TextWriter's Synchronized methods.This also applies to classes like StreamWriter and StreamReader.
         ///
@@ -79,9 +93,6 @@ namespace NLog.Targets
         /// </remarks>
         public ColoredConsoleTarget()
         {
-            WordHighlightingRules = new List<ConsoleWordHighlightingRule>();
-            RowHighlightingRules = new List<ConsoleRowHighlightingRule>();
-            UseDefaultRowHighlightingRules = true;
             _consolePrinter = CreateConsolePrinter(EnableAnsiOutput);
         }
 
@@ -98,18 +109,18 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="StdErr"/> with NLog v5.
         /// Gets or sets a value indicating whether the error stream (stderr) should be used instead of the output stream (stdout).
         /// </summary>
         /// <docgen category='Console Options' order='10' />
-        [DefaultValue(false)]
         [Obsolete("Replaced by StdErr to align with ConsoleTarget. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool ErrorStream { get => StdErr; set => StdErr = value; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to send the log messages to the standard error instead of the standard output.
         /// </summary>
         /// <docgen category='Console Options' order='10' />
-        [DefaultValue(false)]
         public bool StdErr { get; set; }
 
         /// <summary>
@@ -156,8 +167,7 @@ namespace NLog.Targets
         /// </table>
         /// </remarks>
         /// <docgen category='Highlighting Rules' order='9' />
-        [DefaultValue(true)]
-        public bool UseDefaultRowHighlightingRules { get; set; }
+        public bool UseDefaultRowHighlightingRules { get; set; } = true;
 
         /// <summary>
         /// The encoding for writing messages to the <see cref="Console"/>.
@@ -181,7 +191,6 @@ namespace NLog.Targets
         ///  - Disables console writing if Console Standard Input is not available (Non-Console-App)
         /// </summary>
         /// <docgen category='Console Options' order='10' />
-        [DefaultValue(false)]
         public bool DetectConsoleAvailable { get; set; }
 
         /// <summary>
@@ -189,7 +198,6 @@ namespace NLog.Targets
         ///   - Disables coloring logic when System.Console.IsOutputRedirected = true
         /// </summary>
         /// <docgen category='Console Options' order='11' />
-        [DefaultValue(false)]
         public bool DetectOutputRedirected { get; set; }
 
         /// <summary>
@@ -199,14 +207,12 @@ namespace NLog.Targets
         /// Normally not required as standard Console.Out will have <see cref="StreamWriter.AutoFlush"/> = true, but not when pipe to file
         /// </remarks>
         /// <docgen category='Console Options' order='11' />
-        [DefaultValue(false)]
         public bool AutoFlush { get; set; }
 
         /// <summary>
         /// Enables output using ANSI Color Codes
         /// </summary>
         /// <docgen category='Console Options' order='10' />
-        [DefaultValue(false)]
         public bool EnableAnsiOutput { get; set; }
 
         /// <summary>
@@ -214,18 +220,16 @@ namespace NLog.Targets
         /// </summary>
         /// <docgen category='Highlighting Rules' order='10' />
         [ArrayParameter(typeof(ConsoleRowHighlightingRule), "highlight-row")]
-        public IList<ConsoleRowHighlightingRule> RowHighlightingRules { get; private set; }
+        public IList<ConsoleRowHighlightingRule> RowHighlightingRules { get; } = new List<ConsoleRowHighlightingRule>();
 
         /// <summary>
         /// Gets the word highlighting rules.
         /// </summary>
         /// <docgen category='Highlighting Rules' order='11' />
         [ArrayParameter(typeof(ConsoleWordHighlightingRule), "highlight-word")]
-        public IList<ConsoleWordHighlightingRule> WordHighlightingRules { get; private set; }
+        public IList<ConsoleWordHighlightingRule> WordHighlightingRules { get; } = new List<ConsoleWordHighlightingRule>();
 
-        /// <summary>
-        /// Initializes the target.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void InitializeTarget()
         {
             _pauseLogging = false;
@@ -285,9 +289,7 @@ namespace NLog.Targets
                 return new ColoredConsoleAnsiPrinter();
         }
 
-        /// <summary>
-        /// Closes the target and releases any unmanaged resources.
-        /// </summary>
+        /// <inheritdoc/>
         protected override void CloseTarget()
         {
             if (Footer != null)
@@ -299,7 +301,7 @@ namespace NLog.Targets
             base.CloseTarget();
         }
 
-        /// <inheritdoc />
+        /// <inheritdoc/>
         protected override void FlushAsync(AsyncContinuation asyncContinuation)
         {
             try
@@ -322,11 +324,7 @@ namespace NLog.Targets
             }
         }
 
-        /// <summary>
-        /// Writes the specified log event to the console highlighting entries
-        /// and words based on a set of defined rules.
-        /// </summary>
-        /// <param name="logEvent">Log event.</param>
+        /// <inheritdoc/>
         protected override void Write(LogEventInfo logEvent)
         {
             if (_pauseLogging)
@@ -435,14 +433,14 @@ namespace NLog.Targets
         private ConsoleRowHighlightingRule GetMatchingRowHighlightingRule(LogEventInfo logEvent)
         {
             var matchingRule = GetMatchingRowHighlightingRule(RowHighlightingRules, logEvent);
-            if (matchingRule == null && UseDefaultRowHighlightingRules)
+            if (matchingRule is null && UseDefaultRowHighlightingRules)
             {
                 matchingRule = GetMatchingRowHighlightingRule(_consolePrinter.DefaultConsoleRowHighlightingRules, logEvent);
             }
             return matchingRule ?? ConsoleRowHighlightingRule.Default;
         }
 
-        private ConsoleRowHighlightingRule GetMatchingRowHighlightingRule(IList<ConsoleRowHighlightingRule> rules, LogEventInfo logEvent)
+        private static ConsoleRowHighlightingRule GetMatchingRowHighlightingRule(IList<ConsoleRowHighlightingRule> rules, LogEventInfo logEvent)
         {
             for (int i = 0; i < rules.Count; ++i)
             {
@@ -468,7 +466,7 @@ namespace NLog.Targets
                 {
                     var hl = WordHighlightingRules[i];
                     var matches = hl.Matches(logEvent, message);
-                    if (matches == null || matches.Count == 0)
+                    if (matches is null || matches.Count == 0)
                         continue;
 
                     if (sb != null)
@@ -503,7 +501,7 @@ namespace NLog.Targets
 
         private static string EscapeColorCodes(string message)
         {
-            if (message.IndexOf("\a", StringComparison.Ordinal) >= 0)
+            if (message.IndexOf('\a') >= 0)
                 message = message.Replace("\a", "\a\a");
             return message;
         }

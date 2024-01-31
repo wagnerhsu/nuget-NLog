@@ -79,20 +79,20 @@ namespace NLog.Internal
 
         public static string GetStackFrameMethodName(MethodBase method, bool includeMethodInfo, bool cleanAsyncMoveNext, bool cleanAnonymousDelegates)
         {
-            if (method == null)
+            if (method is null)
                 return null;
 
             string methodName = method.Name;
 
             var callerClassType = method.DeclaringType;
-            if (cleanAsyncMoveNext && methodName == "MoveNext" && callerClassType?.DeclaringType != null && callerClassType.Name.StartsWith("<"))
+            if (cleanAsyncMoveNext && methodName == "MoveNext" && callerClassType?.DeclaringType != null && callerClassType.Name.IndexOf('<') == 0)
             {
                 // NLog.UnitTests.LayoutRenderers.CallSiteTests+<CleanNamesOfAsyncContinuations>d_3'1.MoveNext
                 int endIndex = callerClassType.Name.IndexOf('>', 1);
                 if (endIndex > 1)
                 {
                     methodName = callerClassType.Name.Substring(1, endIndex - 1);
-                    if (methodName.StartsWith("<"))
+                    if (methodName.IndexOf('<') == 0)
                         methodName = methodName.Substring(1, methodName.Length - 1);    // Local functions, and anonymous-methods in Task.Run()
                 }
             }
@@ -100,11 +100,10 @@ namespace NLog.Internal
             // Clean up the function name if it is an anonymous delegate
             // <.ctor>b__0
             // <Main>b__2
-            if (cleanAnonymousDelegates && (methodName.StartsWith("<") && methodName.Contains("__") && methodName.Contains(">")))
+            if (cleanAnonymousDelegates && (methodName.IndexOf('<') == 0 && methodName.IndexOf("__", StringComparison.Ordinal) >= 0 && methodName.IndexOf('>') >= 0))
             {
                 int startIndex = methodName.IndexOf('<') + 1;
                 int endIndex = methodName.IndexOf('>');
-
                 methodName = methodName.Substring(startIndex, endIndex - startIndex);
             }
 
@@ -118,11 +117,11 @@ namespace NLog.Internal
 
         public static string GetStackFrameMethodClassName(MethodBase method, bool includeNameSpace, bool cleanAsyncMoveNext, bool cleanAnonymousDelegates)
         {
-            if (method == null)
+            if (method is null)
                 return null;
 
             var callerClassType = method.DeclaringType;
-            if (cleanAsyncMoveNext && method.Name == "MoveNext" && callerClassType?.DeclaringType != null && callerClassType.Name.StartsWith("<"))
+            if (cleanAsyncMoveNext && method.Name == "MoveNext" && callerClassType?.DeclaringType != null && callerClassType.Name.IndexOf('<') == 0)
             {
                 // NLog.UnitTests.LayoutRenderers.CallSiteTests+<CleanNamesOfAsyncContinuations>d_3'1
                 int endIndex = callerClassType.Name.IndexOf('>', 1);
@@ -155,6 +154,12 @@ namespace NLog.Internal
             return className;
         }
 
+        [System.Diagnostics.CodeAnalysis.UnconditionalSuppressMessage("Trimming - Allow callsite logic", "IL2026")]
+        public static MethodBase GetStackMethod(StackFrame stackFrame)
+        {
+            return stackFrame?.GetMethod();
+        }
+
         /// <summary>
         /// Gets the fully qualified name of the class invoking the calling method, including the 
         /// namespace but not the assembly.    
@@ -181,13 +186,13 @@ namespace NLog.Internal
                     var callingClass = callingClassAndMethod.Substring(0, methodStartIndex);
                     // Needed because of extra dot, for example if method was .ctor()
                     className = callingClass.TrimEnd('.');
-                    if (!className.StartsWith("System.Environment") && framesToSkip != 0)
+                    if (!className.StartsWith("System.Environment", StringComparison.Ordinal) && framesToSkip != 0)
                     {
                         i += framesToSkip - 1;
                         framesToSkip = 0;
                         continue;
                     }
-                    if (!className.StartsWith("System."))
+                    if (!className.StartsWith("System.", StringComparison.Ordinal))
                         break;
                 }
             }
@@ -210,7 +215,10 @@ namespace NLog.Internal
                 var stackTrace = new StackTrace(false);
                 className = GetClassFullName(stackTrace);
                 if (string.IsNullOrEmpty(className))
-                    className = stackFrame.GetMethod()?.Name ?? string.Empty;
+                {
+                    var method = StackTraceUsageUtils.GetStackMethod(stackFrame);
+                    className = method?.Name ?? string.Empty;
+                }                    
             }
             return className;
         }
@@ -235,8 +243,8 @@ namespace NLog.Internal
         /// <returns>Valid assembly, or null if assembly was internal</returns>
         public static Assembly LookupAssemblyFromStackFrame(StackFrame stackFrame)
         {
-            var method = stackFrame.GetMethod();
-            if (method == null)
+            var method = StackTraceUsageUtils.GetStackMethod(stackFrame);
+            if (method is null)
             {
                 return null;
             }
@@ -268,7 +276,7 @@ namespace NLog.Internal
         /// <returns>Valid class name, or empty string if assembly was internal</returns>
         public static string LookupClassNameFromStackFrame(StackFrame stackFrame)
         {
-            var method = stackFrame.GetMethod();
+            var method = StackTraceUsageUtils.GetStackMethod(stackFrame);
             if (method != null && LookupAssemblyFromStackFrame(stackFrame) != null)
             {
                 string className = GetStackFrameMethodClassName(method, true, true, true);

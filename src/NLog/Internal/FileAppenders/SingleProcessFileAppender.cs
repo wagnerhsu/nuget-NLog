@@ -31,14 +31,11 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-
 namespace NLog.Internal.FileAppenders
 {
     using System;
     using System.IO;
     using System.Security;
-
-    using NLog.Common;
 
     /// <summary>
     /// Optimized single-process file appender which keeps the file open for exclusive write.
@@ -50,7 +47,7 @@ namespace NLog.Internal.FileAppenders
 
         private FileStream _file;
         private readonly bool _enableFileDeleteSimpleMonitor;
-        private DateTime _lastSimpleMonitorCheckTimeUtc;
+        private int _lastSimpleMonitorCheckTickCount;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SingleProcessFileAppender" /> class.
@@ -61,24 +58,20 @@ namespace NLog.Internal.FileAppenders
         {
             _file = CreateFileStream(false);
             _enableFileDeleteSimpleMonitor = parameters.EnableFileDeleteSimpleMonitor;
-            _lastSimpleMonitorCheckTimeUtc = OpenTimeUtc;
+            _lastSimpleMonitorCheckTickCount = Environment.TickCount;
         }
 
-        /// <summary>
-        /// Writes the specified bytes.
-        /// </summary>
-        /// <param name="bytes">The bytes array.</param>
-        /// <param name="offset">The bytes array offset.</param>
-        /// <param name="count">The number of bytes.</param>
+        /// <inheritdoc/>
         public override void Write(byte[] bytes, int offset, int count)
         {
-            if (_file == null)
+            if (_file is null)
             {
                 return;
             }
 
-            if (_enableFileDeleteSimpleMonitor && MonitorForEnableFileDeleteEvent(FileName, ref _lastSimpleMonitorCheckTimeUtc))
+            if (_enableFileDeleteSimpleMonitor && MonitorForEnableFileDeleteEvent(FileName, ref _lastSimpleMonitorCheckTickCount))
             {
+                NLog.Common.InternalLogger.Debug("{0}: Recreating FileStream because no longer File.Exists: '{1}'", CreateFileParameters, FileName);
                 CloseFileSafe(ref _file, FileName);
                 _file = CreateFileStream(false);
             }
@@ -86,42 +79,25 @@ namespace NLog.Internal.FileAppenders
             _file.Write(bytes, offset, count);
         }
 
-        /// <summary>
-        /// Flushes this instance.
-        /// </summary>
+        /// <inheritdoc/>
         public override void Flush()
         {
-            if (_file == null)
-            {
-                return;
-            }
-
-            _file.Flush();
+            _file?.Flush();
         }
 
-        /// <summary>
-        /// Closes this instance.
-        /// </summary>
+        /// <inheritdoc/>
         public override void Close()
         {
             CloseFileSafe(ref _file, FileName);
         }
 
-
-        /// <summary>
-        /// Gets the creation time for a file associated with the appender. The time returned is in Coordinated Universal 
-        /// Time [UTC] standard.
-        /// </summary>
-        /// <returns>The file creation time.</returns>
+        /// <inheritdoc/>
         public override DateTime? GetFileCreationTimeUtc()
         {
             return CreationTimeUtc;
         }
 
-        /// <summary>
-        /// Gets the length in bytes of the file associated with the appender.
-        /// </summary>
-        /// <returns>A long value representing the length of the file in bytes.</returns>
+        /// <inheritdoc/>
         public override long? GetFileLength()
         {
             return _file?.Length;
@@ -130,16 +106,9 @@ namespace NLog.Internal.FileAppenders
         /// <summary>
         /// Factory class.
         /// </summary>
-        private class Factory : IFileAppenderFactory
+        private sealed class Factory : IFileAppenderFactory
         {
-            /// <summary>
-            /// Opens the appender for given file name and parameters.
-            /// </summary>
-            /// <param name="fileName">Name of the file.</param>
-            /// <param name="parameters">Creation parameters.</param>
-            /// <returns>
-            /// Instance of <see cref="BaseFileAppender"/> which can be used to write to the file.
-            /// </returns>
+            /// <inheritdoc/>
             BaseFileAppender IFileAppenderFactory.Open(string fileName, ICreateFileParameters parameters)
             {
                 return new SingleProcessFileAppender(fileName, parameters);

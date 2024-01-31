@@ -31,23 +31,22 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using NLog.Conditions;
-using NLog.Config;
-using NLog.Internal;
-using NLog.Layouts;
-using NLog.Targets.Wrappers;
-using NLog.UnitTests.Config;
-
 namespace NLog.UnitTests.Targets
 {
     using System;
     using System.Collections.Generic;
+    using System.Globalization;
+    using System.Linq;
+    using System.Text;
     using System.Threading;
     using NLog.Common;
+    using NLog.Conditions;
+    using NLog.Config;
+    using NLog.Internal;
+    using NLog.Layouts;
     using NLog.Targets;
+    using NLog.Targets.Wrappers;
+    using NLog.UnitTests.Config;
     using Xunit;
 
     public class TargetTests : NLogTestBase
@@ -244,7 +243,7 @@ namespace NLog.UnitTests.Targets
             /// <param name="x">The first object of type <paramref name="T"/> to compare.</param><param name="y">The second object of type <paramref name="T"/> to compare.</param>
             public override bool Equals(IRenderable x, IRenderable y)
             {
-                if (x == null) return y == null;
+                if (x is null) return y is null;
                 var nullEvent = LogEventInfo.CreateNullEvent();
                 return x.Render(nullEvent) == y.Render(nullEvent);
             }
@@ -273,7 +272,7 @@ namespace NLog.UnitTests.Targets
             /// <param name="x">The first object of type <paramref name="T"/> to compare.</param><param name="y">The second object of type <paramref name="T"/> to compare.</param>
             public override bool Equals(AsyncRequestQueue x, AsyncRequestQueue y)
             {
-                if (x == null) return y == null;
+                if (x is null) return y is null;
 
                 return x.RequestLimit == y.RequestLimit && x.OnOverflow == y.OnOverflow;
             }
@@ -371,39 +370,35 @@ namespace NLog.UnitTests.Targets
         {
             private readonly bool _throwsOnInit;
 
-            #region Overrides of Target
-
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public ThrowingInitializeTarget(bool throwsOnInit)
             {
                 _throwsOnInit = throwsOnInit;
             }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             protected override void InitializeTarget()
             {
                 if (_throwsOnInit)
                     throw new TestException("Initialize says no");
             }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             protected override void FlushAsync(AsyncContinuation asyncContinuation)
             {
                 throw new TestException("No flush");
             }
 
-            /// <inheritdoc />
+            /// <inheritdoc/>
             protected override void WriteAsyncThreadSafe(AsyncLogEventInfo logEvent)
             {
                 throw new TestException("Write oops");
             }
-
-            #endregion
         }
 
         private class TestException : Exception
         {
-            /// <inheritdoc />
+            /// <inheritdoc/>
             public TestException(string message) : base(message)
             {
             }
@@ -544,6 +539,7 @@ namespace NLog.UnitTests.Targets
         [InlineData("TRACE")]
         [InlineData("TraceSystem")]
         [InlineData("TraceSYSTEM")]
+        [InlineData("Trace--SYSTEM")]
         public void TargetAliasShouldWork(string typeName)
         {
             LoggingConfiguration c = XmlLoggingConfiguration.CreateFromXmlString($@"
@@ -644,8 +640,11 @@ namespace NLog.UnitTests.Targets
         public void WriteFormattedStringEvent_WithNullArgument()
         {
             var target = new MyTarget();
-            SimpleConfigurator.ConfigureForTargetLogging(target);
-            var logger = LogManager.GetLogger("WriteFormattedStringEvent_EventWithNullArguments");
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(target);
+            }).GetLogger(nameof(WriteFormattedStringEvent_WithNullArgument));
+
             string t = null;
             logger.Info("Testing null:{0}", t);
             Assert.Equal(1, target.WriteCount);
@@ -734,10 +733,12 @@ namespace NLog.UnitTests.Targets
         {
             using (new NoThrowNLogExceptions())
             {
-                var target = new WrongMyTarget();
-                SimpleConfigurator.ConfigureForTargetLogging(target);
-                var logger = LogManager.GetLogger("WrongMyTargetShouldThrowException");
-                logger.Info("Testing");
+                var logFactory = new LogFactory().Setup().LoadConfiguration(builder =>
+                {
+                    builder.ForLogger().WriteTo(new WrongMyTarget());
+                }).LogFactory;
+                Assert.Single(logFactory.Configuration.AllTargets);
+                logFactory.GetLogger("WrongMyTargetShouldThrowException").Info("Testing");
             }
         }
 
@@ -862,7 +863,7 @@ namespace NLog.UnitTests.Targets
             // Assert
             Assert.Equal((byte)42, logEvent.Properties["ByteProperty"]);
             Assert.Equal((short)43, logEvent.Properties["Int16Property"]);
-            Assert.Equal(Thread.CurrentThread.ManagedThreadId, logEvent.Properties["Int32Property"]);
+            Assert.Equal(CurrentManagedThreadId, logEvent.Properties["Int32Property"]);
             Assert.Equal((long)logEvent.SequenceID, logEvent.Properties["Int64Property"]);
             Assert.Equal(AppDomain.CurrentDomain.FriendlyName, logEvent.Properties["StringProperty"]);
             Assert.Equal(true, logEvent.Properties["BoolProperty"]);
@@ -875,6 +876,119 @@ namespace NLog.UnitTests.Targets
             Assert.Equal(typeof(int), logEvent.Properties["TypeProperty"]);
             Assert.Equal(new Uri("https://nlog-project.org"), logEvent.Properties["UriProperty"]);
             Assert.Equal(LineEndingMode.Default, logEvent.Properties["LineEndingModeProperty"]);
+        }
+
+        [Fact]
+        public void Target_LayoutWithLock_Test()
+        {
+            int checkThreadSafe = 1;
+
+            var logFactory = new LogFactory().Setup()
+                .SetupExtensions(ext => ext.RegisterLayoutRenderer("naked-runner", (evt) =>
+                {
+                    var orgValue = System.Threading.Interlocked.Exchange(ref checkThreadSafe, 0);
+                    if (orgValue == 0)
+                        throw new InvalidOperationException("Running naked in the woods");
+
+                    System.Threading.Thread.Sleep(10);
+                    System.Threading.Interlocked.Exchange(ref checkThreadSafe, orgValue);
+                    return "Running safely";
+                }))
+                .LoadConfigurationFromXml(@"<nlog throwExceptions='true'>
+                    <targets async='true'>
+                        <target name='debug1' type='Memory' layoutWithLock='true' layout='${logger}|${message}|${naked-runner}' />
+                    </targets>
+                    <rules>
+                        <logger name='*' minLevel='Debug' writeTo='debug1' />
+                    </rules>
+                </nlog>").LogFactory;
+
+            // Act
+            int expectedLogCount = 100;
+            var manualEvent = new System.Threading.ManualResetEvent(false);
+            Action<Logger> runnerMethod = (logger) =>
+            {
+                manualEvent.WaitOne();
+                for (int i = 0; i < expectedLogCount / 2; ++i)
+                    logger.Info("Test {0}", i);
+            };
+
+            var logger1 = logFactory.GetLogger("d1");
+            var thread1 = new System.Threading.Thread((s) => runnerMethod((Logger)s)) { Name = logger1.Name, IsBackground = true };
+            thread1.Start(logger1);
+
+            var logger2 = logFactory.GetLogger("d2");
+            var thread2 = new System.Threading.Thread((s) => runnerMethod((Logger)s)) { Name = logger2.Name, IsBackground = true };
+            thread2.Start(logger2);
+
+            manualEvent.Set();
+            thread1.Join();
+            thread2.Join();
+            logFactory.Flush();
+
+            // Assert
+            Assert.Equal(expectedLogCount, logFactory.Configuration.AllTargets.OfType<MemoryTarget>().Sum(m => m.Logs.Count));
+        }
+
+        [Fact]
+        public void LogEvent_OutOfMemoryException_EarlyAbort()
+        {
+            using (new NoThrowNLogExceptions())
+            {
+                var logFactory = new LogFactory().Setup().LoadConfiguration(builder =>
+                {
+                    builder.ForLogger().WriteTo(new NoMemoryTarget() { Name = "LowMem" }).WithBuffering(bufferSize: 3);
+                }).LogFactory;
+                var logger = logFactory.GetCurrentClassLogger();
+                var target = logFactory.Configuration.FindTargetByName<NoMemoryTarget>("LowMem");
+
+                logger.Info("Testing1");
+                logger.Info("Testing2");
+#if DEBUG
+                Assert.Throws<OutOfMemoryException>(() => logger.Info("Testing3"));
+#else
+                logger.Info("Testing3");    // Flushes and writes
+#endif
+                Assert.Equal(1, target.FailedCount);
+            }
+        }
+
+        [Fact]
+        public void LogEvent_OutOfMemoryException_AsyncNotCrash()
+        {
+            using (new NoThrowNLogExceptions())
+            {
+                var logFactory = new LogFactory().Setup().LoadConfiguration(builder =>
+                {
+                    builder.ForLogger().WriteTo(new NoMemoryTarget() { Name = "LowMem" }).WithAsync();
+                }).LogFactory;
+                var logger = logFactory.GetCurrentClassLogger();
+                var target = logFactory.Configuration.FindTargetByName<NoMemoryTarget>("LowMem");
+
+                logger.Info("Testing1");
+                logFactory.Flush();
+                Assert.Equal(1, target.FailedCount);
+
+                logger.Info("Testing2");
+                for (int i = 0; i < 5000; ++i)
+                {
+                    if (target.WriteCount != 1)
+                        break;
+                    Thread.Sleep(1);
+                }
+                Assert.Equal(2, target.FailedCount);
+
+                target.LowMemory = false;
+                logger.Info("Testing3");
+                for (int i = 0; i < 5000; ++i)
+                {
+                    if (target.WriteCount != 2)
+                        break;
+                    Thread.Sleep(1);
+                }
+                Assert.Equal(2, target.FailedCount);
+                Assert.Equal(3, target.WriteCount);
+            }
         }
 
         [Target("MyTypedLayoutTarget")]
@@ -927,6 +1041,26 @@ namespace NLog.UnitTests.Targets
                 logEvent.Properties[nameof(TypeProperty)] = RenderLogEvent(TypeProperty, logEvent);
                 logEvent.Properties[nameof(UriProperty)] = RenderLogEvent(UriProperty, logEvent);
                 logEvent.Properties[nameof(LineEndingModeProperty)] = RenderLogEvent(LineEndingModeProperty, logEvent);
+            }
+        }
+
+        [Target("NoMemoryTarget")]
+        public class NoMemoryTarget : Target
+        {
+            public int FailedCount { get; set; }
+
+            public int WriteCount { get; set; }
+
+            public bool LowMemory { get; set; } = true;
+
+            protected override void Write(LogEventInfo logEvent)
+            {
+                ++WriteCount;
+                if (LowMemory)
+                {
+                    ++FailedCount;
+                    throw new OutOfMemoryException("LogEvent is too big");
+                }
             }
         }
     }

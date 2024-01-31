@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net35;net45;net46</TargetFrameworks>
+    <TargetFrameworks>net35;net46;netstandard2.0</TargetFrameworks>
 
     <Title>NLog.OutputDebugString</Title>
     <Company>NLog</Company>
@@ -16,6 +16,7 @@
       OutputDebugStringTarget Docs:
       https://github.com/NLog/NLog/wiki/OutputDebugString-target
     </PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>NLog;Windows;DebugView;logging;log</PackageTags>
     <PackageIcon>N.png</PackageIcon>
     <PackageProjectUrl>https://nlog-project.org/</PackageProjectUrl>
@@ -24,12 +25,20 @@
     <RepositoryUrl>https://github.com/NLog/NLog.git</RepositoryUrl>
 
     <SignAssembly>true</SignAssembly>
-    <AssemblyVersion>4.0.0.0</AssemblyVersion>
+    <AssemblyVersion>5.0.0.0</AssemblyVersion>
     <AssemblyOriginatorKeyFile>..\NLog.snk</AssemblyOriginatorKeyFile>
     <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
 
+    <IsPackable>true</IsPackable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    <IsTrimmable>true</IsTrimmable>
+    <TrimMode>copyused</TrimMode>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <Title>NLog.OutputDebugString for .NET Standard 2.0</Title>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(TargetFramework)' == 'net46' ">
@@ -48,7 +57,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="8.0.0" PrivateAssets="All" />
   </ItemGroup>
 
   <ItemGroup>
@@ -56,7 +65,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="N.png" Pack="true" PackagePath=""/>
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="N.png" Pack="true" PackagePath="" visible="false" />
   </ItemGroup>
   <Target Name="DownloadMissingContent" BeforeTargets="GenerateNuspec">
     <DownloadFile SourceUrl="https://nlog-project.org/N.png" DestinationFolder="$(MSBuildThisFileDirectory)" />

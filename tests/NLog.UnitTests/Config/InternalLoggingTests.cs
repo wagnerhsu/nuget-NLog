@@ -31,14 +31,13 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.IO;
-using System.Text;
-using NLog.Config;
-
 namespace NLog.UnitTests.Config
 {
+    using System;
+    using System.IO;
+    using System.Text;
     using NLog.Common;
+    using NLog.Config;
     using Xunit;
 
     public class InternalLoggingTests : NLogTestBase
@@ -121,14 +120,30 @@ namespace NLog.UnitTests.Config
             }
         }
 
-        private void InternalLoggingConfigTest(LogLevel logLevel, bool logToConsole, bool logToConsoleError, LogLevel globalThreshold, bool throwExceptions, bool? throwConfigExceptions, string file, bool logToTrace, bool autoShutdown)
+        [Fact]
+        public void InternalLoggingInvalidFormatString()
+        {
+            using (new InternalLoggerScope())
+            {
+                var sb = new StringBuilder();
+                var stringWriter = new StringWriter(sb);
+                InternalLogger.LogWriter = stringWriter;
+                InternalLogger.LogLevel = LogLevel.Info;
+
+                var invalidFormatString = "Invalid String.Format({Message})";
+                InternalLogger.Warn(invalidFormatString, "Oops");
+                Assert.Contains(invalidFormatString, sb.ToString());
+            }
+        }
+
+        private static void InternalLoggingConfigTest(LogLevel logLevel, bool logToConsole, bool logToConsoleError, LogLevel globalThreshold, bool throwExceptions, bool? throwConfigExceptions, string file, bool logToTrace, bool autoShutdown)
         {
             var logLevelString = logLevel.ToString();
             var internalLogToConsoleString = logToConsole.ToString().ToLower();
             var internalLogToConsoleErrorString = logToConsoleError.ToString().ToLower();
             var globalThresholdString = globalThreshold.ToString();
             var throwExceptionsString = throwExceptions.ToString().ToLower();
-            var throwConfigExceptionsString = throwConfigExceptions == null ? "" : throwConfigExceptions.ToString().ToLower();
+            var throwConfigExceptionsString = throwConfigExceptions?.ToString().ToLower() ?? string.Empty;
             var logToTraceString = logToTrace.ToString().ToLower();
             var autoShutdownString = autoShutdown.ToString().ToLower();
 

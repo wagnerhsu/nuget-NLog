@@ -33,6 +33,7 @@
 
 using System;
 using System.Collections.Generic;
+using NLog.Conditions;
 using NLog.Config;
 using NLog.Filters;
 using NLog.Internal;
@@ -85,6 +86,20 @@ namespace NLog
         /// Defines <see cref="LoggingRule" /> for redirecting output from matching <see cref="Logger"/> to wanted targets.
         /// </summary>
         /// <param name="configBuilder">Fluent interface parameter.</param>
+        /// <param name="finalMinLevel">Restrict minimum LogLevel for <see cref="Logger"/> names that matches this rule</param>
+        /// <param name="loggerNamePattern">Logger name pattern to check which <see cref="Logger"/> names matches this rule</param>
+        /// <param name="ruleName">Rule identifier to allow rule lookup</param>
+        public static ISetupConfigurationLoggingRuleBuilder ForLogger(this ISetupLoadConfigurationBuilder configBuilder, LogLevel finalMinLevel, string loggerNamePattern = "*", string ruleName = null)
+        {
+            var ruleBuilder = new SetupConfigurationLoggingRuleBuilder(configBuilder.LogFactory, configBuilder.Configuration, loggerNamePattern, ruleName);
+            ruleBuilder.LoggingRule.EnableLoggingForLevels(finalMinLevel ?? LogLevel.MinLevel, LogLevel.MaxLevel);
+            return ruleBuilder;
+        }
+
+        /// <summary>
+        /// Defines <see cref="LoggingRule" /> for redirecting output from matching <see cref="Logger"/> to wanted targets.
+        /// </summary>
+        /// <param name="configBuilder">Fluent interface parameter.</param>
         /// <param name="targetName">Override the name for the target created</param>
         public static ISetupConfigurationTargetBuilder ForTarget(this ISetupLoadConfigurationBuilder configBuilder, string targetName = null)
         {
@@ -99,8 +114,7 @@ namespace NLog
         /// <param name="minLevel">Minimum level that this rule matches</param>
         public static ISetupConfigurationLoggingRuleBuilder FilterMinLevel(this ISetupConfigurationLoggingRuleBuilder configBuilder, LogLevel minLevel)
         {
-            if (minLevel == null)
-                throw new ArgumentNullException(nameof(minLevel));
+            Guard.ThrowIfNull(minLevel);
 
             configBuilder.LoggingRule.DisableLoggingForLevels(LogLevel.MinLevel, LogLevel.MaxLevel);
             configBuilder.LoggingRule.EnableLoggingForLevels(minLevel, LogLevel.MaxLevel);
@@ -114,8 +128,7 @@ namespace NLog
         /// <param name="maxLevel">Maximum level that this rule matches</param>
         public static ISetupConfigurationLoggingRuleBuilder FilterMaxLevel(this ISetupConfigurationLoggingRuleBuilder configBuilder, LogLevel maxLevel)
         {
-            if (maxLevel == null)
-                throw new ArgumentNullException(nameof(maxLevel));
+            Guard.ThrowIfNull(maxLevel);
 
             configBuilder.LoggingRule.DisableLoggingForLevels(LogLevel.MinLevel, LogLevel.MaxLevel);
             configBuilder.LoggingRule.EnableLoggingForLevels(LogLevel.MinLevel, maxLevel);
@@ -129,8 +142,7 @@ namespace NLog
         /// <param name="logLevel">Single loglevel that this rule matches</param>
         public static ISetupConfigurationLoggingRuleBuilder FilterLevel(this ISetupConfigurationLoggingRuleBuilder configBuilder, LogLevel logLevel)
         {
-            if (logLevel == null)
-                throw new ArgumentNullException(nameof(logLevel));
+            Guard.ThrowIfNull(logLevel);
 
             if (configBuilder.LoggingRule.IsLoggingEnabledForLevel(logLevel))
             {
@@ -156,13 +168,15 @@ namespace NLog
         /// <summary>
         /// Apply dynamic filtering logic for advanced control of when to redirect output to target.
         /// </summary>
+        /// <remarks>
+        /// Slower than using Logger-name or LogLevel-severity, because of <see cref="LogEventInfo"/> allocation.
+        /// </remarks>
         /// <param name="configBuilder">Fluent interface parameter.</param>
         /// <param name="filter">Filter for controlling whether to write</param>
         /// <param name="filterDefaultAction">Default action if none of the filters match</param>
         public static ISetupConfigurationLoggingRuleBuilder FilterDynamic(this ISetupConfigurationLoggingRuleBuilder configBuilder, Filter filter, FilterResult? filterDefaultAction = null)
         {
-            if (filter == null)
-                throw new ArgumentNullException(nameof(filter));
+            Guard.ThrowIfNull(filter);
 
             configBuilder.LoggingRule.Filters.Add(filter);
             if (filterDefaultAction.HasValue)
@@ -173,24 +187,49 @@ namespace NLog
         /// <summary>
         /// Apply dynamic filtering logic for advanced control of when to redirect output to target.
         /// </summary>
+        /// <remarks>
+        /// Slower than using Logger-name or LogLevel-severity, because of <see cref="LogEventInfo"/> allocation.
+        /// </remarks>
         /// <param name="configBuilder">Fluent interface parameter.</param>
         /// <param name="filterMethod">Delegate for controlling whether to write</param>
-        /// <param name="defaultFilterResult">Default action if none of the filters match</param>
-        public static ISetupConfigurationLoggingRuleBuilder FilterDynamic(this ISetupConfigurationLoggingRuleBuilder configBuilder, Func<LogEventInfo, FilterResult> filterMethod, FilterResult? defaultFilterResult = null)
+        /// <param name="filterDefaultAction">Default action if none of the filters match</param>
+        public static ISetupConfigurationLoggingRuleBuilder FilterDynamic(this ISetupConfigurationLoggingRuleBuilder configBuilder, Func<LogEventInfo, FilterResult> filterMethod, FilterResult? filterDefaultAction = null)
         {
-            if (filterMethod == null)
-                throw new ArgumentNullException(nameof(filterMethod));
+            Guard.ThrowIfNull(filterMethod);
 
-            return configBuilder.FilterDynamic(new WhenMethodFilter(filterMethod), defaultFilterResult);
+            return configBuilder.FilterDynamic(new WhenMethodFilter(filterMethod), filterDefaultAction);
         }
 
         /// <summary>
-        /// Configure <see cref="LoggingRule.Final"/>, so LogEvents matching this LoggingRule will not flow down to the following rules.
+        /// Dynamic filtering of LogEvent, where it will be ignored when matching filter-method-delegate
         /// </summary>
-        public static ISetupConfigurationLoggingRuleBuilder FinalRule(this ISetupConfigurationLoggingRuleBuilder configBuilder, bool final = true)
+        /// <remarks>
+        /// Slower than using Logger-name or LogLevel-severity, because of <see cref="LogEventInfo"/> allocation.
+        /// </remarks>
+        /// <param name="configBuilder">Fluent interface parameter.</param>
+        /// <param name="filterMethod">Delegate for controlling whether to write</param>
+        /// <param name="final">LogEvent will on match also be ignored by following logging-rules</param>
+        public static ISetupConfigurationLoggingRuleBuilder FilterDynamicIgnore(this ISetupConfigurationLoggingRuleBuilder configBuilder, Func<LogEventInfo, bool> filterMethod, bool final = false)
         {
-            configBuilder.LoggingRule.Final = final;
-            return configBuilder;
+            var matchResult = final ? FilterResult.IgnoreFinal : FilterResult.Ignore;
+            var whenMethodFilter = new WhenMethodFilter((evt) => filterMethod(evt) ? matchResult : FilterResult.Neutral) { Action = matchResult };
+            return configBuilder.FilterDynamic(whenMethodFilter, FilterResult.Neutral);
+        }
+
+        /// <summary>
+        /// Dynamic filtering of LogEvent, where it will be logged when matching filter-method-delegate
+        /// </summary>
+        /// <remarks>
+        /// Slower than using Logger-name or LogLevel-severity, because of <see cref="LogEventInfo"/> allocation.
+        /// </remarks>
+        /// <param name="configBuilder">Fluent interface parameter.</param>
+        /// <param name="filterMethod">Delegate for controlling whether to write</param>
+        /// <param name="final">LogEvent will not be evaluated by following logging-rules</param>
+        public static ISetupConfigurationLoggingRuleBuilder FilterDynamicLog(this ISetupConfigurationLoggingRuleBuilder configBuilder, Func<LogEventInfo, bool> filterMethod, bool final = false)
+        {
+            var matchResult = final ? FilterResult.LogFinal : FilterResult.Log;
+            var whenMethodFilter = new WhenMethodFilter((evt) => filterMethod(evt) ? matchResult : FilterResult.Neutral) { Action = matchResult };
+            return configBuilder.FilterDynamic(whenMethodFilter, final ? FilterResult.IgnoreFinal : FilterResult.Ignore);
         }
 
         /// <summary>
@@ -275,16 +314,59 @@ namespace NLog
         }
 
         /// <summary>
-        /// Discard output from any matching <see cref="Logger"/>, so the output will not reach <see cref="LoggingConfiguration.LoggingRules"/> added after this.
+        /// Discard output from matching <see cref="Logger"/>, so it will not reach any following <see cref="LoggingConfiguration.LoggingRules"/>.
         /// </summary>
         /// <param name="configBuilder">Fluent interface parameter.</param>
-        /// <param name="maxLevel">Maximum level that this rule matches</param>
-        public static void WriteToNil(this ISetupConfigurationLoggingRuleBuilder configBuilder, LogLevel maxLevel = null)
+        /// <param name="finalMinLevel">Only discard output from matching Logger when below minimum LogLevel</param>
+        public static void WriteToNil(this ISetupConfigurationLoggingRuleBuilder configBuilder, LogLevel finalMinLevel = null)
         {
-            var logginRule = configBuilder.FilterMaxLevel(maxLevel ?? LogLevel.MaxLevel).FinalRule().LoggingRule;
-            if (!configBuilder.Configuration.LoggingRules.Contains(logginRule))
+            var loggingRule = configBuilder.LoggingRule;
+            if (finalMinLevel != null)
             {
-                configBuilder.Configuration.LoggingRules.Add(logginRule);
+                if (loggingRule.Targets.Count == 0)
+                {
+                    loggingRule = configBuilder.FilterMinLevel(finalMinLevel).LoggingRule;
+                }
+
+                loggingRule.FinalMinLevel = finalMinLevel;
+            }
+            else
+            {
+                if (loggingRule.Targets.Count == 0)
+                {
+                    loggingRule = configBuilder.FilterMaxLevel(LogLevel.MaxLevel).LoggingRule;
+                }
+
+                if (loggingRule.Filters.Count == 0)
+                {
+                    loggingRule.Final = true;
+                }
+            }
+
+            if (loggingRule.Filters.Count > 0)
+            {
+                if (loggingRule.FilterDefaultAction == FilterResult.Ignore)
+                {
+                    loggingRule.FilterDefaultAction = FilterResult.IgnoreFinal;
+                }
+
+                for (int i = 0; i < loggingRule.Filters.Count; ++i)
+                {
+                    if (loggingRule.Filters[i].Action == FilterResult.Ignore)
+                    {
+                        loggingRule.Filters[i].Action = FilterResult.IgnoreFinal;
+                    }
+                }
+
+                if (loggingRule.Targets.Count == 0)
+                {
+                    loggingRule.Targets.Add(new NullTarget());
+                }
+            }
+
+            if (!configBuilder.Configuration.LoggingRules.Contains(loggingRule))
+            {
+                configBuilder.Configuration.LoggingRules.Add(loggingRule);
             }
         }
 
@@ -343,8 +425,7 @@ namespace NLog
         /// <param name="layouts">Layouts to render object[]-args before calling <paramref name="logEventAction"/></param>
         public static ISetupConfigurationTargetBuilder WriteToMethodCall(this ISetupConfigurationTargetBuilder configBuilder, Action<LogEventInfo, object[]> logEventAction, Layout[] layouts = null)
         {
-            if (logEventAction == null)
-                throw new ArgumentNullException(nameof(logEventAction));
+            Guard.ThrowIfNull(logEventAction);
 
             var methodTarget = new MethodCallTarget(string.Empty, logEventAction);
             if (layouts?.Length > 0)
@@ -378,7 +459,109 @@ namespace NLog
             consoleTarget.WriteBuffer = writeBuffered;
             return configBuilder.WriteTo(consoleTarget);
         }
+
+        /// <summary>
+        /// Write to <see cref="NLog.Targets.ColoredConsoleTarget"/> and color log-messages based on <see cref="LogLevel"/>
+        /// </summary>
+        /// <param name="configBuilder">Fluent interface parameter.</param>
+        /// <param name="layout">Override the default Layout for output</param>
+        /// <param name="highlightWordLevel">Highlight only the Level-part</param>
+        /// <param name="encoding">Override the default Encoding for output (Ex. UTF8)</param>
+        /// <param name="stderr">Write to stderr instead of standard output (stdout)</param>
+        /// <param name="detectConsoleAvailable">Skip overhead from writing to console, when not available (Ex. running as Windows Service)</param>
+        /// <param name="enableAnsiOutput">Enables output using ANSI Color Codes (Windows console does not support this by default)</param>
+        public static ISetupConfigurationTargetBuilder WriteToColoredConsole(this ISetupConfigurationTargetBuilder configBuilder, Layout layout = null, bool highlightWordLevel = false, System.Text.Encoding encoding = null, bool stderr = false, bool detectConsoleAvailable = false, bool enableAnsiOutput = false)
+        {
+            var consoleTarget = new ColoredConsoleTarget();
+            if (layout != null)
+                consoleTarget.Layout = layout;
+            if (encoding != null)
+                consoleTarget.Encoding = encoding;
+            consoleTarget.StdErr = stderr;
+            consoleTarget.DetectConsoleAvailable = detectConsoleAvailable;
+            consoleTarget.EnableAnsiOutput = enableAnsiOutput;
+            consoleTarget.UseDefaultRowHighlightingRules = false;
+
+            var conditionLogLevelFatal = ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Fatal", (evt) => evt.Level == LogLevel.Fatal);
+            var conditionLogLevelError = ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Error", (evt) => evt.Level == LogLevel.Error);
+            var conditionLogLevelWarn = ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Warn", (evt) => evt.Level == LogLevel.Warn);
+
+            if (enableAnsiOutput)
+            {
+                if (highlightWordLevel)
+                {
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Fatal", ConsoleOutputColor.DarkRed, ConsoleOutputColor.NoChange) { Condition = conditionLogLevelFatal, IgnoreCase = true, WholeWords = true });
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Error", ConsoleOutputColor.DarkRed, ConsoleOutputColor.NoChange) { Condition = conditionLogLevelError, IgnoreCase = true, WholeWords = true });
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Warn", ConsoleOutputColor.DarkYellow, ConsoleOutputColor.NoChange) { Condition = conditionLogLevelWarn, IgnoreCase = true, WholeWords = true });
+                }
+                else
+                {
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelFatal, ConsoleOutputColor.DarkRed, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelError, ConsoleOutputColor.DarkRed, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelWarn, ConsoleOutputColor.DarkYellow, ConsoleOutputColor.NoChange));
+                }
+            }
+            else
+            {
+                if (highlightWordLevel)
+                {
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Fatal", ConsoleOutputColor.White, ConsoleOutputColor.DarkRed) { Condition = conditionLogLevelFatal, IgnoreCase = true, WholeWords = true });
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Error", ConsoleOutputColor.White, ConsoleOutputColor.DarkRed) { Condition = conditionLogLevelError, IgnoreCase = true, WholeWords = true });
+                    consoleTarget.WordHighlightingRules.Add(new ConsoleWordHighlightingRule("Warn", ConsoleOutputColor.Yellow, ConsoleOutputColor.NoChange) { Condition = conditionLogLevelWarn, IgnoreCase = true, WholeWords = true });
+                }
+                else
+                {
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelFatal, ConsoleOutputColor.Red, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelError, ConsoleOutputColor.Red, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(conditionLogLevelWarn, ConsoleOutputColor.Yellow, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Info", (evt) => evt.Level == LogLevel.Info),  ConsoleOutputColor.White, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Debug", (evt) => evt.Level == LogLevel.Debug), ConsoleOutputColor.Gray, ConsoleOutputColor.NoChange));
+                    consoleTarget.RowHighlightingRules.Add(new ConsoleRowHighlightingRule(ConditionMethodExpression.CreateMethodNoParameters("level == LogLevel.Trace", (evt) => evt.Level == LogLevel.Trace), ConsoleOutputColor.Gray, ConsoleOutputColor.NoChange));
+                }
+            }
+
+            return configBuilder.WriteTo(consoleTarget);
+        }
+
+        /// <summary>
+        /// Write to <see cref="NLog.Targets.TraceTarget"/> 
+        /// </summary>
+        /// <param name="configBuilder"></param>
+        /// <param name="layout">Override the default Layout for output</param>
+        /// <param name="rawWrite">Force use <see cref="System.Diagnostics.Trace.WriteLine(string)"/> independent of <see cref="LogLevel"/></param>
+        public static ISetupConfigurationTargetBuilder WriteToTrace(this ISetupConfigurationTargetBuilder configBuilder, Layout layout = null, bool rawWrite = true)
+        {
+            var traceTarget = new TraceTarget();
+            traceTarget.RawWrite = rawWrite;
+            if (layout != null)
+                traceTarget.Layout = layout;
+            return configBuilder.WriteTo(traceTarget);
+        }
 #endif
+
+        /// <summary>
+        /// Write to <see cref="NLog.Targets.DebugSystemTarget"/> 
+        /// </summary>
+        /// <param name="configBuilder"></param>
+        /// <param name="layout">Override the default Layout for output</param>
+        public static ISetupConfigurationTargetBuilder WriteToDebug(this ISetupConfigurationTargetBuilder configBuilder, Layout layout = null)
+        {
+            var debugTarget = new DebugSystemTarget();
+            if (layout != null)
+                debugTarget.Layout = layout;
+            return configBuilder.WriteTo(debugTarget);
+        }
+
+        /// <summary>
+        /// Write to <see cref="NLog.Targets.DebugSystemTarget"/> (when DEBUG-build)
+        /// </summary>
+        /// <param name="configBuilder"></param>
+        /// <param name="layout">Override the default Layout for output</param>
+        [System.Diagnostics.Conditional("DEBUG")]
+        public static void WriteToDebugConditional(this ISetupConfigurationTargetBuilder configBuilder, Layout layout = null)
+        {
+            configBuilder.WriteToDebug(layout);
+        }
 
         /// <summary>
         /// Write to <see cref="NLog.Targets.FileTarget"/> 
@@ -393,10 +576,9 @@ namespace NLog
         /// <param name="archiveAboveSize">Size in bytes where log files will be automatically archived.</param>
         /// <param name="maxArchiveFiles">Maximum number of archive files that should be kept.</param>
         /// <param name="maxArchiveDays">Maximum days of archive files that should be kept.</param>
-        public static ISetupConfigurationTargetBuilder WriteToFile(this ISetupConfigurationTargetBuilder configBuilder, Layout fileName, Layout layout = null, System.Text.Encoding encoding = null, LineEndingMode lineEnding = null, bool keepFileOpen = false, bool concurrentWrites = false, long archiveAboveSize = 0, int maxArchiveFiles = 0, int maxArchiveDays = 0)
+        public static ISetupConfigurationTargetBuilder WriteToFile(this ISetupConfigurationTargetBuilder configBuilder, Layout fileName, Layout layout = null, System.Text.Encoding encoding = null, LineEndingMode lineEnding = null, bool keepFileOpen = true, bool concurrentWrites = false, long archiveAboveSize = 0, int maxArchiveFiles = 0, int maxArchiveDays = 0)
         {
-            if (fileName == null)
-                throw new ArgumentNullException(nameof(fileName));
+            Guard.ThrowIfNull(fileName);
 
             var fileTarget = new FileTarget();
             fileTarget.FileName = fileName;
@@ -421,8 +603,7 @@ namespace NLog
         /// <param name="wrapperFactory">Factory method for creating target-wrapper</param>
         public static ISetupConfigurationTargetBuilder WithWrapper(this ISetupConfigurationTargetBuilder configBuilder, Func<Target, Target> wrapperFactory)
         {
-            if (wrapperFactory == null)
-                throw new ArgumentNullException(nameof(wrapperFactory));
+            Guard.ThrowIfNull(wrapperFactory);
 
             var targets = configBuilder.Targets;
 
@@ -432,7 +613,7 @@ namespace NLog
                 {
                     var target = targets[i];
                     var targetWrapper = wrapperFactory(target);
-                    if (targetWrapper == null || ReferenceEquals(targetWrapper, target))
+                    if (targetWrapper is null || ReferenceEquals(targetWrapper, target))
                         continue;
 
                     if (string.IsNullOrEmpty(targetWrapper.Name))
@@ -481,7 +662,7 @@ namespace NLog
         /// <param name="configBuilder">Fluent interface parameter.</param>
         /// <param name="bufferSize">Buffer size limit for pending logevents</param>
         /// <param name="flushTimeout">Timeout for when the buffer will flush automatically using background thread</param>
-        /// <param name="slidingTimeout">Restart timeout when when logevent is written</param>
+        /// <param name="slidingTimeout">Restart timeout when logevent is written</param>
         /// <param name="overflowAction">Action to take when buffer overflows</param>
         public static ISetupConfigurationTargetBuilder WithBuffering(this ISetupConfigurationTargetBuilder configBuilder, int? bufferSize = null, TimeSpan? flushTimeout = null, bool? slidingTimeout = null, BufferingTargetWrapperOverflowAction? overflowAction = null)
         {
@@ -511,10 +692,9 @@ namespace NLog
             return configBuilder.WithWrapper(t =>
             {
                 var targetWrapper = new AutoFlushTargetWrapper() { WrappedTarget = t };
-                var methodInfo = conditionMethod.GetDelegateInfo();
-                ReflectionHelpers.LateBoundMethod lateBound = (target, args) => conditionMethod((LogEventInfo)args[0]);
-                var conditionExpression = new Conditions.ConditionMethodExpression(methodInfo.Name, methodInfo, lateBound, ArrayHelper.Empty<Conditions.ConditionExpression>());
-                targetWrapper.Condition = conditionExpression;
+
+                var autoFlushCondition = Conditions.ConditionMethodExpression.CreateMethodNoParameters("AutoFlush", (logEvent) => conditionMethod(logEvent) ? Conditions.ConditionExpression.BoxedTrue : Conditions.ConditionExpression.BoxedFalse);
+                targetWrapper.Condition = autoFlushCondition;
                 if (flushOnConditionOnly.HasValue)
                     targetWrapper.FlushOnConditionOnly = flushOnConditionOnly.Value;
                 return targetWrapper;
@@ -548,8 +728,7 @@ namespace NLog
         /// <param name="returnToFirstOnSuccess">Whether to return to the first target after any successful write</param>
         public static ISetupConfigurationTargetBuilder WithFallback(this ISetupConfigurationTargetBuilder configBuilder, Target fallbackTarget, bool returnToFirstOnSuccess = true)
         {
-            if (fallbackTarget == null)
-                throw new ArgumentNullException(nameof(fallbackTarget));
+            Guard.ThrowIfNull(fallbackTarget);
 
             if (string.IsNullOrEmpty(fallbackTarget.Name))
                 fallbackTarget.Name = EnsureUniqueTargetName(configBuilder.Configuration, fallbackTarget, "_Fallback");
@@ -605,7 +784,7 @@ namespace NLog
 
         private static string GenerateTargetName(Type targetType)
         {
-            var targetName = targetType.GetFirstCustomAttribute<TargetAttribute>()?.Name ?? string.Empty;
+            var targetName = targetType.GetFirstCustomAttribute<TargetAttribute>()?.Name ?? targetType.Name;
             if (string.IsNullOrEmpty(targetName))
                 targetName = targetType.ToString();
 

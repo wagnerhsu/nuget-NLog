@@ -33,15 +33,21 @@
 
 using System;
 using System.Collections;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
+using NLog.Internal;
 
 namespace NLog.Fluent
 {
     /// <summary>
+    /// Obsolete and replaced by <see cref="LogEventBuilder"/> with NLog v5.
+    /// 
     /// A fluent class to build log events for NLog.
     /// </summary>
     [Obsolete("Obsoleted since it allocates unnecessary. Instead use ILogger.ForLogEvent and LogEventBuilder. Obsoleted in NLog 5.0")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public class LogBuilder
     {
         private readonly LogEventInfo _logEvent;
@@ -65,10 +71,8 @@ namespace NLog.Fluent
         [CLSCompliant(false)]
         public LogBuilder(ILogger logger, LogLevel logLevel)
         {
-            if (logger == null)
-                throw new ArgumentNullException(nameof(logger));
-            if (logLevel == null)
-                throw new ArgumentNullException(nameof(logLevel));
+            Guard.ThrowIfNull(logger);
+            Guard.ThrowIfNull(logLevel);
 
             _logger = logger;
             _logEvent = new LogEventInfo() { LoggerName = logger.Name, Level = logLevel };
@@ -97,8 +101,7 @@ namespace NLog.Fluent
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         public LogBuilder Level(LogLevel logLevel)
         {
-            if (logLevel == null)
-                throw new ArgumentNullException(nameof(logLevel));
+            Guard.ThrowIfNull(logLevel);
 
             _logEvent.Level = logLevel;
             return this;
@@ -109,7 +112,7 @@ namespace NLog.Fluent
         /// </summary>
         /// <param name="loggerName">The logger name of the logging event.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
-        public LogBuilder LoggerName(string loggerName)
+        public LogBuilder LoggerName([Localizable(false)] string loggerName)
         {
             _logEvent.LoggerName = loggerName;
             return this;
@@ -120,7 +123,7 @@ namespace NLog.Fluent
         /// </summary>
         /// <param name="message">The log message for the logging event.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
-        public LogBuilder Message(string message)
+        public LogBuilder Message([Localizable(false)] string message)
         {
             _logEvent.Message = message;
 
@@ -134,7 +137,7 @@ namespace NLog.Fluent
         /// <param name="arg0">The object to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(string format, object arg0)
+        public LogBuilder Message([Localizable(false)][StructuredMessageTemplate] string format, object arg0)
         {
             _logEvent.Message = format;
             _logEvent.Parameters = new[] { arg0 };
@@ -150,7 +153,7 @@ namespace NLog.Fluent
         /// <param name="arg1">The second object to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(string format, object arg0, object arg1)
+        public LogBuilder Message([Localizable(false)][StructuredMessageTemplate] string format, object arg0, object arg1)
         {
             _logEvent.Message = format;
             _logEvent.Parameters = new[] { arg0, arg1 };
@@ -167,7 +170,7 @@ namespace NLog.Fluent
         /// <param name="arg2">The third object to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(string format, object arg0, object arg1, object arg2)
+        public LogBuilder Message([Localizable(false)][StructuredMessageTemplate] string format, object arg0, object arg1, object arg2)
         {
             _logEvent.Message = format;
             _logEvent.Parameters = new[] { arg0, arg1, arg2 };
@@ -185,7 +188,7 @@ namespace NLog.Fluent
         /// <param name="arg3">The fourth object to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(string format, object arg0, object arg1, object arg2, object arg3)
+        public LogBuilder Message([Localizable(false)][StructuredMessageTemplate] string format, object arg0, object arg1, object arg2, object arg3)
         {
             _logEvent.Message = format;
             _logEvent.Parameters = new[] { arg0, arg1, arg2, arg3 };
@@ -200,7 +203,7 @@ namespace NLog.Fluent
         /// <param name="args">An object array that contains zero or more objects to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(string format, params object[] args)
+        public LogBuilder Message([Localizable(false)][StructuredMessageTemplate] string format, params object[] args)
         {
             _logEvent.Message = format;
             _logEvent.Parameters = args;
@@ -216,7 +219,7 @@ namespace NLog.Fluent
         /// <param name="args">An object array that contains zero or more objects to format.</param>
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         [MessageTemplateFormatMethod("format")]
-        public LogBuilder Message(IFormatProvider provider, string format, params object[] args)
+        public LogBuilder Message(IFormatProvider provider, [Localizable(false)][StructuredMessageTemplate] string format, params object[] args)
         {
             _logEvent.FormatProvider = provider;
             _logEvent.Message = format;
@@ -233,8 +236,7 @@ namespace NLog.Fluent
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         public LogBuilder Property(object name, object value)
         {
-            if (name == null)
-                throw new ArgumentNullException(nameof(name));
+            Guard.ThrowIfNull(name);
 
             _logEvent.Properties[name] = value;
             return this;
@@ -247,8 +249,7 @@ namespace NLog.Fluent
         /// <returns>current <see cref="LogBuilder"/> for chaining calls.</returns>
         public LogBuilder Properties(IDictionary properties)
         {
-            if (properties == null)
-                throw new ArgumentNullException(nameof(properties));
+            Guard.ThrowIfNull(properties);
 
             foreach (var key in properties.Keys)
             {
@@ -323,7 +324,7 @@ namespace NLog.Fluent
             [CallerFilePath]string callerFilePath = null,
             [CallerLineNumber]int callerLineNumber = 0)
         {
-            if (condition == null || !condition() || !_logger.IsEnabled(_logEvent.Level))
+            if (condition is null || !condition() || !_logger.IsEnabled(_logEvent.Level))
                 return;
 
             SetCallerInfo(callerMemberName, callerFilePath, callerLineNumber);
@@ -337,7 +338,7 @@ namespace NLog.Fluent
             string callerFilePath = null,
             int callerLineNumber = 0)
         {
-            if (condition == null || !condition() || !_logger.IsEnabled(_logEvent.Level))
+            if (condition is null || !condition() || !_logger.IsEnabled(_logEvent.Level))
                 return;
 
             _logger.Log(_logEvent);

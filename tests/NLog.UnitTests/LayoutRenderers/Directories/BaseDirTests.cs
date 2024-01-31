@@ -31,16 +31,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System.Collections.Generic;
-using System.Linq;
-using NLog.Internal.Fakeables;
-using NLog.Layouts;
-
 namespace NLog.UnitTests.LayoutRenderers
 {
     using System;
     using System.IO;
-    using System.Reflection;
+    using System.Linq;
+    using NLog.Layouts;
     using Xunit;
 
     public class BaseDirTests : NLogTestBase
@@ -79,7 +75,7 @@ namespace NLog.UnitTests.LayoutRenderers
 
             Assert.NotNull(dir);
             Assert.True(Directory.Exists(dir), $"dir '{dir}' doesn't exists");
-            Assert.Equal(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), dir);
+            Assert.Equal(Path.GetDirectoryName(CurrentProcessPath), dir);
         }
 
         [Fact]
@@ -118,17 +114,17 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void BaseDir_FixTempDir_ChoosesProcessDir()
         {
-            var tempPath = System.IO.Path.GetTempPath();
-            var processPath = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+            var tempDir = System.IO.Path.GetTempPath();
+            var processPath = CurrentProcessPath;
 
             var appEnvironment = new Mocks.AppEnvironmentMock(null, null);
-            appEnvironment.AppDomainBaseDirectory = tempPath;
-            appEnvironment.UserTempFilePath = tempPath;
+            appEnvironment.AppDomainBaseDirectory = tempDir;
+            appEnvironment.UserTempFilePath = tempDir;
             appEnvironment.CurrentProcessFilePath = processPath;
             var baseLayoutRenderer = new NLog.LayoutRenderers.BaseDirLayoutRenderer(appEnvironment);
 
             // test1
-            Assert.Equal(tempPath, baseLayoutRenderer.Render(LogEventInfo.CreateNullEvent()));
+            Assert.Equal(tempDir, baseLayoutRenderer.Render(LogEventInfo.CreateNullEvent()));
 
             // test2
             baseLayoutRenderer.FixTempDir = true;

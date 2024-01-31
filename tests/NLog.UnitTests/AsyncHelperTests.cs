@@ -37,6 +37,7 @@ namespace NLog.UnitTests
     using System.Collections.Generic;
     using System.Threading;
     using NLog.Common;
+    using NLog.Internal;
     using Xunit;
 
     public class AsyncHelperTests : NLogTestBase
@@ -308,6 +309,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Marked obsolete on NLog 5.0")]
         public void ForEachItemSequentiallyTest1()
         {
             bool finalContinuationInvoked = false;
@@ -336,6 +338,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Marked obsolete on NLog 5.0")]
         public void ForEachItemSequentiallyTest2()
         {
             bool finalContinuationInvoked = false;
@@ -365,6 +368,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Marked obsolete on NLog 5.0")]
         public void ForEachItemSequentiallyTest3()
         {
             using (new NoThrowNLogExceptions())
@@ -398,7 +402,7 @@ namespace NLog.UnitTests
         [Fact]
         public void ForEachItemInParallelEmptyTest()
         {
-            int[] items = new int[0];
+            int[] items = ArrayHelper.Empty<int>();
             Exception lastException = null;
             bool finalContinuationInvoked = false;
 
@@ -527,6 +531,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Marked obsolete on NLog 5.0")]
         public void PrecededByTest1()
         {
             int invokedCount1 = 0;
@@ -561,6 +566,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Marked obsolete on NLog 5.0")]
         public void PrecededByTest2()
         {
             int invokedCount1 = 0;

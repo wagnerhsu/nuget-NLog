@@ -54,15 +54,12 @@ namespace NLog.Conditions
         /// Gets the literal value.
         /// </summary>
         /// <value>The literal value.</value>
-        public object LiteralValue { get; private set; }
+        public object LiteralValue { get; }
 
-        /// <summary>
-        /// Returns a string representation of the expression.
-        /// </summary>
-        /// <returns>The literal value.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
-            if (LiteralValue == null)
+            if (LiteralValue is null)
             {
                 return "null";
             }
@@ -82,7 +79,7 @@ namespace NLog.Conditions
         /// <summary>
         /// Evaluates the expression.
         /// </summary>
-        /// <param name="context">Evaluation context.</param>
+        /// <param name="context">Evaluation context. Ignored.</param>
         /// <returns>The literal value as passed in the constructor.</returns>
         protected override object EvaluateNode(LogEventInfo context)
         {

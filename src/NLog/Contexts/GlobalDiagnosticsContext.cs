@@ -48,7 +48,7 @@ namespace NLog
         private static Dictionary<string, object> _dictReadOnly;  // Reset cache on change
 
         /// <summary>
-        /// Sets the Global Diagnostics Context item to the specified value.
+        /// Sets the value with the specified key in the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <param name="value">Item value.</param>
@@ -58,7 +58,7 @@ namespace NLog
         }
 
         /// <summary>
-        /// Sets the Global Diagnostics Context item to the specified value.
+        /// Sets the value with the specified key in the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <param name="value">Item value.</param>
@@ -66,13 +66,12 @@ namespace NLog
         {
             lock (_lockObject)
             {
-                bool requireCopyOnWrite = _dictReadOnly != null && !_dict.ContainsKey(item); // Overwrite existing value is ok (no resize)
-                GetWritableDict(requireCopyOnWrite)[item] = value;
+                GetWritableDict()[item] = value;
             }
         }
 
         /// <summary>
-        /// Gets the Global Diagnostics Context named item.
+        /// Gets the value with the specified key in the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <returns>The value of <paramref name="item"/>, if defined; otherwise <see cref="String.Empty"/>.</returns>
@@ -83,7 +82,7 @@ namespace NLog
         }
 
         /// <summary>
-        /// Gets the Global Diagnostics Context item.
+        /// Gets the value with the specified key in the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <param name="formatProvider"><see cref="IFormatProvider"/> to use when converting the item's value to a string.</param>
@@ -95,7 +94,7 @@ namespace NLog
         }
 
         /// <summary>
-        /// Gets the Global Diagnostics Context named item.
+        /// Gets the value with the specified key in the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <returns>The item value, if defined; otherwise <c>null</c>.</returns>
@@ -106,7 +105,7 @@ namespace NLog
         }
 
         /// <summary>
-        /// Returns all item names
+        /// Gets all key-names from Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <returns>A collection of the names of all items in the Global Diagnostics Context.</returns>
         public static ICollection<string> GetNames()
@@ -115,7 +114,7 @@ namespace NLog
         }
 
         /// <summary>
-        /// Checks whether the specified item exists in the Global Diagnostics Context.
+        /// Determines whether the Global Diagnostics Context (GDC) dictionary contains the specified key.
         /// </summary>
         /// <param name="item">Item name.</param>
         /// <returns>A boolean indicating whether the specified item exists in current thread GDC.</returns>
@@ -125,34 +124,38 @@ namespace NLog
         }
 
         /// <summary>
-        /// Removes the specified item from the Global Diagnostics Context.
+        /// Removes the value with the specified key from the Global Diagnostics Context (GDC) dictionary
         /// </summary>
         /// <param name="item">Item name.</param>
         public static void Remove(string item)
         {
             lock (_lockObject)
             {
-                bool requireCopyOnWrite = _dictReadOnly != null && _dict.ContainsKey(item);
-                GetWritableDict(requireCopyOnWrite).Remove(item);
+                if (_dict.ContainsKey(item))
+                {
+                    GetWritableDict().Remove(item);
+                }
             }
         }
 
         /// <summary>
-        /// Clears the content of the GDC.
+        /// Clears the content of the Global Diagnostics Context (GDC) dictionary.
         /// </summary>
         public static void Clear()
         {
             lock (_lockObject)
             {
-                bool requireCopyOnWrite = _dictReadOnly != null && _dict.Count > 0;
-                GetWritableDict(requireCopyOnWrite, true).Clear();
+                if (_dict.Count != 0)
+                {
+                    GetWritableDict(true).Clear();
+                }
             }
         }
 
-        private static Dictionary<string, object> GetReadOnlyDict()
+        internal static Dictionary<string, object> GetReadOnlyDict()
         {
             var readOnly = _dictReadOnly;
-            if (readOnly == null)
+            if (readOnly is null)
             {
                 lock (_lockObject)
                 {
@@ -162,9 +165,9 @@ namespace NLog
             return readOnly;
         }
 
-        private static Dictionary<string, object> GetWritableDict(bool requireCopyOnWrite, bool clearDictionary = false)
+        private static Dictionary<string, object> GetWritableDict(bool clearDictionary = false)
         {
-            if (requireCopyOnWrite)
+            if (_dictReadOnly != null)
             {
                 Dictionary<string, object> newDict = CopyDictionaryOnWrite(clearDictionary);
                 _dict = newDict;

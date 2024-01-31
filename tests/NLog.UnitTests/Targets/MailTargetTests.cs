@@ -39,6 +39,7 @@ namespace NLog.UnitTests.Targets
     using System.Net.Configuration;
 #endif
     using System.IO;
+    using System.Linq;
     using System.Net;
     using System.Net.Mail;
     using NLog.Internal;
@@ -520,14 +521,17 @@ namespace NLog.UnitTests.Targets
                 To = "bar@foo.com",
                 Subject = "Hello from NLog",
                 SmtpServer = "server1",
-                Priority = "invalidPriority"
+                Priority = "${scopeproperty:scopePriority}"
             };
             var logFactory = new LogFactory().Setup().LoadConfiguration(cfg =>
             {
                 cfg.Configuration.AddRuleForAllLevels(mmt);
             }).LogFactory;
 
-            logFactory.GetLogger("MyLogger").Info("log message 1");
+            using (logFactory.GetCurrentClassLogger().PushScopeProperty("scopePriority", "InvalidPriority"))
+            {
+                logFactory.GetLogger("MyLogger").Info("log message 1");
+            }
 
             var messageSent = mmt.CreatedMocks[0].MessagesSent[0];
             Assert.Equal(MailPriority.Normal, messageSent.Priority);
@@ -696,10 +700,12 @@ namespace NLog.UnitTests.Targets
                 Body = "${level} ${logger} ${message}",
                 UseSystemNetMailSettings = true
             };
-            new LogFactory().Setup().LoadConfiguration(cfg =>
+            var logFactory = new LogFactory().Setup().LoadConfiguration(cfg =>
             {
                 cfg.Configuration.AddRuleForAllLevels(mmt);
-            });
+            }).LogFactory;
+
+            Assert.Single(logFactory.Configuration.AllTargets);
         }
 
         [Fact]
@@ -831,10 +837,10 @@ namespace NLog.UnitTests.Targets
             Assert.Equal("nlog@foo.com", mmt.From.ToString());
         }
 
+#if !NETSTANDARD
         [Fact]
         public void MailTarget_UseSystemNetMailSettings_True_ReadFromFromConfigFile()
         {
-#if !NETSTANDARD
             var mmt = new MailTarget()
             {
                 From = null,
@@ -853,13 +859,13 @@ namespace NLog.UnitTests.Targets
             });
 
             Assert.Equal("config@foo.com", mmt.From.ToString());
-#endif
         }
+#endif
 
+#if !NETSTANDARD
         [Fact]
         public void MailTarget_UseSystemNetMailSettings_False_ReadFromFromConfigFile()
         {
-#if !NETSTANDARD
             var mmt = new MailTarget()
             {
                 From = null,
@@ -878,8 +884,8 @@ namespace NLog.UnitTests.Targets
                     cfg.Configuration.AddRuleForAllLevels(mmt);
                 })
             );
-#endif
         }
+#endif
 
         [Fact]
         public void MailTarget_WithoutSubject_SendsMessageWithDefaultSubject()
@@ -905,6 +911,30 @@ namespace NLog.UnitTests.Targets
             Assert.Single(mock.MessagesSent);
 
             Assert.Equal($"Message from NLog on {Environment.MachineName}", mock.MessagesSent[0].Subject);
+        }
+
+        [Fact]
+        public void MailTarget_WithMessageHeaders_SendsMail()
+        {
+            var mmt = new MockMailTarget
+            {
+                From = "foo@bar.com",
+                To = "bar@foo.com",
+                Subject = "Hello from NLog",
+                SmtpServer = "server1",
+            };
+            mmt.MailHeaders.Add(new MethodCallParameter("Hello", "World"));
+            var logFactory = new LogFactory().Setup().LoadConfiguration(cfg =>
+            {
+                cfg.Configuration.AddRuleForAllLevels(mmt);
+            }).LogFactory;
+
+            logFactory.GetLogger("MyLogger").Info("log message 1");
+
+            var messageSent = mmt.CreatedMocks[0].MessagesSent[0];
+            Assert.NotEmpty(messageSent.Headers);
+            Assert.Contains("Hello", messageSent.Headers.Keys.Cast<string>());
+            Assert.Equal("World", messageSent.Headers["Hello"]);
         }
 
         public sealed class MockSmtpClient : ISmtpClient

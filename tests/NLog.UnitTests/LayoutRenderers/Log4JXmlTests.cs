@@ -1,4 +1,4 @@
-// 
+﻿// 
 // Copyright (c) 2004-2021 Jaroslaw Kowalski <jaak@jkowalski.net>, Kim Christensen, Julian Verdurmen
 // 
 // All rights reserved.
@@ -40,7 +40,6 @@ namespace NLog.UnitTests.LayoutRenderers
     using System.Reflection;
     using System.Threading;
     using System.Xml;
-    using NLog.Config;
     using NLog.Internal;
     using NLog.Layouts;
     using NLog.Targets;
@@ -51,15 +50,15 @@ namespace NLog.UnitTests.LayoutRenderers
         [Fact]
         public void Log4JXmlTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog throwExceptions='true'>
                 <targets>
-                    <target name='debug' type='Debug' layout='${log4jxmlevent:includeCallSite=true:includeSourceInfo=true:includeNdlc=true:includeMdc=true:IncludeNdc=true:includeMdlc=true:IncludeAllProperties=true:ndcItemSeparator=\:\::includenlogdata=true:loggerName=${logger}}' />
+                    <target name='debug' type='Debug' layout='${log4jxmlevent:includeCallSite=true:includeSourceInfo=true:includeNdlc=true:includeMdc=true:IncludeNdc=true:includeMdlc=true:IncludeAllProperties=true:ndcItemSeparator=\:\::includenlogdata=true:loggerName=${logger}:formattedMessage=${message}}' />
                 </targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeTo='debug' />
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
             ScopeContext.Clear();
 
@@ -71,11 +70,13 @@ namespace NLog.UnitTests.LayoutRenderers
             ScopeContext.PushNestedState("baz2");
             ScopeContext.PushNestedState("baz3");
 
-            var logger = LogManager.GetLogger("A");
-            var logEventInfo = LogEventInfo.Create(LogLevel.Debug, "A", new Exception("Hello Exception", new Exception("Goodbye Exception")), null, "some message");
+            var logger = logFactory.GetLogger("A");
+            var logEventInfo = LogEventInfo.Create(LogLevel.Debug, "A", new Exception("Hello Exception", new Exception("Goodbye Exception")), null, "some message \u0014");
             logEventInfo.Properties["nlogPropertyKey"] = "nlogPropertyValue";
             logger.Log(logEventInfo);
-            string result = GetDebugLastMessage("debug");
+            string result = GetDebugLastMessage("debug", logFactory);
+            Assert.DoesNotContain("dummy", result);
+
             string wrappedResult = "<log4j:dummyRoot xmlns:log4j='http://log4j' xmlns:nlog='http://nlog'>" + result + "</log4j:dummyRoot>";
 
             Assert.NotEqual("", result);
@@ -128,12 +129,12 @@ namespace NLog.UnitTests.LayoutRenderers
                                 var now = DateTime.UtcNow;
                                 Assert.True(now.Ticks - time.Ticks < TimeSpan.FromSeconds(3).Ticks);
 
-                                Assert.Equal(Thread.CurrentThread.ManagedThreadId.ToString(), reader.GetAttribute("thread"));
+                                Assert.Equal(CurrentManagedThreadId.ToString(), reader.GetAttribute("thread"));
                                 break;
 
                             case "message":
                                 reader.Read();
-                                Assert.Equal("some message", reader.Value);
+                                Assert.Equal("some message ", reader.Value);
                                 break;
 
                             case "NDC":
@@ -161,7 +162,7 @@ namespace NLog.UnitTests.LayoutRenderers
                                 switch (name)
                                 {
                                     case "log4japp":
-                                        Assert.Equal(AppDomain.CurrentDomain.FriendlyName + "(" + Process.GetCurrentProcess().Id + ")", value);
+                                        Assert.Equal(AppDomain.CurrentDomain.FriendlyName + "(" + CurrentProcessId + ")", value);
                                         break;
 
                                     case "log4jmachinename":
@@ -254,7 +255,7 @@ namespace NLog.UnitTests.LayoutRenderers
                 Parameters = new[] { "world" },
             };
 
-            var threadid = Environment.CurrentManagedThreadId;
+            var threadid = CurrentManagedThreadId;
             var machinename = Environment.MachineName;
             Assert.Equal($"<log4j:event logger=\"MyLOgger\" level=\"INFO\" timestamp=\"1262349296000\" thread=\"{threadid}\"><log4j:message>hello, &lt;world&gt;</log4j:message><log4j:properties><log4j:data name=\"mt\" value=\"hello, &lt;{{0}}&gt;\" /><log4j:data name=\"log4japp\" value=\"MyApp\" /><log4j:data name=\"log4jmachinename\" value=\"{machinename}\" /></log4j:properties></log4j:event>", log4jLayout.Render(logEventInfo));
         }

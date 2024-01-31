@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -46,38 +45,38 @@ namespace NLog.LayoutRenderers.Wrappers
     [AmbientProperty("ReplaceNewLines")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class ReplaceNewLinesLayoutRendererWrapper : WrapperLayoutRendererBase
     {
         private const string WindowsNewLine = "\r\n";
         private const string UnixNewLine = "\n";
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ReplaceNewLinesLayoutRendererWrapper" /> class.
-        /// </summary>
-        public ReplaceNewLinesLayoutRendererWrapper()
-        {
-            Replacement = " ";
-        }
-
-        /// <summary>
         /// Gets or sets a value indicating the string that should be used for separating lines.
         /// </summary>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(" ")]
-        public string Replacement { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public string Replacement
+        {
+            get => _replacement;
+            set
+            {
+                _replacement = value;
+                _replaceWithNewLines = value?.IndexOf('\n') >= 0;
+            }
+        }
+        private string _replacement = " ";
+        private bool _replaceWithNewLines;
 
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
-            Inner.RenderAppendBuilder(logEvent, builder);
+            Inner.Render(logEvent, builder);
             if (builder.Length > orgLength)
             {
                 var containsNewLines = builder.IndexOf('\n', orgLength) >= 0;
                 if (containsNewLines)
                 {
                     string str = builder.ToString(orgLength, builder.Length - orgLength)
-                                        .Replace(WindowsNewLine, Replacement)
+                                        .Replace(WindowsNewLine, _replaceWithNewLines ? UnixNewLine : Replacement)
                                         .Replace(UnixNewLine, Replacement);
 
                     builder.Length = orgLength;

@@ -35,6 +35,7 @@ namespace NLog.Common
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.Text;
     using System.Threading;
     using NLog.Internal;
@@ -81,6 +82,8 @@ namespace NLog.Common
         /// <param name="asyncContinuation">The asynchronous continuation to invoke once all items
         /// have been iterated.</param>
         /// <param name="action">The action to invoke for each item.</param>
+        [Obsolete("Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void ForEachItemSequentially<T>(IEnumerable<T> items, AsyncContinuation asyncContinuation, AsynchronousAction<T> action)
         {
             action = ExceptionGuard(action);
@@ -145,6 +148,8 @@ namespace NLog.Common
         /// <param name="asyncContinuation">The async continuation.</param>
         /// <param name="action">The action to pre-pend.</param>
         /// <returns>Continuation which will execute the given action before forwarding to the actual continuation.</returns>
+        [Obsolete("Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static AsyncContinuation PrecededBy(AsyncContinuation asyncContinuation, AsynchronousAction action)
         {
             action = ExceptionGuard(action);
@@ -154,7 +159,7 @@ namespace NLog.Common
                 {
                     if (ex != null)
                     {
-                        // if got exception from from original invocation, don't execute action
+                        // if got exception from original invocation, don't execute action
                         asyncContinuation(ex);
                         return;
                     }
@@ -173,7 +178,6 @@ namespace NLog.Common
         /// <param name="asyncContinuation">The asynchronous continuation.</param>
         /// <param name="timeout">The timeout.</param>
         /// <returns>Wrapped continuation.</returns>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope", Justification = "Continuation will be disposed of elsewhere.")]
         public static AsyncContinuation WithTimeout(AsyncContinuation asyncContinuation, TimeSpan timeout)
         {
             return new TimeoutContinuation(asyncContinuation, timeout).Function;
@@ -237,12 +241,13 @@ namespace NLog.Common
                     }
                     catch (Exception ex)
                     {
-                        InternalLogger.Error(ex, "ForEachItemInParallel - Unhandled Exception");
+#if DEBUG
                         if (ex.MustBeRethrownImmediately())
                         {
                             throw;  // Throwing exceptions here will crash the entire application (.NET 2.0 behavior)
                         }
-
+#endif
+                        InternalLogger.Error(ex, "ForEachItemInParallel - Unhandled Exception");
                         preventMultipleCalls.Invoke(ex);
                     }
                 }), null);
@@ -257,6 +262,8 @@ namespace NLog.Common
         /// <remarks>
         /// Using this method is not recommended because it will block the calling thread.
         /// </remarks>
+        [Obsolete("Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static void RunSynchronously(AsynchronousAction action)
         {
             var ev = new ManualResetEvent(false);

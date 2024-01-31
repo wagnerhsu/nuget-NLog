@@ -43,14 +43,12 @@ namespace NLog.LayoutRenderers.Wrappers
     [LayoutRenderer("right")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class RightLayoutRendererWrapper : WrapperLayoutRendererBase
     {
         /// <summary>
         /// Gets or sets the length in characters. 
         /// </summary>
-        /// <docgen category="Transformation Options" order="10"/>
-        [RequiredParameter]
+        /// <docgen category="Layout Options" order="10"/>
         public int Length { get; set; }
 
         /// <inheritdoc/>
@@ -61,7 +59,7 @@ namespace NLog.LayoutRenderers.Wrappers
                 return;
             }
 
-            Inner.RenderAppendBuilder(logEvent, builder);
+            Inner.Render(logEvent, builder);
             var renderedLength = builder.Length - orgLength;
             if (renderedLength > Length)
             {

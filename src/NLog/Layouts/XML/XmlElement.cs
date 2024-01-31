@@ -31,25 +31,28 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System.ComponentModel;
-using NLog.Config;
-
 namespace NLog.Layouts
 {
+    using NLog.Config;
+
     /// <summary>
     /// A XML Element
     /// </summary>
-    [NLogConfigurationItem]
+    [ThreadAgnostic]
     public class XmlElement : XmlElementBase
     {
         private const string DefaultElementName = "item";
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="XmlElement"/> class.
+        /// </summary>
         public XmlElement() : this(DefaultElementName, null)
         {
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="XmlElement"/> class.
+        /// </summary>
         public XmlElement(string elementName, Layout elementValue) : base(elementName, elementValue)
         {
         }
@@ -57,8 +60,11 @@ namespace NLog.Layouts
         /// <summary>
         /// Name of the element
         /// </summary>
-        /// <docgen category='Element Options' order='10' />
-        [DefaultValue(DefaultElementName)]
+        /// <remarks>
+        /// Default value "item"
+        /// </remarks>
+        /// <docgen category='Layout Options' order='1' />
+        [RequiredParameter]
         public string Name
         {
             get => base.ElementNameInternal;
@@ -68,7 +74,7 @@ namespace NLog.Layouts
         /// <summary>
         /// Value inside the element
         /// </summary>
-        /// <docgen category='Element Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public Layout Value
         {
             get => base.LayoutWrapper.Inner;
@@ -76,10 +82,15 @@ namespace NLog.Layouts
         }
 
         /// <summary>
-        /// Determines whether or not this attribute will be Xml encoded.
+        /// Value inside the element
         /// </summary>
-        /// <docgen category='Element Options' order='10' />
-        [DefaultValue(true)]
+        /// <docgen category='Layout Options' order='10' />
+        public Layout Layout { get => Value; set => Value = value; }
+
+        /// <summary>
+        /// Gets or sets whether output should be encoded with Xml-string escaping, or be treated as valid xml-element-value
+        /// </summary>
+        /// <docgen category='Layout Options' order='50' />
         public bool Encode
         {
             get => base.LayoutWrapper.XmlEncode;

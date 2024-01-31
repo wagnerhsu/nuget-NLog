@@ -31,16 +31,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#region
-
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using NLog.Config;
+using NLog.Internal;
 using NLog.Targets;
 using Xunit;
-
-#endregion
 
 namespace NLog.UnitTests.Config
 {
@@ -68,28 +64,40 @@ namespace NLog.UnitTests.Config
         public void AddTarget_WithName_NullNameParam()
         {
             var config = new LoggingConfiguration();
-            Exception ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(name: null, target: new FileTarget { Name = "name1" }));
-        }      
+            var ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(name: null, target: new FileTarget { Name = "name1" }));
+            Assert.Equal("name", ex.ParamName);
+        }
         
         [Fact]
-        public void AddTarget_WithName_EmptyPameParam()
+        public void AddTarget_WithName_EmptyNameParam()
         {
             var config = new LoggingConfiguration();
-            Exception ex = Assert.Throws<ArgumentException>(() => config.AddTarget(name: "", target: new FileTarget { Name = "name1" }));
+            var ex = Assert.Throws<ArgumentException>(() => config.AddTarget(name: "", target: new FileTarget { Name = "name1" }));
+            Assert.Equal("name", ex.ParamName);
         }
 
         [Fact]
         public void AddTarget_WithName_NullTargetParam()
         {
             var config = new LoggingConfiguration();
-            Exception ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(name: "Name1", target: null));
+            var ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(name: "Name1", target: null));
+            Assert.Equal("target", ex.ParamName);
         }
 
         [Fact]
         public void AddTarget_TargetOnly_NullParam()
         {
             var config = new LoggingConfiguration();
-            Exception ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(target: null));
+            var ex = Assert.Throws<ArgumentNullException>(() => config.AddTarget(target: null));
+            Assert.Equal("target", ex.ParamName);
+        }
+
+        [Fact]
+        public void AddTarget_TargetOnly_EmptyName()
+        {
+            var config = new LoggingConfiguration();
+            var ex = Assert.Throws<ArgumentException>(() => config.AddTarget(target: new FileTarget { Name = "" }));
+            Assert.Equal("target", ex.ParamName);
         }
 
         [Fact]
@@ -137,6 +145,25 @@ namespace NLog.UnitTests.Config
             Assert.False(rule1.IsLoggingEnabledForLevel(LogLevel.Debug));
             Assert.False(rule1.IsLoggingEnabledForLevel(LogLevel.Trace));
             Assert.False(rule1.IsLoggingEnabledForLevel(LogLevel.Off));
+        }
+
+        [Fact]
+        public void AddRule_ruleobject()
+        {
+            var config = new LoggingConfiguration();
+            config.AddTarget(new FileTarget { Name = "File" });
+            LoggingRule rule = new LoggingRule("testRule")
+            {
+                LoggerNamePattern = "testRulePattern"
+            };
+            rule.EnableLoggingForLevels(LogLevel.Info, LogLevel.Error);
+            rule.Targets.Add(config.FindTargetByName("File"));
+            rule.Final = true;
+            config.AddRule(rule);
+            Assert.NotNull(config.LoggingRules);
+            Assert.Equal(1, config.LoggingRules.Count);
+            var lastRule = config.LoggingRules.LastOrDefault();
+            Assert.Same(rule, lastRule);
         }
 
         [Fact]
@@ -305,7 +332,7 @@ namespace NLog.UnitTests.Config
             rule.EnableLoggingForLevels(LogLevel.MinLevel, LogLevel.MaxLevel);
 
             rule.SetLoggingLevels(LogLevel.Off, LogLevel.Off);
-            Assert.Equal(rule.Levels, new LogLevel[0]);
+            Assert.Equal(rule.Levels, ArrayHelper.Empty<LogLevel>());
         }
 
         [Fact]

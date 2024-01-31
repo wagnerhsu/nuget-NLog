@@ -56,12 +56,9 @@ namespace NLog.Targets.Wrappers
         /// <summary>
         /// Gets the collection of targets managed by this compound target.
         /// </summary>
-        public IList<Target> Targets { get; private set; }
+        public IList<Target> Targets { get; }
 
-        /// <summary>
-        /// Returns the text representation of the object. Used for diagnostics.
-        /// </summary>
-        /// <returns>A string that describes the target.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return _tostring ?? (_tostring = GenerateTargetToString());
@@ -74,7 +71,7 @@ namespace NLog.Targets.Wrappers
                 string separator = string.Empty;
                 var sb = new StringBuilder();
                 sb.Append(GenerateTargetToString(true));
-                sb.Append("[");
+                sb.Append('[');
 
                 foreach (var t in Targets)
                 {
@@ -83,17 +80,14 @@ namespace NLog.Targets.Wrappers
                     separator = ", ";
                 }
 
-                sb.Append("]");
+                sb.Append(']');
                 return sb.ToString();
             }
 
             return GenerateTargetToString(true);
         }
 
-        /// <summary>
-        /// Writes logging event to the log target.
-        /// </summary>
-        /// <param name="logEvent">Logging event to be written out.</param>
+        /// <inheritdoc/>
         protected override void Write(LogEventInfo logEvent)
         {
             throw new NotSupportedException("This target must not be invoked in a synchronous way.");

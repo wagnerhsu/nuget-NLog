@@ -33,6 +33,7 @@
 
 using System;
 using JetBrains.Annotations;
+using NLog.Internal;
 
 namespace NLog.Config
 {
@@ -45,17 +46,21 @@ namespace NLog.Config
         /// Typed we tried to resolve
         /// </summary>
         [NotNull] public Type ServiceType { get; }
-        
-        /// <inheritdoc />
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NLogDependencyResolveException" /> class.
+        /// </summary>
         public NLogDependencyResolveException(string message, [NotNull] Type serviceType) : base(CreateFullMessage(serviceType, message))
         {
-            ServiceType = serviceType ?? throw new ArgumentNullException(nameof(serviceType));
+            ServiceType = Guard.ThrowIfNull(serviceType);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NLogDependencyResolveException" /> class.
+        /// </summary>
         public NLogDependencyResolveException(string message, Exception innerException, [NotNull] Type serviceType) : base(CreateFullMessage(serviceType, message), innerException)
         {
-            ServiceType = serviceType ?? throw new ArgumentNullException(nameof(serviceType));
+            ServiceType = Guard.ThrowIfNull(serviceType);
         }
 
         private static string CreateFullMessage(Type typeToResolve, string message) => $"Cannot resolve the type: '{typeToResolve.Name}'. {message}".Trim();

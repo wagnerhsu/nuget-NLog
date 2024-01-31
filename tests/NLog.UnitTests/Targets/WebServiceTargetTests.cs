@@ -31,34 +31,65 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
+namespace NLog.UnitTests.Targets
+{
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Net;
+    using System.Net.Http.Headers;
+    using System.Runtime.Serialization;
+    using System.Threading;
+    using System.Threading.Tasks;
+    using System.Xml.Serialization;
 #if !NETSTANDARD
-using System.Collections.Concurrent;
 using System.Web.Http;
 using System.Web.Http.Dependencies;
 using Microsoft.Owin.Hosting;
 using Owin;
 #endif
-using NLog.Targets;
-using NLog.Config;
-using Xunit;
+    using NLog.Internal;
+    using NLog.Targets;
+    using Xunit;
 
-namespace NLog.UnitTests.Targets
-{
     public class WebServiceTargetTests : NLogTestBase
     {
         public WebServiceTargetTests()
         {
             LogManager.ThrowExceptions = true;
+        }
+
+        [Fact]
+        public void WebServiceWithEmptyUrl()
+        {
+            var logFactory = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(new WebServiceTarget() { Url = "" });
+                builder.ForLogger().WriteTo(new WebServiceTarget() { Url = "${eventproperty:Url}" });
+            }).LogFactory;
+            
+            logFactory.GetCurrentClassLogger().WithProperty("Url", "").Info("Test");
+
+            Assert.NotNull(logFactory.Configuration);
+        }
+
+        [Fact]
+        public void WebServiceWithInvalidUrl()
+        {
+            var logFactory = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                var configException = Assert.Throws<NLogConfigurationException>(() => builder.ForLogger().WriteTo(new WebServiceTarget() { Url = "!!!" }));
+                Assert.Contains("!!!", configException.Message);
+                builder.ForLogger().WriteTo(new WebServiceTarget() { Url = "${eventproperty:Url}" });
+            }).LogFactory;
+
+            logFactory.GetCurrentClassLogger().WithProperty("Url", "!!!").Info("Test");
+            
+            logFactory.ThrowExceptions = true;
+
+            Assert.Throws<NLogRuntimeException>(() => logFactory.GetCurrentClassLogger().WithProperty("Url", "!!!").Info("Test"));
         }
 
         [Fact]
@@ -79,7 +110,7 @@ namespace NLog.UnitTests.Targets
             WebserviceTest_httppost_utf8("includeBOM='false'", false);
         }
 
-        private void WebserviceTest_httppost_utf8(string bomAttr, bool includeBom)
+        private static void WebserviceTest_httppost_utf8(string bomAttr, bool includeBom)
         {
             var logFactory = new LogFactory().Setup()
                                              .SetupExtensions(ext => ext.RegisterAssembly(typeof(WebServiceTarget).Assembly))
@@ -111,7 +142,9 @@ namespace NLog.UnitTests.Targets
             Assert.Equal("utf-8", target.Encoding.WebName);
 
             //async call with mockup stream
+#pragma warning disable SYSLIB0014 // Type or member is obsolete
             var webRequest = System.Net.WebRequest.Create("http://www.test.com");
+#pragma warning restore SYSLIB0014 // Type or member is obsolete
             var httpWebRequest = (HttpWebRequest)webRequest;
             var streamMock = new StreamMock();
 
@@ -190,7 +223,7 @@ namespace NLog.UnitTests.Targets
         private static int _portOffset;
 
         /// <summary>
-        /// Test the Webservice with REST api - <see cref="WebServiceProtocol.HttpPost"/> (only checking for no exception)
+        /// Test the Webservice with REST api - <see cref="WebServiceProtocol.HttpPost"/>
         /// </summary>
         [Fact]
         public void WebserviceTest_restapi_httppost()
@@ -344,76 +377,60 @@ namespace NLog.UnitTests.Targets
         }
 
         /// <summary>
-        /// Timeout for <see cref="WebserviceTest_restapi_httppost_checkingLost"/>.
-        /// 
-        /// in miliseconds. 20000 = 20 sec
-        /// </summary>
-        const int webserviceCheckTimeoutMs = 20000;
-
-        /// <summary>
-        /// Test the Webservice with REST api - <see cref="WebServiceProtocol.HttpPost"/> (only checking for no exception)
-        /// 
-        /// repeats for checking 'lost messages'
+        /// Test the Webservice with REST api - <see cref="WebServiceProtocol.HttpPost"/>
         /// </summary>
         [Fact]
-        public void WebserviceTest_restapi_httppost_checkingLost()
+        public void WebserviceTest_restapi_httppost_many()
         {
-            RetryingIntegrationTest(3, () =>
+            string wsAddress = getNewWsAddress();
+            var logFactory = new LogFactory().Setup()
+                                             .SetupExtensions(ext => ext.RegisterAssembly(typeof(WebServiceTarget).Assembly))
+                                             .LoadConfigurationFromXml($@"
+                <nlog throwExceptions='true'>
+                    <targets>
+                        <target type='WebService'
+                                name='ws'
+                                url='{wsAddress}{"api/logme"}'
+                                protocol='HttpPost'
+                                encoding='UTF-8'
+                                >
+                            <parameter name='param1' type='System.String' layout='${{message}}'/> 
+                            <parameter name='param2' type='System.String' layout='${{level}}'/>
+                        </target>
+                    </targets>
+                    <rules>
+                        <logger name='*' writeTo='ws' />
+                    </rules>
+                </nlog>").LogFactory;
+
+            var logger = logFactory.GetCurrentClassLogger();
+
+            const int messageCount = 101;
+            //reset
+            var context = new LogMeController.TestContext();
+            context.ResetState(messageCount);
+
+            string lastMessage = null;
+
+            StartOwinTest(wsAddress, context, () =>
             {
-                string wsAddress = getNewWsAddress();
-                var logFactory = new LogFactory().Setup()
-                                                 .SetupExtensions(ext => ext.RegisterAssembly(typeof(WebServiceTarget).Assembly))
-                                                 .LoadConfigurationFromXml($@"
-                    <nlog throwExceptions='true'>
-                        <targets>
-                            <target type='WebService'
-                                    name='ws'
-                                    url='{wsAddress}{"api/logme"}'
-                                    protocol='HttpPost'
-                                    encoding='UTF-8'
-                                   >
-                                <parameter name='param1' type='System.String' layout='${{message}}'/> 
-                                <parameter name='param2' type='System.String' layout='${{level}}'/>
-                            </target>
-                        </targets>
-                        <rules>
-                          <logger name='*' writeTo='ws' />
-                        </rules>
-                    </nlog>").LogFactory;
-
-                var logger = logFactory.GetCurrentClassLogger();
-
-                const int messageCount = 1000;
-                var createdMessages = new List<string>(messageCount);
-
                 for (int i = 0; i < messageCount; i++)
                 {
-                    var message = "message " + i;
-                    createdMessages.Add(message);
+                    lastMessage = "message" + i;
+                    logger.Info(lastMessage);
                 }
-
-                //reset
-                var context = new LogMeController.TestContext();
-                context.ResetState(messageCount);
-
-                StartOwinTest(wsAddress, context, () =>
-                {
-                    foreach (var createdMessage in createdMessages)
-                    {
-                        logger.Info(createdMessage);
-                    }
-                });
-
-                Assert.Equal(0, context.CountdownEvent.CurrentCount);
-                Assert.Equal(createdMessages.Count, context.ReceivedLogsPostParam1.Count);
             });
+
+            Assert.Equal(0, context.CountdownEvent.CurrentCount);
+            Assert.Equal(messageCount, context.ReceivedLogsPostParam1.Count);
+            CheckQueueMessage(lastMessage, context.ReceivedLogsPostParam1);
         }
 
         /// <summary>
         /// Test the Webservice with REST api - <see cref="WebServiceProtocol.JsonPost"/>
         /// </summary>
         [Fact]
-        public void WebserviceTest_restapi_json()
+        public void WebserviceTest_restapi_jsonpost()
         {
             string wsAddress = getNewWsAddress();
             var logFactory = new LogFactory().Setup()
@@ -427,6 +444,7 @@ namespace NLog.UnitTests.Targets
                                 protocol='JsonPost'
                                 encoding='UTF-8'
                                >
+                            <UserAgent>SecretAgent</UserAgent>
                             <header name='Authorization' layout='OpenBackDoor' />
                             <parameter name='param1' ParameterType='System.String' layout='${{message}}'/> 
                             <parameter name='param2' ParameterType='System.String' layout='${{level}}'/>
@@ -442,12 +460,12 @@ namespace NLog.UnitTests.Targets
             var logger = logFactory.GetCurrentClassLogger();
 
             var txt = "message 1 with a JSON POST<hello><again\\>\"\b";   // Lets tease the JSON serializer and see it can handle valid and invalid xml chars
-            var count = 101;
-            var context = new LogDocController.TestContext(count, false, new Dictionary<string, string>() { { "Authorization", "OpenBackDoor" } }, txt, "info", true, DateTime.UtcNow);
+            const int messageCount = 101;
+            var context = new LogDocController.TestContext(messageCount, false, new Dictionary<string, string>() { { "Authorization", "OpenBackDoor" }, { "User-Agent", "SecretAgent" } }, txt, "info", true, DateTime.UtcNow);
 
             StartOwinDocTest(wsAddress, context, () =>
             {
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < messageCount; i++)
                     logger.Info(txt);
             });
 
@@ -459,7 +477,7 @@ namespace NLog.UnitTests.Targets
         /// Test the Webservice with REST api - <see cref="WebServiceProtocol.XmlPost"/> 
         /// </summary>
         [Fact]
-        public void WebserviceTest_restapi_xml()
+        public void WebserviceTest_restapi_xmlpost()
         {
             string wsAddress = getNewWsAddress();
             var logFactory = new LogFactory().Setup()
@@ -488,12 +506,12 @@ namespace NLog.UnitTests.Targets
             var logger = logFactory.GetCurrentClassLogger();
 
             var txt = "message 1 with a XML POST<hello><again\\>\"";   // Lets tease the Xml-Serializer, and see it can handle xml-tags
-            var count = 101;
-            var context = new LogDocController.TestContext(count, true, null, txt, "info", true, DateTime.UtcNow);
+            const int messageCount = 101;
+            var context = new LogDocController.TestContext(messageCount, true, null, txt, "info", true, DateTime.UtcNow);
 
             StartOwinDocTest(wsAddress, context, () =>
             {
-                for (int i = 0; i < count; i++)
+                for (int i = 0; i < messageCount; i++)
                     logger.Info(txt);
             });
 
@@ -673,7 +691,6 @@ namespace NLog.UnitTests.Targets
             /// </summary>
             public string Get(int id)
             {
-
                 return "value";
             }
 
@@ -695,10 +712,7 @@ namespace NLog.UnitTests.Targets
             public void Post([FromBody] ComplexType complexType)
             {
                 //this is working. 
-                if (complexType == null)
-                {
-                    throw new ArgumentNullException(nameof(complexType));
-                }
+                Guard.ThrowIfNull(complexType);
                 Context.ReceivedLogsPostParam1.Add(complexType.Param1);
 
                 if (Context.CountdownEvent != null)
@@ -721,7 +735,7 @@ namespace NLog.UnitTests.Targets
             {
             }
 
-            public class TestContext
+            public sealed class TestContext
             {
                 /// <summary>
                 /// Countdown event for keeping WS alive.
@@ -752,6 +766,8 @@ namespace NLog.UnitTests.Targets
                 }
             }
         }
+
+        const int webserviceCheckTimeoutMs = 20000;
 
         internal static void StartOwinTest(string url, LogMeController.TestContext testContext, Action testsFunc)
         {
@@ -826,12 +842,13 @@ namespace NLog.UnitTests.Targets
                 if (testContext.CountdownEvent != null)
                 {
                     testContext.CountdownEvent.Wait(webserviceCheckTimeoutMs);
+                    //we need some extra time for completion
                     Thread.Sleep(1000);
                 }
             }
         }
 
-        private sealed class ControllerResolver<T> : IDependencyResolver
+        private sealed class ControllerResolver<T> : IDependencyResolver where T : class
         {
             private readonly Func<T> _factory;
 
@@ -869,7 +886,7 @@ namespace NLog.UnitTests.Targets
                 }
                 else
                 {
-                    return new object[0];
+                    return ArrayHelper.Empty<object>();
                 }
             }
         }
@@ -882,39 +899,15 @@ namespace NLog.UnitTests.Targets
             [HttpPost]
             public void Json(LogMeController.ComplexType complexType)
             {
-                if (complexType == null)
-                {
-                    throw new ArgumentNullException(nameof(complexType));
-                }
+                Guard.ThrowIfNull(complexType);
 
                 processRequest(complexType);
-            }
-
-            private void processRequest(LogMeController.ComplexType complexType)
-            {
-                if (Context != null)
-                {
-                    if (string.Equals(Context.ExpectedParam2, complexType.Param2, StringComparison.OrdinalIgnoreCase)
-                        && Context.ExpectedParam1 == complexType.Param1
-                        && Context.ExpectedParam3 == complexType.Param3
-                        && Context.ExpectedParam4.Date == complexType.Param4.Date)
-                    {
-                        if (!ValidateHeaders())
-                        {
-                            return;
-                        }
-                        Context.CountdownEvent.Signal();
-                    }
-                }
             }
 
             [HttpPost]
             public void Xml(LogMeController.ComplexType complexType)
             {
-                if (complexType == null)
-                {
-                    throw new ArgumentNullException(nameof(complexType));
-                }
+                Guard.ThrowIfNull(complexType);
 
                 processRequest(complexType);
             }
@@ -940,6 +933,24 @@ namespace NLog.UnitTests.Targets
                 }
             }
 
+            private void processRequest(LogMeController.ComplexType complexType)
+            {
+                if (Context != null)
+                {
+                    if (string.Equals(Context.ExpectedParam2, complexType.Param2, StringComparison.OrdinalIgnoreCase)
+                        && Context.ExpectedParam1 == complexType.Param1
+                        && Context.ExpectedParam3 == complexType.Param3
+                        && Context.ExpectedParam4.Date == complexType.Param4.Date)
+                    {
+                        if (!ValidateHeaders())
+                        {
+                            return;
+                        }
+                        Context.CountdownEvent.Signal();
+                    }
+                }
+            }
+
             private bool ValidateHeaders()
             {
                 if (Context.ExpectedHeaders?.Count > 0)
@@ -954,7 +965,7 @@ namespace NLog.UnitTests.Targets
                 return true;
             }
 
-            public class TestContext
+            public sealed class TestContext
             {
                 public CountdownEvent CountdownEvent { get; }
 
@@ -985,8 +996,6 @@ namespace NLog.UnitTests.Targets
                 }
             }
         }
-
 #endif
     }
-
 }

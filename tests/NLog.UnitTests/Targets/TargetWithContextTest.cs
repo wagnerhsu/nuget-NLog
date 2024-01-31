@@ -37,7 +37,6 @@ namespace NLog.UnitTests.Targets
     using System.Linq;
     using System.Collections.Generic;
     using Xunit;
-    using NLog.Config;
     using NLog.Targets;
     using NLog.Targets.Wrappers;
 
@@ -78,7 +77,7 @@ namespace NLog.UnitTests.Targets
 
                 LastCombinedProperties = base.GetAllProperties(logEvent);
 
-                var nestedStates = base.GetScopeContextNestedStates(logEvent);
+                var nestedStates = base.GetScopeContextNested(logEvent);
                 if (nestedStates.Count != 0)
                     LastCombinedProperties["TestKey"] = nestedStates[0];
 
@@ -93,16 +92,17 @@ namespace NLog.UnitTests.Targets
             target.ContextProperties.Add(new TargetPropertyWithContext("threadid", "${threadid}"));
             target.IncludeScopeProperties = true;
             target.IncludeGdc = true;
-            target.IncludeScopeNestedStates = true;
+            target.IncludeScopeNested = true;
             target.IncludeCallSite = true;
 
             AsyncTargetWrapper wrapper = new AsyncTargetWrapper();
             wrapper.WrappedTarget = target;
             wrapper.TimeToSleepBetweenBatches = 0;
 
-            NLog.Config.SimpleConfigurator.ConfigureForTargetLogging(wrapper, LogLevel.Debug);
-
-            Logger logger = LogManager.GetLogger("Example");
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(wrapper);
+            }).GetLogger("Example");
 
             GlobalDiagnosticsContext.Clear();
             ScopeContext.Clear();
@@ -121,7 +121,7 @@ namespace NLog.UnitTests.Targets
             Assert.Contains(new KeyValuePair<string, object>("AsyncKey", "Hello Async World"), target.LastCombinedProperties);
             Assert.Contains(new KeyValuePair<string, object>("TestKey", "Hello Async World"), target.LastCombinedProperties);
             Assert.Contains(new KeyValuePair<string, object>("TestKey_1", "Hello Global World"), target.LastCombinedProperties);
-            Assert.Contains(new KeyValuePair<string, object>("threadid", System.Environment.CurrentManagedThreadId.ToString()), target.LastCombinedProperties);
+            Assert.Contains(new KeyValuePair<string, object>("threadid", CurrentManagedThreadId.ToString()), target.LastCombinedProperties);
         }
 
         private static bool WaitForLastMessage(CustomTargetWithContext target)
@@ -162,7 +162,7 @@ namespace NLog.UnitTests.Targets
         }
 
         [Fact]
-        [Obsolete("Replaced by dispose of return value from ScopeContext.PushNestedState or Logger.PushScopeState. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by dispose of return value from ScopeContext.PushNestedState or Logger.PushScopeNested. Marked obsolete on NLog 5.0")]
         public void TargetWithContextNdcSerializeTest()
         {
             NestedDiagnosticsContext.Clear();
@@ -174,7 +174,7 @@ namespace NLog.UnitTests.Targets
         }
 
         [Fact]
-        [Obsolete("Replaced by dispose of return value from ScopeContext.PushNestedState or Logger.PushScopeState. Marked obsolete on NLog 5.0")]
+        [Obsolete("Replaced by dispose of return value from ScopeContext.PushNestedState or Logger.PushScopeNested. Marked obsolete on NLog 5.0")]
         public void TargetWithContextNdlcSerializeTest()
         {
             NestedDiagnosticsLogicalContext.Clear();
@@ -189,9 +189,10 @@ namespace NLog.UnitTests.Targets
         {
             AsyncTargetWrapper wrapper = new AsyncTargetWrapper { WrappedTarget = target, TimeToSleepBetweenBatches = 0 };
 
-            NLog.Config.SimpleConfigurator.ConfigureForTargetLogging(wrapper, LogLevel.Debug);
-
-            Logger logger = LogManager.GetLogger("Example");
+            var logger = new LogFactory().Setup().LoadConfiguration(builder =>
+            {
+                builder.ForLogger().WriteTo(wrapper);
+            }).GetLogger("Example");
 
             logger.Debug("log message");
 
@@ -203,9 +204,9 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void TargetWithContextConfigTest()
         {
-            Target.Register("contexttarget", typeof(CustomTargetWithContext));
-
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup()
+                                             .SetupExtensions(ext => ext.RegisterTarget<CustomTargetWithContext>("contexttarget"))
+                                             .LoadConfigurationFromXml(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <target name='debug' type='contexttarget' includeCallSite='true'>
@@ -215,59 +216,94 @@ namespace NLog.UnitTests.Targets
                     <rules>
                         <logger name='*' levels='Error' writeTo='debug' />
                     </rules>
-                </nlog>");
+                </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
             ScopeContext.Clear();
             logger.Error("log message");
-            var target = LogManager.Configuration.FindTargetByName("debug") as CustomTargetWithContext;
+            var target = logFactory.Configuration.FindTargetByName("debug") as CustomTargetWithContext;
             Assert.NotEqual(0, target.LastMessage.Length);
             var lastCombinedProperties = target.LastCombinedProperties;
             Assert.NotEmpty(lastCombinedProperties);
-            Assert.Contains(new KeyValuePair<string, object>("threadid", System.Environment.CurrentManagedThreadId.ToString()), lastCombinedProperties);
+            Assert.Contains(new KeyValuePair<string, object>("threadid", CurrentManagedThreadId.ToString()), lastCombinedProperties);
         }
 
         [Fact]
         public void TargetWithContextAsyncPropertyTest()
         {
-            Target.Register("contexttarget", typeof(CustomTargetWithContext));
-
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup()
+                                             .SetupExtensions(ext => ext.RegisterTarget<CustomTargetWithContext>("contexttarget"))
+                                             .LoadConfigurationFromXml(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
-                        <target name='debug' type='contexttarget' includeCallSite='true' includeEventProperties='true' />
+                        <target name='debug' type='contexttarget' includeCallSite='true' includeEventProperties='true' excludeProperties='password' />
                     </targets>
                     <rules>
                         <logger name='*' levels='Error' writeTo='debug' />
                     </rules>
-                </nlog>");
+                </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
-            var target = LogManager.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
+            var logger = logFactory.GetLogger("A");
+            var target = logFactory.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
 
             LogEventInfo logEvent = LogEventInfo.Create(LogLevel.Error, logger.Name, "Hello");
             logEvent.Properties["name"] = "Kenny";
+            logEvent.Properties["password"] = "123Password";
             logger.Error(logEvent);
-            LogManager.Flush();
+            logFactory.Flush();
             Assert.NotEqual(0, target.LastMessage.Length);
             var lastCombinedProperties = target.LastCombinedProperties;
-            Assert.NotEmpty(lastCombinedProperties);
+            Assert.Single(lastCombinedProperties);
             Assert.Contains(new KeyValuePair<string, object>("name", "Kenny"), lastCombinedProperties);
 
             logger.Error("Hello {name}", "Cartman");
-            LogManager.Flush();
+            logEvent.Properties["Password"] = "123Password";
+            logFactory.Flush();
             lastCombinedProperties = target.LastCombinedProperties;
-            Assert.NotEmpty(lastCombinedProperties);
+            Assert.Single(lastCombinedProperties);
             Assert.Contains(new KeyValuePair<string, object>("name", "Cartman"), lastCombinedProperties);
+        }
+
+        [Fact]
+        public void TargetWithContextAsyncBufferScopePropertyTest()
+        {
+            var logFactory = new LogFactory().Setup()
+                                 .SetupExtensions(ext => ext.RegisterTarget<CustomTargetWithContext>("contexttarget"))
+                                 .LoadConfigurationFromXml(@"
+                <nlog throwExceptions='true'>
+                    <targets>
+                        <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
+                        <target name='debug_buffer' type='BufferingWrapper'>
+                           <target name='debug' type='contexttarget' includeCallSite='true' includeScopeProperties='true' excludeProperties='password' />
+                        </target>
+                    </targets>
+                    <rules>
+                        <logger name='*' levels='Error' writeTo='debug_buffer' />
+                    </rules>
+                </nlog>").LogFactory;
+
+            var logger = logFactory.GetLogger("A");
+            var target = logFactory.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
+
+            using (logger.PushScopeProperty("name", "Kenny"))
+            using (logger.PushScopeProperty("password", "123Password"))
+            {
+                logger.Error("Hello");
+            }
+            logFactory.Flush();
+            Assert.NotEqual(0, target.LastMessage.Length);
+            var lastCombinedProperties = target.LastCombinedProperties;
+            Assert.Single(lastCombinedProperties);
+            Assert.Contains(new KeyValuePair<string, object>("name", "Kenny"), lastCombinedProperties);
         }
 
         [Fact]
         public void TargetWithContextJsonTest()
         {
-            Target.Register("contexttarget", typeof(CustomTargetWithContext));
-
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup()
+                                             .SetupExtensions(ext => ext.RegisterTarget<CustomTargetWithContext>("contexttarget"))
+                                             .LoadConfigurationFromXml(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
@@ -283,14 +319,14 @@ namespace NLog.UnitTests.Targets
                     <rules>
                         <logger name='*' levels='Error' writeTo='debug' />
                     </rules>
-                </nlog>");
+                </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
 
             ScopeContext.Clear();
             ScopeContext.PushProperty("TestKey", "Hello Thread World");
             logger.Error("log message");
-            var target = LogManager.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
+            var target = logFactory.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
             System.Threading.Thread.Sleep(1);
             for (int i = 0; i < 1000; ++i)
             {
@@ -301,7 +337,7 @@ namespace NLog.UnitTests.Targets
             }
 
             Assert.NotEqual(0, target.LastMessage.Length);
-            Assert.Contains(System.Environment.CurrentManagedThreadId.ToString(), target.LastMessage);
+            Assert.Contains(CurrentManagedThreadId.ToString(), target.LastMessage);
             var lastCombinedProperties = target.LastCombinedProperties;
             Assert.Empty(lastCombinedProperties);
         }
@@ -309,9 +345,9 @@ namespace NLog.UnitTests.Targets
         [Fact]
         public void TargetWithContextPropertyTypeTest()
         {
-            Target.Register("contexttarget", typeof(CustomTargetWithContext));
-
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup()
+                                             .SetupExtensions(ext => ext.RegisterTarget<CustomTargetWithContext>("contexttarget"))
+                                             .LoadConfigurationFromXml(@"
                 <nlog throwExceptions='true'>
                     <targets>
                         <default-wrapper type='AsyncWrapper' timeToSleepBetweenBatches='0' overflowAction='Block' />
@@ -328,20 +364,20 @@ namespace NLog.UnitTests.Targets
                     <rules>
                         <logger name='*' levels='Error' writeTo='debug' />
                     </rules>
-                </nlog>");
+                </nlog>").LogFactory;
 
-            var logger = LogManager.GetLogger("A");
+            var logger = logFactory.GetLogger("A");
             ScopeContext.Clear();
 
             var logEvent = new LogEventInfo() { Message = "log message" };
             logger.Error(logEvent);
-            LogManager.Flush();
-            var target = LogManager.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
+            logFactory.Flush();
+            var target = logFactory.Configuration.AllTargets.OfType<CustomTargetWithContext>().FirstOrDefault();
             Assert.NotEqual(0, target.LastMessage.Length);
             var lastCombinedProperties = target.LastCombinedProperties;
             Assert.NotEmpty(lastCombinedProperties);
-            Assert.Contains(new KeyValuePair<string, object>("threadid", System.Environment.CurrentManagedThreadId), lastCombinedProperties);
-            Assert.Contains(new KeyValuePair<string, object>("processid", System.Diagnostics.Process.GetCurrentProcess().Id), lastCombinedProperties);
+            Assert.Contains(new KeyValuePair<string, object>("threadid", CurrentManagedThreadId), lastCombinedProperties);
+            Assert.Contains(new KeyValuePair<string, object>("processid", CurrentProcessId), lastCombinedProperties);
             Assert.Contains(new KeyValuePair<string, object>("int-non-existing", 0), lastCombinedProperties);
             Assert.DoesNotContain("int-non-existing-empty", lastCombinedProperties.Keys);
             Assert.Contains(new KeyValuePair<string, object>("object-non-existing", ""), lastCombinedProperties);

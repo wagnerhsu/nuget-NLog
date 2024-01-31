@@ -55,7 +55,7 @@ namespace NLog.Internal
 #if !NET35
             return string.IsNullOrWhiteSpace(value);
 #else
-            if (value == null) return true;
+            if (value is null) return true;
             if (value.Length == 0) return true;
             return String.IsNullOrEmpty(value.Trim());
 #endif
@@ -91,21 +91,15 @@ namespace NLog.Internal
         /// <returns>The same reference of nothing has been replaced.</returns>
         public static string Replace([NotNull] string str, [NotNull] string oldValue, string newValue, StringComparison comparison)
         {
-            if (str == null)
-            {
-                throw new ArgumentNullException(nameof(str));
-            }
+            Guard.ThrowIfNull(str);
 
-            if (oldValue == null)
-            {
-                throw new ArgumentNullException(nameof(oldValue));
-            }
-
-            if (str.Length == 0)
+            if (string.IsNullOrEmpty(str))
             {
                 //nothing to do
-                return str;
+                return string.Empty;
             }
+
+            Guard.ThrowIfNullOrEmpty(oldValue);
 
             StringBuilder sb = null;
 
@@ -120,7 +114,7 @@ namespace NLog.Internal
                     // for cases that 2 chars is one symbol
                     break;
                 }
-                sb.Append(str.Substring(previousIndex, index - previousIndex));
+                sb.Append(str, previousIndex, index - previousIndex);
                 sb.Append(newValue);
                 index += oldValue.Length;
 
@@ -134,7 +128,7 @@ namespace NLog.Internal
                 index = str.IndexOf(oldValue, index, comparison);
             }
 
-            if (sb == null)
+            if (sb is null)
             {
                 //nothing replaced
                 return str;
@@ -142,17 +136,17 @@ namespace NLog.Internal
 
             if (previousIndex < str.Length)
             {
-                sb.Append(str.Substring(previousIndex));
+                sb.Append(str, previousIndex, str.Length - previousIndex);
             }
-            return sb.ToString();
 
+            return sb.ToString();
         }
 
         /// <summary>Concatenates all the elements of a string array, using the specified separator between each element. </summary>
         /// <param name="separator">The string to use as a separator. <paramref name="separator" /> is included in the returned string only if <paramref name="values" /> has more than one element.</param>
         /// <param name="values">An collection that contains the elements to concatenate. </param>
-        /// <returns>A string that consists of the elements in <paramref name="values" /> delimited by the <paramref name="separator" /> string. If <paramref name="values" /> is an empty array, the method returns <see cref="F:System.String.Empty" />.</returns>
-        /// <exception cref="T:System.ArgumentNullException">
+        /// <returns>A string that consists of the elements in <paramref name="values" /> delimited by the <paramref name="separator" /> string. If <paramref name="values" /> is an empty array, the method returns <see cref="System.String.Empty" />.</returns>
+        /// <exception cref="System.ArgumentNullException">
         /// <paramref name="values" /> is <see langword="null" />. </exception>
         internal static string Join(string separator, IEnumerable<string> values)
         {

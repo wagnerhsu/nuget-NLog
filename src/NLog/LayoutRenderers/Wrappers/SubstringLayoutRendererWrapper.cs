@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers.Wrappers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
 
@@ -49,33 +48,21 @@ namespace NLog.LayoutRenderers.Wrappers
     [LayoutRenderer("substring")]
     [AppDomainFixedOutput]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class SubstringLayoutRendererWrapper : WrapperLayoutRendererBase
     {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="UppercaseLayoutRendererWrapper" /> class.
-        /// </summary>
-        public SubstringLayoutRendererWrapper()
-        {
-            Start = 0;
-        }
-
         /// <summary>
         /// Gets or sets the start index. 
         /// </summary>
         /// <value>Index</value>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(0)]
+        /// <docgen category='Layout Options' order='10' />
         public int Start { get; set; }
 
         /// <summary>
         /// Gets or sets the length in characters. If <c>null</c>, then the whole string
         /// </summary>
         /// <value>Index</value>
-        /// <docgen category='Transformation Options' order='10' />
-        [DefaultValue(null)]
+        /// <docgen category='Layout Options' order='10' />
         public int? Length { get; set; }
-
 
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
@@ -85,7 +72,7 @@ namespace NLog.LayoutRenderers.Wrappers
                 return;
             }
 
-            Inner.RenderAppendBuilder(logEvent, builder);
+            Inner.Render(logEvent, builder);
             var renderedLength = builder.Length - orgLength;
 
             if (renderedLength > 0)

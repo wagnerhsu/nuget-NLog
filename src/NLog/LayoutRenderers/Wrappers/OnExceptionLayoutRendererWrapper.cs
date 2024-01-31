@@ -35,29 +35,35 @@ namespace NLog.LayoutRenderers.Wrappers
 {
     using System.Text;
     using NLog.Config;
+    using NLog.Layouts;
 
     /// <summary>
     /// Only outputs the inner layout when exception has been defined for log message.
     /// </summary>
     [LayoutRenderer("onexception")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public sealed class OnExceptionLayoutRendererWrapper : WrapperLayoutRendererBase
     {
+        /// <summary>
+        /// If <see cref="LogEventInfo.Exception"/> is not found, print this layout.
+        /// </summary>
+        /// <docgen category="Condition Options" order="10"/>
+        public Layout Else { get; set; }
+
         /// <inheritdoc/>
         protected override void RenderInnerAndTransform(LogEventInfo logEvent, StringBuilder builder, int orgLength)
         {
             if (logEvent.Exception != null)
             {
-                Inner.RenderAppendBuilder(logEvent, builder);
+                Inner?.Render(logEvent, builder);
+            }
+            else
+            {
+                Else?.Render(logEvent, builder);
             }
         }
 
-        /// <summary>
-        /// Transforms the output of another layout.
-        /// </summary>
-        /// <param name="text">Output to be transform.</param>
-        /// <returns>Transformed text.</returns>
+        /// <inheritdoc/>
         protected override string Transform(string text)
         {
             return text;

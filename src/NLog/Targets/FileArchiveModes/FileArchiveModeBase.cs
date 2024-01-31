@@ -43,7 +43,7 @@ namespace NLog.Targets.FileArchiveModes
         static readonly DateTime MaxAgeArchiveFileDate = new DateTime(1900, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private int _lastArchiveFileCount = short.MaxValue * 2;
-        private DateTime _oldestArchiveFileDate = MaxAgeArchiveFileDate;
+        private DateTime _oldestArchiveFileDate = MaxAgeArchiveFileDate.Date;
 
         public bool IsArchiveCleanupEnabled { get; }
 
@@ -66,7 +66,7 @@ namespace NLog.Targets.FileArchiveModes
             if (maxArchiveFiles > 0 && _lastArchiveFileCount++ > maxArchiveFiles)
                 return true;
 
-            if (maxArchiveDays > 0 && (NLog.Time.TimeSource.Current.Time.Date.ToUniversalTime() - _oldestArchiveFileDate.Date).TotalDays > maxArchiveDays)
+            if (maxArchiveDays > 0 && (NLog.Time.TimeSource.Current.Time.Date.ToUniversalTime() - _oldestArchiveFileDate).TotalDays > maxArchiveDays)
                 return true;
 
             return false;
@@ -85,7 +85,7 @@ namespace NLog.Targets.FileArchiveModes
         public virtual List<DateAndSequenceArchive> GetExistingArchiveFiles(string archiveFilePath)
         {
             _lastArchiveFileCount = short.MaxValue * 2;
-            _oldestArchiveFileDate = MaxAgeArchiveFileDate;
+            _oldestArchiveFileDate = MaxAgeArchiveFileDate.Date;
 
             string archiveFolderPath = Path.GetDirectoryName(archiveFilePath);
             FileNameTemplate archiveFileNameTemplate = GenerateFileNameTemplate(archiveFilePath);
@@ -124,7 +124,7 @@ namespace NLog.Targets.FileArchiveModes
         protected void UpdateMaxArchiveState(List<DateAndSequenceArchive> existingArchiveFiles)
         {
             _lastArchiveFileCount = existingArchiveFiles.Count;
-            _oldestArchiveFileDate = existingArchiveFiles.Count == 0 ? DateTime.UtcNow : existingArchiveFiles[0].Date.Date.ToUniversalTime();
+            _oldestArchiveFileDate = existingArchiveFiles.Count == 0 ? NLog.Time.TimeSource.Current.Time.Date.ToUniversalTime() : existingArchiveFiles[0].Date.Date.ToUniversalTime();
         }
 
         private static int FileSortOrderComparison(DateAndSequenceArchive x, DateAndSequenceArchive y)
@@ -135,7 +135,7 @@ namespace NLog.Targets.FileArchiveModes
             if (x.Sequence.CompareTo(y.Sequence) != 0)
                 return x.Sequence.CompareTo(y.Sequence);
 
-            return string.CompareOrdinal(x.FileName, y.FileName);
+            return StringComparer.OrdinalIgnoreCase.Compare(x.FileName, y.FileName);
         }
 
         protected virtual FileNameTemplate GenerateFileNameTemplate(string archiveFilePath)
@@ -146,10 +146,7 @@ namespace NLog.Targets.FileArchiveModes
 
         protected virtual string GenerateFileNameMask(string archiveFilePath, FileNameTemplate fileTemplate)
         {
-            if (fileTemplate != null)
-                return fileTemplate.ReplacePattern("*");
-            else
-                return string.Empty;
+            return fileTemplate?.ReplacePattern("*") ?? string.Empty;
         }
 
         protected abstract DateAndSequenceArchive GenerateArchiveFileInfo(FileInfo archiveFile, FileNameTemplate fileTemplate);
@@ -184,7 +181,7 @@ namespace NLog.Targets.FileArchiveModes
             }
         }
 
-        private bool ShouldDeleteFile(DateAndSequenceArchive existingArchiveFile, int remainingFileCount, int maxArchiveFiles, int maxArchiveDays)
+        private static bool ShouldDeleteFile(DateAndSequenceArchive existingArchiveFile, int remainingFileCount, int maxArchiveFiles, int maxArchiveDays)
         {
             if (maxArchiveFiles > 0 && remainingFileCount > maxArchiveFiles)
                 return true;
@@ -210,12 +207,12 @@ namespace NLog.Targets.FileArchiveModes
         internal sealed class FileNameTemplate
         {
             /// <summary>
-            /// Characters determining the start of the <see cref="P:FileNameTemplate.Pattern"/>.
+            /// Characters determining the start of the <see cref="FileNameTemplate.Template"/>.
             /// </summary>
             public const string PatternStartCharacters = "{#";
 
             /// <summary>
-            /// Characters determining the end of the <see cref="P:FileNameTemplate.Pattern"/>.
+            /// Characters determining the end of the <see cref="FileNameTemplate.Template"/>.
             /// </summary>
             public const string PatternEndCharacters = "#}";
 
@@ -223,21 +220,21 @@ namespace NLog.Targets.FileArchiveModes
             /// File name which is used as template for matching and replacements. 
             /// It is expected to contain a pattern to match.
             /// </summary>
-            public string Template { get; private set; }
+            public string Template { get; }
 
             /// <summary>
-            /// The begging position of the <see cref="P:FileNameTemplate.Pattern"/> 
-            /// within the <see cref="P:FileNameTemplate.Template"/>. -1 is returned 
+            /// The beginning position of the <see cref="FileNameTemplate.PatternStartCharacters"/> 
+            /// within the <see cref="FileNameTemplate.Template"/>. -1 is returned 
             /// when no pattern can be found.
             /// </summary>
-            public int BeginAt { get; private set; }
+            public int BeginAt { get; }
 
             /// <summary>
-            /// The ending position of the <see cref="P:FileNameTemplate.Pattern"/> 
-            /// within the <see cref="P:FileNameTemplate.Template"/>. -1 is returned 
+            /// The ending position of the <see cref="FileNameTemplate.PatternEndCharacters"/> 
+            /// within the <see cref="FileNameTemplate.Template"/>. -1 is returned 
             /// when no pattern can be found.
             /// </summary>
-            public int EndAt { get; private set; }
+            public int EndAt { get; }
 
             private bool FoundPattern => BeginAt != -1 && EndAt != -1;
 
@@ -245,8 +242,7 @@ namespace NLog.Targets.FileArchiveModes
             {
                 Template = template;
                 BeginAt = template.IndexOf(PatternStartCharacters, StringComparison.Ordinal);
-                if (BeginAt != -1)
-                    EndAt = template.IndexOf(PatternEndCharacters, StringComparison.Ordinal) + PatternEndCharacters.Length;
+                EndAt = BeginAt != -1 ? (template.IndexOf(PatternEndCharacters, StringComparison.Ordinal) + PatternEndCharacters.Length) : -1;
             }
 
             /// <summary>

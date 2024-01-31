@@ -31,8 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System.IO;
-
 namespace NLog.UnitTests.Config
 {
     using NLog.Conditions;
@@ -43,6 +41,7 @@ namespace NLog.UnitTests.Config
     using NLog.Targets.Wrappers;
     using System;
     using System.Globalization;
+    using System.IO;
     using System.Text;
     using Xunit;
 
@@ -513,8 +512,11 @@ namespace NLog.UnitTests.Config
         [Fact]
         public void DontThrowExceptionWhenArchiveEverySetByDefaultParameters()
         {
+            var fileName = Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + ".log";
 
-            var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            try
+            {
+                var logFactory = new LogFactory().Setup().LoadConfigurationFromXml($@"
 <nlog throwExceptions='true'>
     <targets>
         <default-target-parameters 
@@ -525,19 +527,26 @@ namespace NLog.UnitTests.Config
             archiveNumbering='Rolling'
             archiveEvery='Day' />
 
-          <target fileName='" + Path.GetFileNameWithoutExtension(Path.GetTempFileName()) + @".log'
+          <target fileName='{fileName}'
                 name = 'file'
-                type = 'File'
-                layout = '${message}' />
+                type = 'File' />
     </targets>
 
     <rules>
         <logger name='*' writeTo='file'/>
     </rules>
-</nlog> ");
+</nlog> ").LogFactory;
 
-            LogManager.Configuration = configuration;
-            LogManager.GetLogger("TestLogger").Info("DefaultFileTargetParametersTests.DontThrowExceptionWhenArchiveEverySetByDefaultParameters is true");
+                logFactory.GetLogger("TestLogger").Info("DefaultFileTargetParametersTests.DontThrowExceptionWhenArchiveEverySetByDefaultParameters is true");
+
+                Assert.NotNull(logFactory.Configuration);
+                Assert.Single(logFactory.Configuration.AllTargets);
+            }
+            finally
+            {
+                if (File.Exists(fileName))
+                    File.Delete(fileName);
+            }
         }
 
         [Fact]
@@ -545,7 +554,7 @@ namespace NLog.UnitTests.Config
         {
             using (new NoThrowNLogExceptions())
             {
-                var configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                var logFactory = new LogFactory().Setup().LoadConfigurationFromXml($@"
 <nlog>
     <targets>
         <target type='bufferingwrapper' name='mytarget'>
@@ -555,12 +564,99 @@ namespace NLog.UnitTests.Config
     <rules>
         <logger name='*' writeTo='mytarget'/>
     </rules>
-</nlog> ");
+</nlog>").LogFactory;
 
-                LogManager.Configuration = configuration;
-                LogManager.GetLogger(nameof(DontThrowExceptionsWhenMissingRequiredParameters)).Info("Test");
-                LogManager.Configuration = null;
+                logFactory.GetLogger(nameof(DontThrowExceptionsWhenMissingRequiredParameters)).Info("Test");
+
+                Assert.NotNull(logFactory.Configuration);
             }
+        }
+
+        [Fact]
+        public void DontThrowExceptionsWhenMissingTargetName()
+        {
+            using (new NoThrowNLogExceptions())
+            {
+                var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
+<nlog>
+    <targets>
+        <target type='bufferingwrapper'>
+            <target type='unknowntargettype' name='badtarget' />
+        </target>
+        <target type='debug' name='goodtarget' layout='${message}' />
+    </targets>
+    <rules>
+        <logger name='*' writeTo='goodtarget'/>
+    </rules>
+</nlog>").LogFactory;
+
+                logFactory.GetLogger(nameof(DontThrowExceptionsWhenMissingTargetName)).Info("Test");
+                AssertDebugLastMessage("goodtarget", "Test", logFactory);
+            }
+        }
+
+        [Fact]
+        public void RequiredDataTypesNullableTest()
+        {
+            var c = new LogFactory().Setup().LoadConfigurationFromXml(@"
+            <nlog throwExceptions='true'>
+                <extensions>
+                    <add type='" + typeof(MyRequiredTarget).AssemblyQualifiedName + @"' />
+                </extensions>
+
+                <targets>
+                    <target type='MyRequiredTarget' name='myTarget'
+                        stringProperty='foobar'
+                        enumProperty='Value3'
+/>
+                </targets>
+            </nlog>").LogFactory.Configuration;
+
+            var myTarget = c.FindTargetByName("myTarget") as MyRequiredTarget;
+            Assert.NotNull(myTarget);
+
+            var missingStringValue = Assert.Throws<NLogConfigurationException>(() => new LogFactory().Setup().LoadConfigurationFromXml(@"
+            <nlog throwExceptions='true'>
+                <extensions>
+                    <add type='" + typeof(MyRequiredTarget).AssemblyQualifiedName + @"' />
+                </extensions>
+
+                <targets>
+                    <target type='MyRequiredTarget' name='myTarget'
+                        enumProperty='Value3'
+                    />
+                </targets>
+            </nlog>"));
+            Assert.Contains(nameof(MyRequiredTarget.StringProperty), missingStringValue.Message);
+
+            var missingEnumValue = Assert.Throws<NLogConfigurationException>(() => new LogFactory().Setup().LoadConfigurationFromXml(@"
+            <nlog throwExceptions='true'>
+                <extensions>
+                    <add type='" + typeof(MyRequiredTarget).AssemblyQualifiedName + @"' />
+                </extensions>
+
+                <targets>
+                    <target type='MyRequiredTarget' name='myTarget'
+                        stringProperty='foobar'
+                    />
+                </targets>
+            </nlog>"));
+            Assert.Contains(nameof(MyRequiredTarget.EnumProperty), missingEnumValue.Message);
+
+            var emptyEnumValue = Assert.Throws<NLogConfigurationException>(() => new LogFactory().Setup().LoadConfigurationFromXml(@"
+            <nlog throwExceptions='true'>
+                <extensions>
+                    <add type='" + typeof(MyRequiredTarget).AssemblyQualifiedName + @"' />
+                </extensions>
+
+                <targets>
+                    <target type='MyRequiredTarget' name='myTarget'
+                        enumProperty=''
+                        stringProperty='foobar'
+                    />
+                </targets>
+            </nlog>"));
+            Assert.Contains(nameof(MyRequiredTarget.EnumProperty), emptyEnumValue.Message);
         }
 
         [Fact]
@@ -754,6 +850,15 @@ namespace NLog.UnitTests.Config
             {
                 Name = name;
             }
+        }
+
+        [Target("MyRequiredTarget")]
+        public class MyRequiredTarget : Target
+        {
+            [RequiredParameter]
+            public string StringProperty { get; set; }
+            [RequiredParameter]
+            public MyEnum? EnumProperty { get; set; }
         }
 
         public enum MyEnum

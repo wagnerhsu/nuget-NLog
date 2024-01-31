@@ -36,9 +36,11 @@ namespace NLog.Config
     using System;
 
     /// <summary>
+    /// Obsolete since dynamic tyope loading is not compatible with publish as trimmed application.
     /// Constructs a new instance the configuration item (target, layout, layout renderer, etc.) given its type.
     /// </summary>
     /// <param name="itemType">Type of the item.</param>
     /// <returns>Created object of the specified type.</returns>
+    [Obsolete("Instead use RegisterType<T>, as dynamic Assembly loading will be moved out. Marked obsolete with NLog v5.2")]
     public delegate object ConfigurationItemCreator(Type itemType);
 }

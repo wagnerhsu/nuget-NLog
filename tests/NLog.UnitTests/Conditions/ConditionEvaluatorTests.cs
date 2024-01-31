@@ -31,8 +31,6 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-#pragma warning disable xUnit2004 //assert.True can't be used with Object parameter
-
 namespace NLog.UnitTests.Conditions
 {
     using System;
@@ -106,7 +104,7 @@ namespace NLog.UnitTests.Conditions
             {
                 Assert.Equal("Cannot resolve function 'starts-with'", ex.Message);
                 Assert.NotNull(ex.InnerException);
-                Assert.Equal("Condition method 'starts-with' requires between 2 and 3 parameters, but passed 1.", ex.InnerException.Message);
+                Assert.Equal("Condition method 'starts-with' requires minimum 2 parameters, but passed 1.", ex.InnerException.Message);
             }
         }
 
@@ -122,7 +120,39 @@ namespace NLog.UnitTests.Conditions
             {
                 Assert.Equal("Cannot resolve function 'starts-with'", ex.Message);
                 Assert.NotNull(ex.InnerException);
-                Assert.Equal("Condition method 'starts-with' requires between 2 and 3 parameters, but passed 4.", ex.InnerException.Message);
+                Assert.Equal("Condition method 'starts-with' requires maximum 3 parameters, but passed 4.", ex.InnerException.Message);
+            }
+        }
+
+        [Fact]
+        public void ConditionMethodNegativeTest3()
+        {
+            try
+            {
+                AssertEvaluationResult(true, "length()");
+                Assert.True(false, "Expected exception");
+            }
+            catch (ConditionParseException ex)
+            {
+                Assert.Equal("Cannot resolve function 'length'", ex.Message);
+                Assert.NotNull(ex.InnerException);
+                Assert.Equal("Condition method 'length' requires minimum 1 parameters, but passed 0.", ex.InnerException.Message);
+            }
+        }
+
+        [Fact]
+        public void ConditionMethodNegativeTest4()
+        {
+            try
+            {
+                AssertEvaluationResult(true, "equals('foobar','baz','qux')");
+                Assert.True(false, "Expected exception");
+            }
+            catch (ConditionParseException ex)
+            {
+                Assert.Equal("Cannot resolve function 'equals'", ex.Message);
+                Assert.NotNull(ex.InnerException);
+                Assert.Equal("Condition method 'equals' requires maximum 2 parameters, but passed 3.", ex.InnerException.Message);
             }
         }
 
@@ -206,6 +236,27 @@ namespace NLog.UnitTests.Conditions
         {
             var factories = SetupConditionMethods();
             Assert.Equal(true, ConditionParser.ParseExpression("IsValid()", factories).Evaluate(CreateWellKnownContext()));
+            var ex = Assert.Throws<ConditionParseException>(() => ConditionParser.ParseExpression("IsValid('foobar')", factories));
+            Assert.Contains("Condition method 'IsValid' requires maximum 0 parameters, but passed 1", ex.ToString());
+        }
+
+        [Fact]
+        public void DoubleEqualsTest()
+        {
+            var factories = SetupConditionMethods();
+            Assert.Equal(true, ConditionParser.ParseExpression("DoubleEquals(0.01, 0.02, 0.1)", factories).Evaluate(CreateWellKnownContext()));
+            Assert.Equal(false, ConditionParser.ParseExpression("DoubleEquals(0.01, 0.02, 0.001)", factories).Evaluate(CreateWellKnownContext()));
+            var ex = Assert.Throws<ConditionParseException>(() => ConditionParser.ParseExpression("DoubleEquals(0.01, 0.02, 0.001, 'foobar')", factories));
+            Assert.Contains("Condition method 'DoubleEquals' requires maximum 3 parameters, but passed 4", ex.ToString());
+            Assert.Throws<ConditionEvaluationException>(() => ConditionParser.ParseExpression("DoubleEquals(0.01, 0.02, 'foobar')", factories).Evaluate(CreateWellKnownContext()));
+        }
+
+        [Fact]
+        public void ManyParametersTest()
+        {
+            var factories = SetupConditionMethods();
+            Assert.Equal(false, ConditionParser.ParseExpression("ManyParameters('One', 'Two', 'Three', 'Four')", factories).Evaluate(CreateWellKnownContext()));
+            Assert.Equal(true, ConditionParser.ParseExpression("ManyParameters('One', 'Two', 'Three', 'Four')", factories).Evaluate(new LogEventInfo() { Message = "Four" }));
         }
 
         [Fact]
@@ -278,11 +329,8 @@ namespace NLog.UnitTests.Conditions
             Assert.Same(inner, ex1.InnerException);
         }
 
-#if NETSTANDARD
-        [Fact(Skip = "NetStandard does not mark InvalidOperationException as Serializable")]
-#else
+#if !NET6_0_OR_GREATER
         [Fact]
-#endif
         public void ExceptionTest4()
         {
             var inner = new InvalidOperationException("f");
@@ -296,6 +344,7 @@ namespace NLog.UnitTests.Conditions
             Assert.Equal("msg", ex2.Message);
             Assert.Equal("f", ex2.InnerException.Message);
         }
+#endif
 
         [Fact]
         public void ExceptionTest11()
@@ -320,11 +369,8 @@ namespace NLog.UnitTests.Conditions
             Assert.Same(inner, ex1.InnerException);
         }
 
-#if NETSTANDARD
-        [Fact(Skip = "NetStandard does not mark InvalidOperationException as Serializable")]
-#else
+#if !NET6_0_OR_GREATER
         [Fact]
-#endif
         public void ExceptionTest14()
         {
             var inner = new InvalidOperationException("f");
@@ -338,19 +384,22 @@ namespace NLog.UnitTests.Conditions
             Assert.Equal("msg", ex2.Message);
             Assert.Equal("f", ex2.InnerException.Message);
         }
+#endif
 
         private static ConfigurationItemFactory SetupConditionMethods()
         {
             var factories = new ConfigurationItemFactory();
-            factories.ConditionMethods.RegisterDefinition("GetGuid", typeof(MyConditionMethods).GetMethod("GetGuid"));
-            factories.ConditionMethods.RegisterDefinition("ToInt16", typeof(MyConditionMethods).GetMethod("ToInt16"));
-            factories.ConditionMethods.RegisterDefinition("ToInt32", typeof(MyConditionMethods).GetMethod("ToInt32"));
-            factories.ConditionMethods.RegisterDefinition("ToInt64", typeof(MyConditionMethods).GetMethod("ToInt64"));
-            factories.ConditionMethods.RegisterDefinition("ToDouble", typeof(MyConditionMethods).GetMethod("ToDouble"));
-            factories.ConditionMethods.RegisterDefinition("ToSingle", typeof(MyConditionMethods).GetMethod("ToSingle"));
-            factories.ConditionMethods.RegisterDefinition("ToDateTime", typeof(MyConditionMethods).GetMethod("ToDateTime"));
-            factories.ConditionMethods.RegisterDefinition("ToDecimal", typeof(MyConditionMethods).GetMethod("ToDecimal"));
-            factories.ConditionMethods.RegisterDefinition("IsValid", typeof(MyConditionMethods).GetMethod("IsValid"));
+            factories.ConditionMethodFactory.RegisterDefinition("GetGuid", typeof(MyConditionMethods).GetMethod("GetGuid"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToInt16", typeof(MyConditionMethods).GetMethod("ToInt16"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToInt32", typeof(MyConditionMethods).GetMethod("ToInt32"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToInt64", typeof(MyConditionMethods).GetMethod("ToInt64"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToDouble", typeof(MyConditionMethods).GetMethod("ToDouble"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToSingle", typeof(MyConditionMethods).GetMethod("ToSingle"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToDateTime", typeof(MyConditionMethods).GetMethod("ToDateTime"));
+            factories.ConditionMethodFactory.RegisterDefinition("ToDecimal", typeof(MyConditionMethods).GetMethod("ToDecimal"));
+            factories.ConditionMethodFactory.RegisterDefinition("IsValid", typeof(MyConditionMethods).GetMethod("IsValid"));
+            factories.ConditionMethodFactory.RegisterDefinition("DoubleEquals", typeof(MyConditionMethods).GetMethod("DoubleEquals"));
+            factories.ConditionMethodFactory.RegisterDefinition("ManyParameters", typeof(MyConditionMethods).GetMethod("ManyParameters"));
             return factories;
         }
 
@@ -422,6 +471,25 @@ namespace NLog.UnitTests.Conditions
             public static bool IsValid(LogEventInfo context)
             {
                 return true;
+            }
+
+            public static bool DoubleEquals(object left, object right, object epsilon)
+            {
+                return Math.Abs(Convert.ToDouble(left) - Convert.ToDouble(right)) < Convert.ToDouble(epsilon);
+            }
+
+            public static bool ManyParameters(LogEventInfo logEvent, object first, object second, object third, object fourth)
+            {
+                if (logEvent.Message == first?.ToString())
+                    return true;
+                if (logEvent.Message == second?.ToString())
+                    return true;
+                if (logEvent.Message == third?.ToString())
+                    return true;
+                if (logEvent.Message == fourth?.ToString())
+                    return true;
+
+                return false;
             }
         }
     }

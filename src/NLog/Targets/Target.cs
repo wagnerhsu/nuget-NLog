@@ -35,6 +35,8 @@ namespace NLog.Targets
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
+    using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using JetBrains.Annotations;
     using NLog.Common;
@@ -50,11 +52,10 @@ namespace NLog.Targets
     {
         internal string _tostring;
 
-        private List<Layout> _allLayouts;
+        private Layout[] _allLayouts = ArrayHelper.Empty<Layout>();
 
         /// <summary> Are all layouts in this target thread-agnostic, if so we don't precalculate the layouts </summary>
         private bool _allLayoutsAreThreadAgnostic;
-        private bool _allLayoutsAreThreadSafe;
         private bool _oneLayoutIsMutableUnsafe;
         private bool _scannedForLayouts;
         private Exception _initializeException;
@@ -69,7 +70,7 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the name of the target.
         /// </summary>
-        /// <docgen category='General Options' order='10' />
+        /// <docgen category='General Options' order='1' />
         public string Name
         {
             get => _name;
@@ -87,8 +88,24 @@ namespace NLog.Targets
         /// </summary>
         /// <docgen category='Performance Tuning Options' order='10' />
         [Obsolete("No longer used, and always returns true. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public bool OptimizeBufferReuse { get => _optimizeBufferReuse ?? true; set => _optimizeBufferReuse = value ? true : (bool?)null; }
         private bool? _optimizeBufferReuse;
+
+        /// <summary>
+        /// NLog Layout are by default threadsafe, so multiple threads can be rendering logevents at the same time.
+        /// This ensure high concurrency with no lock-congestion for the application-threads, especially when using <see cref="Wrappers.AsyncTargetWrapper"/>
+        /// or AsyncTaskTarget.
+        /// 
+        /// But if using custom <see cref="Layout" /> or <see cref="LayoutRenderers.LayoutRenderer"/> that are not
+        /// threadsafe, then this option can enabled to protect against thread-concurrency-issues. Allowing one
+        /// to update to NLog 5.0 without having to fix custom/external layout-dependencies.
+        /// </summary>
+        /// <docgen category='Performance Tuning Options' order='10' />
+        [Obsolete("Temporary workaround for broken Layout Renderers that are not threadsafe. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public bool LayoutWithLock { get => _layoutWithLock ?? false; set => _layoutWithLock = value; }
+        internal bool? _layoutWithLock;
 
         /// <summary>
         /// Gets the object which can be used to synchronize asynchronous operations that must rely on the .
@@ -164,10 +181,7 @@ namespace NLog.Targets
         /// <param name="asyncContinuation">The asynchronous continuation.</param>
         public void Flush(AsyncContinuation asyncContinuation)
         {
-            if (asyncContinuation == null)
-            {
-                throw new ArgumentNullException(nameof(asyncContinuation));
-            }
+            Guard.ThrowIfNull(asyncContinuation);
 
             asyncContinuation = AsyncHelpers.PreventMultipleCalls(asyncContinuation);
 
@@ -209,26 +223,22 @@ namespace NLog.Targets
                 return;
             }
 
-            // Not all Layouts support concurrent threads, so we have to protect them
-            if (_allLayoutsAreThreadSafe)
+            if (!IsInitialized)
+                return;
+
+            if (_layoutWithLock == true)
             {
-                PrecalculateVolatileLayoutsConcurrent(logEvent);
+                PrecalculateVolatileLayoutsWithLock(logEvent);
             }
             else
             {
-                PrecalculateVolatileLayoutsWithLock(logEvent);
+                PrecalculateVolatileLayoutsConcurrent(logEvent);
             }
         }
 
         private void PrecalculateVolatileLayoutsConcurrent(LogEventInfo logEvent)
         {
-            if (!IsInitialized)
-                return;
-
-            if (_allLayouts == null)
-                return;
-
-            if (_precalculateStringBuilderPool == null)
+            if (_precalculateStringBuilderPool is null)
             {
                 System.Threading.Interlocked.CompareExchange(ref _precalculateStringBuilderPool, new StringBuilderPool(Environment.ProcessorCount * 2), null);
             }
@@ -247,12 +257,6 @@ namespace NLog.Targets
         {
             lock (SyncRoot)
             {
-                if (!_isInitialized)
-                    return;
-
-                if (_allLayouts == null)
-                    return;
-
                 using (var targetBuilder = ReusableLayoutBuilder.Allocate())
                 {
                     foreach (Layout layout in _allLayouts)
@@ -264,12 +268,7 @@ namespace NLog.Targets
             }
         }
 
-        /// <summary>
-        /// Returns a <see cref="System.String"/> that represents this instance.
-        /// </summary>
-        /// <returns>
-        /// A <see cref="System.String"/> that represents this instance.
-        /// </returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return _tostring ?? (_tostring = GenerateTargetToString(false));
@@ -285,7 +284,10 @@ namespace NLog.Targets
                 targetType += "Target";
             }
             targetName = targetName ?? Name;
-            return string.IsNullOrEmpty(targetName) ? $"{targetType}([unnamed])" : $"{targetType}(Name={targetName})";
+            if (string.IsNullOrEmpty(targetName))
+                return targetWrapper ? targetType : $"{targetType}([unnamed])";
+            else
+                return $"{targetType}(Name={targetName})";
         }
 
         /// <summary>
@@ -333,12 +335,10 @@ namespace NLog.Targets
         /// <param name="logEvents">The log events.</param>
         public void WriteAsyncLogEvents(params AsyncLogEventInfo[] logEvents)
         {
-            if (logEvents == null || logEvents.Length == 0)
+            if (logEvents?.Length > 0)
             {
-                return;
+                WriteAsyncLogEvents((IList<AsyncLogEventInfo>)logEvents);
             }
-
-            WriteAsyncLogEvents((IList<AsyncLogEventInfo>)logEvents);
         }
 
         /// <summary>
@@ -347,7 +347,7 @@ namespace NLog.Targets
         /// <param name="logEvents">The log events.</param>
         public void WriteAsyncLogEvents(IList<AsyncLogEventInfo> logEvents)
         {
-            if (logEvents == null || logEvents.Count == 0)
+            if (logEvents is null || logEvents.Count == 0)
             {
                 return;
             }
@@ -399,7 +399,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
-        /// LogEvent is written to target, but target failed to succesfully initialize
+        /// LogEvent is written to target, but target failed to successfully initialize
         /// </summary>
         protected virtual void WriteFailedNotInitialized(AsyncLogEventInfo logEvent, Exception initializeException)
         {
@@ -421,7 +421,7 @@ namespace NLog.Targets
                 {
                     try
                     {
-                        PropertyHelper.CheckRequiredParameters(this);
+                        PropertyHelper.CheckRequiredParameters(ConfigurationItemFactory.Default, this);
 
                         InitializeTarget();
                         _initializeException = null;
@@ -454,7 +454,7 @@ namespace NLog.Targets
                     }
                     finally
                     {
-                        _isInitialized = true;
+                        _isInitialized = true;  // Only one attempt, must Close to retry
                     }
                 }
             }
@@ -475,7 +475,7 @@ namespace NLog.Targets
 
                     try
                     {
-                        if (_initializeException == null)
+                        if (_initializeException is null)
                         {
                             // if Init succeeded, call Close()
                             InternalLogger.Debug("{0}: Closing...", this);
@@ -501,7 +501,7 @@ namespace NLog.Targets
             if (disposing && _isInitialized)
             {
                 _isInitialized = false;
-                if (_initializeException == null)
+                if (_initializeException is null)
                 {
                     CloseTarget();
                 }
@@ -509,8 +509,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
-        /// Initializes the target. Can be used by inheriting classes
-        /// to initialize logging.
+        /// Initializes the target before writing starts
         /// </summary>
         protected virtual void InitializeTarget()
         {
@@ -520,45 +519,36 @@ namespace NLog.Targets
 
         private void FindAllLayouts()
         {
-            _allLayouts = ObjectGraphScanner.FindReachableObjects<Layout>(false, this);
-            InternalLogger.Trace("{0} has {1} layouts", this, _allLayouts.Count);
-            _allLayoutsAreThreadAgnostic = _allLayouts.All(layout => layout.ThreadAgnostic);
-            _oneLayoutIsMutableUnsafe = _allLayoutsAreThreadAgnostic && _allLayouts.Any(layout => layout.MutableUnsafe);
-            if (!_allLayoutsAreThreadAgnostic || _oneLayoutIsMutableUnsafe)
-            {
-                _allLayoutsAreThreadSafe = _allLayouts.All(layout => layout.ThreadSafe);
-            }
+            var allLayouts = ObjectGraphScanner.FindReachableObjects<Layout>(ConfigurationItemFactory.Default, false, this);
+            InternalLogger.Trace("{0} has {1} layouts", this, allLayouts.Count);
+            _allLayoutsAreThreadAgnostic = allLayouts.All(layout => layout.ThreadAgnostic);
+            _oneLayoutIsMutableUnsafe = _allLayoutsAreThreadAgnostic && allLayouts.Any(layout => layout.MutableUnsafe);
 
-            StackTraceUsage result = StackTraceUsage.None;
-            foreach (var layout in _allLayouts.DefaultIfEmpty())
-            {
-                result |= layout?.StackTraceUsage ?? StackTraceUsage.None;
-            }
-            StackTraceUsage = result;
-            if (this is IUsesStackTrace usesStackTrace)
-                StackTraceUsage |= usesStackTrace.StackTraceUsage;
+            var result = allLayouts.Aggregate(StackTraceUsage.None, (agg, layout) => agg | layout.StackTraceUsage);
+            StackTraceUsage = result | ((this as IUsesStackTrace)?.StackTraceUsage ?? StackTraceUsage.None);
+            _allLayouts = allLayouts.Where(l => !l.ThreadAgnostic || l.MutableUnsafe || !(l is SimpleLayout)).Distinct(SingleItemOptimizedHashSet<Layout>.ReferenceEqualityComparer.Default).ToArray();
             _scannedForLayouts = true;
         }
 
         /// <summary>
-        /// Closes the target and releases any unmanaged resources.
+        /// Closes the target to release any initialized resources
         /// </summary>
         protected virtual void CloseTarget()
         {
         }
 
         /// <summary>
-        /// Flush any pending log messages asynchronously (in case of asynchronous targets).
+        /// Flush any pending log messages
         /// </summary>
-        /// <param name="asyncContinuation">The asynchronous continuation.</param>
+        /// <remarks>The asynchronous continuation parameter must be called on flush completed</remarks>
+        /// <param name="asyncContinuation">The asynchronous continuation to be called on flush completed.</param>
         protected virtual void FlushAsync(AsyncContinuation asyncContinuation)
         {
             asyncContinuation(null);
         }
 
         /// <summary>
-        /// Writes logging event to the log target. Must be overridden in inheriting
-        /// classes.
+        /// Writes logging event to the target destination
         /// </summary>
         /// <param name="logEvent">Logging event to be written out.</param>
         protected virtual void Write(LogEventInfo logEvent)
@@ -657,9 +647,10 @@ namespace NLog.Targets
         /// </summary>
         /// <param name="logEvent">The event info object to perform the merge to.</param>
         [Obsolete("Logger.Trace(logEvent) now automatically captures the logEvent Properties. Marked obsolete on NLog 4.6")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected void MergeEventProperties(LogEventInfo logEvent)
         {
-            if (logEvent.Parameters == null || logEvent.Parameters.Length == 0)
+            if (logEvent.Parameters is null || logEvent.Parameters.Length == 0)
             {
                 return;
             }
@@ -687,7 +678,7 @@ namespace NLog.Targets
         /// <returns>String representing log event.</returns>
         protected string RenderLogEvent([CanBeNull] Layout layout, [CanBeNull] LogEventInfo logEvent)
         {
-            if (layout == null || logEvent == null)
+            if (layout is null || logEvent is null)
                 return null;    // Signal that input was wrong
 
             SimpleLayout simpleLayout = layout as SimpleLayout;
@@ -722,18 +713,21 @@ namespace NLog.Targets
         /// <returns>Result value when available, else fallback to defaultValue</returns>
         protected T RenderLogEvent<T>([CanBeNull] Layout<T> layout, [CanBeNull] LogEventInfo logEvent, T defaultValue = default(T))
         {
-            if (layout == null || logEvent == null)
+            if (layout is null)
                 return defaultValue;
 
             if (layout.IsFixed)
                 return layout.FixedValue;
 
+            if (logEvent is null)
+                return defaultValue;
+
             if (TryGetCachedValue(layout, logEvent, out var value))
             {
-                if (value != null)
-                    return (T)value;
-                else
+                if (value is null)
                     return defaultValue;
+                else
+                    return (T)value;
             }
 
             using (var localTarget = ReusableLayoutBuilder.Allocate())
@@ -777,12 +771,16 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="LogManager.Setup()"/> with NLog v5.2.
+        /// 
         /// Register a custom Target.
         /// </summary>
         /// <remarks>Short-cut for registering to default <see cref="ConfigurationItemFactory"/></remarks>
-        /// <typeparam name="T"> Type of the Target.</typeparam>
-        /// <param name="name"> Name of the Target.</param>
-        public static void Register<T>(string name)
+        /// <typeparam name="T">Type of the Target.</typeparam>
+        /// <param name="name">The target type-alias for use in NLog configuration</param>
+        [Obsolete("Instead use LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void Register<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] T>(string name)
             where T : Target
         {
             var layoutRendererType = typeof(T);
@@ -790,14 +788,18 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="LogManager.Setup()"/> with NLog v5.2.
+        /// 
         /// Register a custom Target.
         /// </summary>
         /// <remarks>Short-cut for registering to default <see cref="ConfigurationItemFactory"/></remarks>
-        /// <param name="targetType"> Type of the Target.</param>
-        /// <param name="name"> Name of the Target.</param>
-        public static void Register(string name, Type targetType)
+        /// <param name="targetType">Type of the Target.</param>
+        /// <param name="name">The target type-alias for use in NLog configuration</param>
+        [Obsolete("Instead use LogManager.Setup().SetupExtensions(). Marked obsolete with NLog v5.2")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public static void Register(string name, [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor | DynamicallyAccessedMemberTypes.PublicProperties)] Type targetType)
         {
-            ConfigurationItemFactory.Default.Targets.RegisterDefinition(name, targetType);
+            ConfigurationItemFactory.Default.GetTargetFactory().RegisterDefinition(name, targetType);
         }
     }
 }

@@ -89,11 +89,14 @@ namespace NLog.Internal
             }
 
             var isConfigError = exception is NLogConfigurationException;
+            var logFactory = loggerContext?.LogFactory;
+            var throwExceptionsAll = logFactory?.ThrowExceptions == true || LogManager.ThrowExceptions;
+            var shallRethrow = isConfigError ? (logFactory?.ThrowConfigExceptions ?? LogManager.ThrowConfigExceptions ?? throwExceptionsAll) : throwExceptionsAll;
 
             //we throw always configuration exceptions (historical)
             if (!exception.IsLoggedToInternalLogger())
             {
-                var level = isConfigError ? LogLevel.Warn : LogLevel.Error;
+                var level = shallRethrow ? LogLevel.Error : LogLevel.Warn;
                 if (loggerContext != null)
                 {
                     if (string.IsNullOrEmpty(callerMemberName))
@@ -102,12 +105,11 @@ namespace NLog.Internal
                         InternalLogger.Log(exception, level, "{0}: Exception in {1}", loggerContext, callerMemberName);
                 }
                 else
+                {
                     InternalLogger.Log(exception, level, "Error has been raised.");
+                }
             }
 
-            var logFactory = loggerContext?.LogFactory;
-            var throwExceptionsAll = logFactory?.ThrowExceptions == true || LogManager.ThrowExceptions;
-            var shallRethrow = isConfigError ? (logFactory?.ThrowConfigExceptions ?? LogManager.ThrowConfigExceptions ?? throwExceptionsAll) : throwExceptionsAll;
             return shallRethrow;
         }
 
@@ -123,12 +125,12 @@ namespace NLog.Internal
 #if !NETSTANDARD1_3 && !NETSTANDARD1_5
             if (exception is StackOverflowException)
             {
-                return true;
+                return true; // StackOverflowException cannot be caught since .NetFramework 2.0
             }
 
             if (exception is ThreadAbortException)
             {
-                return true;
+                return true; // ThreadAbortException will automatically be rethrown at end of catch-block
             }
 #endif
 
@@ -143,6 +145,14 @@ namespace NLog.Internal
                 return true;
             }
             if (exception is NullReferenceException)
+            {
+                return true;
+            }
+            if (exception is ArgumentNullException)
+            {
+                return true;
+            }
+            if (exception is ArgumentOutOfRangeException)
             {
                 return true;
             }

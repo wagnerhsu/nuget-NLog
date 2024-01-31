@@ -38,6 +38,7 @@ namespace NLog.UnitTests.Targets.Wrappers
     using System.Linq;
     using System.Threading;
     using NLog.Common;
+    using NLog.Internal;
     using NLog.Targets;
     using NLog.Targets.Wrappers;
     using Xunit;
@@ -47,7 +48,7 @@ namespace NLog.UnitTests.Targets.Wrappers
         [Fact]
         public void NoTargets_SplitGroupTarget_IsWorking()
         {
-            SplitGroupTarget_Exercise(new MyTarget[] { });
+            SplitGroupTarget_Exercise(ArrayHelper.Empty<MyTarget>());
         }
 
         [Fact]
@@ -104,7 +105,7 @@ namespace NLog.UnitTests.Targets.Wrappers
 
             // Assert
             Assert.Equal(LogEventWriteCount + 1, exceptions.Count); // +1 because of flush
-            Assert.Equal(LogEventWriteCount + 1 - logEventFailCount, exceptions.Count(ex => ex == null));
+            Assert.Equal(LogEventWriteCount + 1 - logEventFailCount, exceptions.Count(ex => ex is null));
             foreach (var target in targets)
             {
                 var myTarget = lookupTarget(target);
@@ -126,7 +127,7 @@ namespace NLog.UnitTests.Targets.Wrappers
                 Targets = { myTarget1, myTarget2, myTarget3 },
             };
 
-            Assert.Equal("SplitGroup([unnamed])[MyTarget([unnamed]), FileTarget(Name=file1), ConsoleTarget(Name=Console2)]", wrapper.ToString());
+            Assert.Equal("SplitGroup[MyTarget([unnamed]), FileTarget(Name=file1), ConsoleTarget(Name=Console2)]", wrapper.ToString());
         }
 
         public class MyTarget : Target

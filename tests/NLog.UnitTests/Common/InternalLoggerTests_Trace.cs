@@ -33,18 +33,15 @@
 
 #define DEBUG
 
-using NLog.Config;
-
 namespace NLog.UnitTests.Common
 {
-
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
     using NLog.Common;
+    using NLog.Config;
     using Xunit;
-    using Xunit.Extensions;
 
     public class InternalLoggerTests_Trace : NLogTestBase
     {
@@ -255,7 +252,7 @@ namespace NLog.UnitTests.Common
         /// <param name="internalLogToTrace">internalLogToTrace XML attribute value. If <c>null</c> attribute is omitted.</param>
         /// <param name="logToTrace">Value of <see cref="InternalLogger.LogToTrace"/> property. If <c>null</c> property is not set.</param>
         /// <returns><see cref="TraceListener"/> instance.</returns>
-        private T SetupTestConfiguration<T>(LogLevel logLevel, bool? internalLogToTrace, bool? logToTrace) where T : TraceListener
+        private static T SetupTestConfiguration<T>(LogLevel logLevel, bool? internalLogToTrace, bool? logToTrace) where T : TraceListener
         {
             var internalLogToTraceAttribute = "";
             if (internalLogToTrace.HasValue)
@@ -286,7 +283,7 @@ namespace NLog.UnitTests.Common
 
             Trace.Listeners.Clear();
 
-            if (traceListener == null)
+            if (traceListener is null)
             {
                 return null;
             }

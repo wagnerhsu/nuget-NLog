@@ -34,8 +34,6 @@
 namespace NLog.LayoutRenderers
 {
     using System;
-    using System.Collections.Generic;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -44,34 +42,32 @@ namespace NLog.LayoutRenderers
     /// The log level.
     /// </summary>
     [LayoutRenderer("level")]
+    [LayoutRenderer("loglevel")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class LevelLayoutRenderer : LayoutRenderer, IRawValue, IStringValueRenderer
     {
-        private static readonly Dictionary<int, string> _upperCaseMapper = new Dictionary<int, string>()
+        private static readonly string[] _upperCaseMapper = new string[]
         {
-            { LogLevel.Trace.Ordinal, LogLevel.Trace.ToString().ToUpperInvariant() },
-            { LogLevel.Debug.Ordinal, LogLevel.Debug.ToString().ToUpperInvariant() },
-            { LogLevel.Info.Ordinal, LogLevel.Info.ToString().ToUpperInvariant() },
-            { LogLevel.Warn.Ordinal, LogLevel.Warn.ToString().ToUpperInvariant() },
-            { LogLevel.Error.Ordinal, LogLevel.Error.ToString().ToUpperInvariant() },
-            { LogLevel.Fatal.Ordinal, LogLevel.Fatal.ToString().ToUpperInvariant() },
-            { LogLevel.Off.Ordinal, LogLevel.Off.ToString().ToUpperInvariant() },
+            LogLevel.Trace.ToString().ToUpperInvariant(),
+            LogLevel.Debug.ToString().ToUpperInvariant(),
+            LogLevel.Info.ToString().ToUpperInvariant(),
+            LogLevel.Warn.ToString().ToUpperInvariant(),
+            LogLevel.Error.ToString().ToUpperInvariant(),
+            LogLevel.Fatal.ToString().ToUpperInvariant(),
+            LogLevel.Off.ToString().ToUpperInvariant(),
         };
 
         /// <summary>
         /// Gets or sets a value indicating the output format of the level.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(LevelFormat.Name)]
-        public LevelFormat Format { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public LevelFormat Format { get; set; } = LevelFormat.Name;
 
         /// <summary>
         /// Gets or sets a value indicating whether upper case conversion should be applied.
         /// </summary>
         /// <value>A value of <c>true</c> if upper case conversion should be applied otherwise, <c>false</c>.</value>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Layout Options' order='10' />
         public bool Uppercase { get; set; }
 
         /// <inheritdoc/>
@@ -90,30 +86,57 @@ namespace NLog.LayoutRenderers
                     builder.AppendInvariant(level.Ordinal);
                     break;
                 case LevelFormat.FullName:
-                    if (level == LogLevel.Info)
-                        builder.Append(Uppercase ? "INFORMATION" : "Information");
-                    else if (level == LogLevel.Warn)
-                        builder.Append(Uppercase ? "WARNING" : "Warning");
-                    else
-                        builder.Append(Uppercase ? GetUpperCaseString(level) : level.ToString());
+                    builder.Append(GetFullNameString(level));
+                    break;
+                case LevelFormat.TriLetter:
+                    builder.Append(GetTriLetterString(level));
                     break;
             }
         }
 
-        private string GetUpperCaseString(LogLevel level)
+        private static string GetUpperCaseString(LogLevel level)
         {
-            _upperCaseMapper.TryGetValue(level.Ordinal, out var uppercaseString);
-            return uppercaseString ?? level.ToString().ToUpperInvariant();
+            try
+            {
+                return _upperCaseMapper[level.Ordinal];
+            }
+            catch (IndexOutOfRangeException)
+            {
+                return level.ToString().ToUpperInvariant();
+            }
         }
 
-        /// <inheritdoc/>
+        private string GetFullNameString(LogLevel level)
+        {
+            if (level == LogLevel.Info)
+                return Uppercase ? "INFORMATION" : "Information";
+            if (level == LogLevel.Warn)
+                return Uppercase ? "WARNING" : "Warning";
+            
+            return Uppercase ? GetUpperCaseString(level) : level.ToString();
+        }
+
+        private string GetTriLetterString(LogLevel level)
+        {
+            if (level == LogLevel.Debug)
+                return Uppercase ? "DBG" : "Dbg";
+            if (level == LogLevel.Info)
+                return Uppercase ? "INF" : "Inf";
+            if (level == LogLevel.Warn)
+                return Uppercase ? "WRN" : "Wrn";
+            if (level == LogLevel.Error)
+                return Uppercase ? "ERR" : "Err";
+            if (level == LogLevel.Fatal)
+                return Uppercase ? "FTL" : "Ftl";
+            return Uppercase ? "TRC" : "Trc";
+        }
+
         bool IRawValue.TryGetRawValue(LogEventInfo logEvent, out object value)
         {
             value = GetValue(logEvent);
             return true;
         }
 
-        /// <inheritdoc/>
         string IStringValueRenderer.GetFormattedString(LogEventInfo logEvent)
         {
             if (Format == LevelFormat.Name)

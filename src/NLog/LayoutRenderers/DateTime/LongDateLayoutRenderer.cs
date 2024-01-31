@@ -34,7 +34,6 @@
 namespace NLog.LayoutRenderers
 {
     using System;
-    using System.ComponentModel;
     using System.Text;
     using NLog.Config;
     using NLog.Internal;
@@ -44,21 +43,16 @@ namespace NLog.LayoutRenderers
     /// </summary>
     [LayoutRenderer("longdate")]
     [ThreadAgnostic]
-    [ThreadSafe]
     public class LongDateLayoutRenderer : LayoutRenderer, IRawValue
     {
         /// <summary>
         /// Gets or sets a value indicating whether to output UTC time instead of local time.
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
-        [DefaultValue(false)]
-        public bool UniversalTime { get; set; }
+        /// <docgen category='Layout Options' order='10' />
+        public bool UniversalTime { get => _universalTime ?? false; set => _universalTime = value; }
+        private bool? _universalTime;
 
-        /// <summary>
-        /// Renders the date in the long format (yyyy-MM-dd HH:mm:ss.ffff) and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             DateTime dt = GetValue(logEvent);
@@ -88,12 +82,15 @@ namespace NLog.LayoutRenderers
 
         private DateTime GetValue(LogEventInfo logEvent)
         {
-            DateTime dt = logEvent.TimeStamp;
-            if (UniversalTime)
+            DateTime timestamp = logEvent.TimeStamp;
+            if (_universalTime.HasValue)
             {
-                dt = dt.ToUniversalTime();
+                if (_universalTime.Value)
+                    timestamp = timestamp.ToUniversalTime();
+                else
+                    timestamp = timestamp.ToLocalTime();
             }
-            return dt;
+            return timestamp;
         }
     }
 }

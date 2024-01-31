@@ -36,7 +36,6 @@ using JetBrains.Annotations;
 namespace NLog.UnitTests
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using Xunit;
@@ -93,62 +92,36 @@ namespace NLog.UnitTests
         }
 
         [Fact]
-        public void ThrowExceptionsTest()
-        {
-            FileTarget ft = new FileTarget();
-            ft.FileName = ""; // invalid file name
-            SimpleConfigurator.ConfigureForTargetLogging(ft);
-
-            using (new NoThrowNLogExceptions())
-            {
-                LogManager.GetLogger("A").Info("a");
-                LogManager.ThrowExceptions = true;
-                try
-                {
-                    LogManager.GetLogger("A").Info("a");
-                    Assert.True(false, "Should not be reached.");
-                }
-                catch
-                {
-                    Assert.True(true);
-                }
-            }
-        }
-
-        [Fact(Skip="Side effects to other unit tests.")]
         public void GlobalThresholdTest()
         {
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
                 <nlog globalThreshold='Info'>
                     <targets><target name='debug' type='Debug' layout='${message}' /></targets>
                     <rules>
                         <logger name='*' minlevel='Debug' writeTo='debug' />
                     </rules>
-                </nlog>");
+                </nlog>").LogFactory;
 
-            Assert.Equal(LogLevel.Info, LogManager.GlobalThreshold);
+            Assert.Equal(LogLevel.Info, logFactory.GlobalThreshold);
 
             // nothing gets logged because of globalThreshold
-            LogManager.GetLogger("A").Debug("xxx");
-            AssertDebugLastMessage("debug", "");
+            logFactory.GetLogger("A").Debug("xxx");
+            logFactory.AssertDebugLastMessage("debug", "");
 
             // lower the threshold
-            LogManager.GlobalThreshold = LogLevel.Trace;
+            logFactory.GlobalThreshold = LogLevel.Trace;
 
-            LogManager.GetLogger("A").Debug("yyy");
-            AssertDebugLastMessage("debug", "yyy");
+            logFactory.GetLogger("A").Debug("yyy");
+            logFactory.AssertDebugLastMessage("debug", "yyy");
 
             // raise the threshold
-            LogManager.GlobalThreshold = LogLevel.Info;
+            logFactory.GlobalThreshold = LogLevel.Info;
 
             // this should be yyy, meaning that the target is in place
             // only rules have been modified.
 
-            LogManager.GetLogger("A").Debug("zzz");
-            AssertDebugLastMessage("debug", "yyy");
-
-            LogManager.Shutdown();
-            LogManager.Configuration = null;
+            logFactory.GetLogger("A").Debug("zzz");
+            logFactory.AssertDebugLastMessage("debug", "yyy");
         }
 
         [Fact]
@@ -269,10 +242,10 @@ namespace NLog.UnitTests
             }
         }
 
-        private void OnConfigReloaded(object sender, LoggingConfigurationReloadedEventArgs e)
+        private void OnConfigReloaded(object sender, LoggingConfigurationChangedEventArgs e)
         {
-            Console.WriteLine("OnConfigReloaded success={0}", e.Succeeded);
-            _reloadCounter++;
+            ++_reloadCounter;
+            Console.WriteLine("OnConfigReloaded triggered: {0}", _reloadCounter);
         }
 
         [Fact]
@@ -292,7 +265,7 @@ namespace NLog.UnitTests
                 try
                 {
                     _reloadCounter = 0;
-                    LogManager.ConfigurationReloaded += OnConfigReloaded;
+                    LogManager.ConfigurationChanged += OnConfigReloaded;
                     using (StreamWriter fs = File.CreateText(fileName))
                     {
                         fs.Write(@"<nlog autoReload='true'>
@@ -322,7 +295,7 @@ namespace NLog.UnitTests
                     }
 
                     InternalLogger.Info("Rewritten.");
-                    WaitForConfigReload(1);
+                    WaitForConfigReload(2);
 
                     logger.Debug("aaa");
                     AssertDebugLastMessage("debug", "xxx aaa");
@@ -338,7 +311,7 @@ namespace NLog.UnitTests
                 </nlog>");
                     }
 
-                    WaitForConfigReload(2);
+                    WaitForConfigReload(3);
                     logger.Debug("bbb");
                     AssertDebugLastMessage("debug", "xxx bbb");
 
@@ -352,14 +325,14 @@ namespace NLog.UnitTests
                     </rules>
                 </nlog>");
                     }
-                    WaitForConfigReload(3);
+                    WaitForConfigReload(4);
                     logger.Debug("ccc");
                     AssertDebugLastMessage("debug", "zzz ccc");
 
                 }
                 finally
                 {
-                    LogManager.ConfigurationReloaded -= OnConfigReloaded;
+                    LogManager.ConfigurationChanged -= OnConfigReloaded;
                     if (File.Exists(fileName))
                         File.Delete(fileName);
                 }
@@ -394,8 +367,8 @@ namespace NLog.UnitTests
 
         private abstract class ImAAbstractClass
         {
-            public Logger Logger { get; private set; }
-            public Logger LoggerType { get; private set; }
+            public virtual Logger Logger { get; private set; }
+            public virtual Logger LoggerType { get; private set; }
 
             public string BaseName => typeof(ImAAbstractClass).FullName;
 
@@ -405,20 +378,27 @@ namespace NLog.UnitTests
             protected ImAAbstractClass()
             {
                 Logger = LogManager.GetCurrentClassLogger();
-                LoggerType = LogManager.GetCurrentClassLogger(typeof(Logger));
+                LoggerType = LogManager.LogFactory.GetCurrentClassLogger<MyLogger>();
             }
 
             protected ImAAbstractClass(string param1, Func<string> param2)
             {
+                if (string.IsNullOrEmpty(param1))
+                    throw new ArgumentException(param2?.Invoke() ?? nameof(param1));
+
                 Logger = LogManager.GetCurrentClassLogger();
-                LoggerType = LogManager.GetCurrentClassLogger(typeof(Logger));
+                LoggerType = LogManager.LogFactory.GetCurrentClassLogger<MyLogger>();
+            }
+
+            class MyLogger : Logger
+            {
             }
         }
 
         private class InheritedFromAbstractClass : ImAAbstractClass
         {
-            public Logger LoggerInherited = LogManager.GetCurrentClassLogger();
-            public Logger LoggerTypeInherited = LogManager.GetCurrentClassLogger(typeof(Logger));
+            public readonly Logger LoggerInherited = LogManager.GetCurrentClassLogger();
+            public readonly Logger LoggerTypeInherited = LogManager.LogFactory.GetCurrentClassLogger<MyLogger>();
 
             public string InheritedName => GetType().FullName;
 
@@ -429,6 +409,12 @@ namespace NLog.UnitTests
 
             public InheritedFromAbstractClass(string param1, Func<string> param2)
                 : base(param1, param2)
+            {
+                if (string.IsNullOrEmpty(param1))
+                    throw new ArgumentException(param2?.Invoke() ?? nameof(param1));
+            }
+
+            class MyLogger : Logger
             {
             }
         }
@@ -455,6 +441,8 @@ namespace NLog.UnitTests
             var instance = new InheritedFromAbstractClass("Hello", null);
             Assert.Equal(instance.BaseName, instance.Logger.Name);
             Assert.Equal(instance.BaseName, instance.LoggerType.Name);
+            Assert.Equal(instance.InheritedName, instance.LoggerInherited.Name);
+            Assert.Equal(instance.InheritedName, instance.LoggerTypeInherited.Name);
         }
 
         /// <summary>
@@ -469,6 +457,7 @@ namespace NLog.UnitTests
         /// ImNotALogger inherits not from Logger , but should not throw an exception
         /// </summary>
         [Fact]
+        [Obsolete("Replaced by LogFactory.GetLogger<T>(). Marked obsolete on NLog 5.2")]
         public void GetLogger_wrong_loggertype_should_continue()
         {
             using (new NoThrowNLogExceptions())
@@ -482,6 +471,7 @@ namespace NLog.UnitTests
         /// ImNotALogger inherits not from Logger , but should not throw an exception
         /// </summary>
         [Fact]
+        [Obsolete("Replaced by LogFactory.GetLogger<T>(). Marked obsolete on NLog 5.2")]
         public void GetLogger_wrong_loggertype_should_continue_even_if_class_is_static()
         {
             using (new NoThrowNLogExceptions())

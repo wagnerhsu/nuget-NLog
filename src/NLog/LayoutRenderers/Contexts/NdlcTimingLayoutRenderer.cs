@@ -35,39 +35,34 @@ namespace NLog.LayoutRenderers
 {
     using System;
     using System.Text;
-    using NLog.Config;
 
     /// <summary>
-    /// <see cref="NestedDiagnosticsLogicalContext"/> Timing Renderer (Async scope)
+    /// Obsolete and replaced by <see cref="ScopeContextTimingLayoutRenderer"/> with NLog v5.
+    /// Render Nested Diagnostic Context (NDLC) timings from <see cref="NestedDiagnosticsLogicalContext"/>
     /// </summary>
     [LayoutRenderer("ndlctiming")]
-    [ThreadSafe]
     [Obsolete("Replaced by ScopeContextTimingLayoutRenderer ${scopetiming}. Marked obsolete on NLog 5.0")]
     public class NdlcTimingLayoutRenderer : LayoutRenderer
     {
         /// <summary>
         /// Gets or sets whether to only include the duration of the last scope created
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public bool CurrentScope { get; set; }
 
         /// <summary>
         /// Gets or sets whether to just display the scope creation time, and not the duration
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public bool ScopeBeginTime { get; set; }
 
         /// <summary>
         /// Gets or sets the TimeSpan format. Can be any argument accepted by TimeSpan.ToString(format).
         /// </summary>
-        /// <docgen category='Rendering Options' order='10' />
+        /// <docgen category='Layout Options' order='10' />
         public string Format { get; set; }
 
-        /// <summary>
-        /// Renders the timing details of the Nested Logical Context item and appends it to the specified <see cref="StringBuilder" />.
-        /// </summary>
-        /// <param name="builder">The <see cref="StringBuilder"/> to append the rendered data to.</param>
-        /// <param name="logEvent">Logging event.</param>
+        /// <inheritdoc/>
         protected override void Append(StringBuilder builder, LogEventInfo logEvent)
         {
             TimeSpan? scopeDuration = CurrentScope ? ScopeContext.PeekInnerNestedDuration() : ScopeContext.PeekOuterNestedDuration();

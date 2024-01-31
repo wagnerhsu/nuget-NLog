@@ -31,15 +31,14 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using NLog.Config;
-
 namespace NLog.UnitTests.Config
 {
     using System;
-    using Time;
+    using NLog.Config;
+    using NLog.Time;
     using Xunit;
     
-    public class TimeConfigurationTests : NLogTestBase, IDisposable
+    public sealed class TimeConfigurationTests : NLogTestBase, IDisposable
     {
         public void Dispose()
         {
@@ -78,7 +77,7 @@ namespace NLog.UnitTests.Config
             TestTimeSourceConfiguration<FastUtcTimeSource>("FastUTC");
         }
 
-        void TestTimeSourceConfiguration<T>(string type)
+        private static void TestTimeSourceConfiguration<T>(string type)
             where T : TimeSource
         {
             Assert.IsType<FastLocalTimeSource>(TimeSource.Current);

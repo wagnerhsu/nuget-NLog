@@ -61,21 +61,18 @@ namespace NLog.Conditions
         /// <value>The layout.</value>
         public Layout Layout => _simpleLayout;
 
-        /// <summary>
-        /// Returns a string representation of this expression.
-        /// </summary>
-        /// <returns>String literal in single quotes.</returns>
+        /// <inheritdoc/>
         public override string ToString()
         {
             return $"'{_simpleLayout.ToString()}'";
         }
 
         /// <summary>
-        /// Evaluates the expression by calculating the value
-        /// of the layout in the specified evaluation context.
+        /// Evaluates the expression by rendering the formatted output from
+        /// the <see cref="Layout"/>
         /// </summary>
         /// <param name="context">Evaluation context.</param>
-        /// <returns>The value of the layout.</returns>
+        /// <returns>The output rendered from the layout.</returns>
         protected override object EvaluateNode(LogEventInfo context)
         {
             if (_simpleLayout.IsSimpleStringText || !_simpleLayout.ThreadAgnostic)
@@ -84,7 +81,7 @@ namespace NLog.Conditions
             var stringBuilder = System.Threading.Interlocked.Exchange(ref _fastObjectPool, null) ?? new StringBuilder();
             try
             {
-                _simpleLayout.RenderAppendBuilder(context, stringBuilder);
+                _simpleLayout.Render(context, stringBuilder);
                 return stringBuilder.ToString();
             }
             finally

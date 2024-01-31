@@ -38,13 +38,16 @@ using System.Reflection;
 namespace NLog.Config
 {
     /// <summary>
-    /// An assembly is trying to load. 
+    /// Obsolete since dynamic assembly loading is not compatible with publish as trimmed application.
+    /// Event notification about trying to load assembly with NLog extensions.
     /// </summary>
+    [Obsolete("Instead use RegisterType<T>, as dynamic Assembly loading will be moved out. Marked obsolete with NLog v5.2")]
     public class AssemblyLoadingEventArgs : CancelEventArgs
-    {/// <summary>
-     /// New event args
-     /// </summary>
-     /// <param name="assembly"></param>
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AssemblyLoadingEventArgs" /> class.
+        /// </summary>
+        /// <param name="assembly">Assembly that have been loaded</param>
         public AssemblyLoadingEventArgs(Assembly assembly)
         {
             Assembly = assembly;
@@ -53,6 +56,6 @@ namespace NLog.Config
         /// <summary>
         /// The assembly that is trying to load.
         /// </summary>
-        public Assembly Assembly { get; private set; }
+        public Assembly Assembly { get; }
     }
 }

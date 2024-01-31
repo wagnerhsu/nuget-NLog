@@ -31,11 +31,12 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
+#if !NETSTANDARD1_3
+
 namespace NLog.Targets
 {
-    using System.ComponentModel;
-    using Conditions;
-    using Config;
+    using NLog.Conditions;
+    using NLog.Config;
 
     /// <summary>
     /// The row-highlighting condition.
@@ -43,14 +44,6 @@ namespace NLog.Targets
     [NLogConfigurationItem]
     public class ConsoleRowHighlightingRule
     {
-        /// <summary>
-        /// Initializes static members of the ConsoleRowHighlightingRule class.
-        /// </summary>
-        static ConsoleRowHighlightingRule()
-        {
-            Default = new ConsoleRowHighlightingRule(null, ConsoleOutputColor.NoChange, ConsoleOutputColor.NoChange);
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ConsoleRowHighlightingRule" /> class.
         /// </summary>
@@ -75,27 +68,25 @@ namespace NLog.Targets
         /// <summary>
         /// Gets the default highlighting rule. Doesn't change the color.
         /// </summary>
-        public static ConsoleRowHighlightingRule Default { get; private set; }
+        public static ConsoleRowHighlightingRule Default { get; } = new ConsoleRowHighlightingRule(null, ConsoleOutputColor.NoChange, ConsoleOutputColor.NoChange);
 
         /// <summary>
         /// Gets or sets the condition that must be met in order to set the specified foreground and background color.
         /// </summary>
-        /// <docgen category='Rule Matching Options' order='10' />
+        /// <docgen category='Highlighting Rules' order='10' />
         [RequiredParameter]
         public ConditionExpression Condition { get; set; }
 
         /// <summary>
         /// Gets or sets the foreground color.
         /// </summary>
-        /// <docgen category='Formatting Options' order='10' />
-        [DefaultValue("NoChange")]
+        /// <docgen category='Highlighting Rules' order='10' />
         public ConsoleOutputColor ForegroundColor { get; set; }
 
         /// <summary>
         /// Gets or sets the background color.
         /// </summary>
-        /// <docgen category='Formatting Options' order='10' />
-        [DefaultValue("NoChange")]
+        /// <docgen category='Highlighting Rules' order='10' />
         public ConsoleOutputColor BackgroundColor { get; set; }
 
         /// <summary>
@@ -110,7 +101,9 @@ namespace NLog.Targets
         /// </returns>
         public bool CheckCondition(LogEventInfo logEvent)
         {
-            return Condition == null || true.Equals(Condition.Evaluate(logEvent));
+            return Condition is null || true.Equals(Condition.Evaluate(logEvent));
         }
     }
 }
+
+#endif

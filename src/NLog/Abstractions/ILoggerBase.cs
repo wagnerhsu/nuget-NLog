@@ -81,7 +81,7 @@ namespace NLog
         /// <summary>
         /// Writes the specified diagnostic message.
         /// </summary>
-        /// <param name="wrapperType">The name of the type that wraps Logger.</param>
+        /// <param name="wrapperType">Type of custom Logger wrapper.</param>
         /// <param name="logEvent">Log event.</param>
         void Log(Type wrapperType, LogEventInfo logEvent);
 
@@ -113,13 +113,14 @@ namespace NLog
         void Log(LogLevel level, LogMessageGenerator messageFunc);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the specified level.
+        /// Obsolete and replaced by <see cref="Log(LogLevel, Exception, string, object[])"/> - Writes the diagnostic message and exception at the specified level.
         /// </summary>
         /// <param name="level">The log level.</param>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Log(LogLevel level, Exception exception, [Localizable(false)] string message, params object[] args) instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Log(LogLevel level, Exception exception, [Localizable(false)] string message, params object[] args) instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void LogException(LogLevel level, [Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -130,7 +131,7 @@ namespace NLog
         /// <param name="args">Arguments to format.</param>
         /// <param name="exception">An exception to be logged.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log(LogLevel level, Exception exception, [Localizable(false)] string message, params object[] args);
+        void Log(LogLevel level, Exception exception, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message and exception at the specified level.
@@ -141,7 +142,7 @@ namespace NLog
         /// <param name="args">Arguments to format.</param>
         /// <param name="exception">An exception to be logged.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log(LogLevel level, Exception exception, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Log(LogLevel level, Exception exception, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified parameters and formatting them with the supplied format provider.
@@ -151,7 +152,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log(LogLevel level, IFormatProvider formatProvider, [Localizable(false)] string message, params object[] args);
+        void Log(LogLevel level, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level.
@@ -167,16 +168,17 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing format items.</param>
         /// <param name="args">Arguments to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log(LogLevel level, [Localizable(false)] string message, params object[] args);
+        void Log(LogLevel level, [Localizable(false)][StructuredMessageTemplate] string message, params object[] args);
 
         /// <summary>
-        /// Writes the diagnostic message and exception at the specified level.
+        /// Obsolete and replaced by <see cref="Log(LogLevel, Exception, string, object[])"/> - Writes the diagnostic message and exception at the specified level.
         /// </summary>
         /// <param name="level">The log level.</param>
         /// <param name="message">A <see langword="string" /> to be written.</param>
         /// <param name="exception">An exception to be logged.</param>
         /// <remarks>This method was marked as obsolete before NLog 4.3.11 and it may be removed in a future release.</remarks>
-        [Obsolete("Use Log(LogLevel level, Exception exception, [Localizable(false)] string message, params object[] args) instead. Marked obsolete before v4.3.11")]
+        [Obsolete("Use Log(LogLevel level, Exception exception, [Localizable(false)] string message, params object[] args) instead. Marked obsolete with v4.3.11")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         void Log(LogLevel level, [Localizable(false)] string message, Exception exception);
 
         /// <summary>
@@ -188,7 +190,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)] string message, TArgument argument);
+        void Log<TArgument>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified parameter.
@@ -198,7 +200,7 @@ namespace NLog
         /// <param name="message">A <see langword="string" /> containing one format item.</param>
         /// <param name="argument">The argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument>(LogLevel level, [Localizable(false)] string message, TArgument argument);
+        void Log<TArgument>(LogLevel level, [Localizable(false)][StructuredMessageTemplate] string message, TArgument argument);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified arguments formatting it with the supplied format provider.
@@ -211,7 +213,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument1, TArgument2>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Log<TArgument1, TArgument2>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified parameters.
@@ -223,7 +225,7 @@ namespace NLog
         /// <param name="argument1">The first argument to format.</param>
         /// <param name="argument2">The second argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument1, TArgument2>(LogLevel level, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2);
+        void Log<TArgument1, TArgument2>(LogLevel level, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified arguments formatting it with the supplied format provider.
@@ -238,7 +240,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument1, TArgument2, TArgument3>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Log<TArgument1, TArgument2, TArgument3>(LogLevel level, IFormatProvider formatProvider, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         /// <summary>
         /// Writes the diagnostic message at the specified level using the specified parameters.
@@ -252,7 +254,7 @@ namespace NLog
         /// <param name="argument2">The second argument to format.</param>
         /// <param name="argument3">The third argument to format.</param>
         [MessageTemplateFormatMethod("message")]
-        void Log<TArgument1, TArgument2, TArgument3>(LogLevel level, [Localizable(false)] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
+        void Log<TArgument1, TArgument2, TArgument3>(LogLevel level, [Localizable(false)][StructuredMessageTemplate] string message, TArgument1 argument1, TArgument2 argument2, TArgument3 argument3);
 
         #endregion
     }

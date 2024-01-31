@@ -34,7 +34,6 @@
 namespace NLog.UnitTests
 {
     using System;
-    using System.Collections.Generic;
     using System.IO;
     using System.Threading;
     using NLog.Config;
@@ -46,7 +45,7 @@ namespace NLog.UnitTests
         public void Flush_DoNotThrowExceptionsAndTimeout_DoesNotThrow()
         {
             // Arrange
-            LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString($@"
+            var logFactory = new LogFactory().Setup().LoadConfigurationFromXml($@"
             <nlog throwExceptions='false'>
                 <targets>
                     <target type='BufferingWrapper' name='test'>
@@ -56,9 +55,9 @@ namespace NLog.UnitTests
                 <rules>
                     <logger name='*' minlevel='Debug' writeto='test'></logger>
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
 
-            Logger logger = LogManager.GetCurrentClassLogger();
+            Logger logger = logFactory.GetCurrentClassLogger();
             logger.Info("Prepare Timeout");
 
             Exception timeoutException = null;
@@ -78,13 +77,14 @@ namespace NLog.UnitTests
         {
             using (new NoThrowNLogExceptions())
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString($@"
+                var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog internalLogIncludeTimestamp='IamNotBooleanValue'>
                 <targets><target type='Debug' name='test' /></targets>
                 <rules>
                     <logger name='*' minlevel='Debug' writeto='test'></logger>
                 </rules>
-            </nlog>");
+            </nlog>").LogFactory;
+                Assert.NotNull(logFactory.Configuration);
             }
         }
 
@@ -94,9 +94,7 @@ namespace NLog.UnitTests
             Boolean ExceptionThrown = false;
             try
             {
-                LogManager.ThrowExceptions = true;
-
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString($@"
+                new LogFactory().Setup().LoadConfigurationFromXml(@"
             <nlog internalLogIncludeTimestamp='IamNotBooleanValue'>
                 <targets><target type='Debug' name='test' /></targets>
                 <rules>
@@ -113,6 +111,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void Configuration_InaccessibleNLog_doesNotThrowException()
         {
             string tempDirectory = null;
@@ -141,6 +140,7 @@ namespace NLog.UnitTests
         }
 
         [Fact]
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         public void LoadConfiguration_InaccessibleNLog_throwException()
         {
             string tempDirectory = null;
@@ -173,6 +173,7 @@ namespace NLog.UnitTests
             return new FileStream(configFile, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
         }
 
+        [Obsolete("Replaced by LogFactory.Setup().LoadConfigurationFromFile(). Marked obsolete on NLog 5.2")]
         private static LogFactory CreateEmptyNLogFile(out string tempDirectory, out string filePath)
         {
             tempDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
@@ -287,41 +288,14 @@ namespace NLog.UnitTests
         {
             using (new NoThrowNLogExceptions())
             {
-                LogManager.Configuration = XmlLoggingConfiguration.CreateFromXmlString(@"
+                var logFactory = new LogFactory().Setup().LoadConfigurationFromXml(@"
                 <nlog imAnewAttribute='noError'>
                     <targets><target type='file' name='f1' filename='test.log' /></targets>
                     <rules>
                         <logger name='*' minlevel='Debug' writeto='f1'></logger>
                     </rules>
-                </nlog>");
-            }
-        }
-
-        [Fact]
-        public void ValueWithVariableMustNotCauseInfiniteRecursion()
-        {
-            LogManager.Configuration = null;
-
-            var filename = "NLog.config";
-            File.WriteAllText(filename, @"
-            <nlog>
-                <variable name='dir' value='c:\mylogs' />
-                <targets>
-                    <target name='f' type='file' fileName='${var:dir}\test.log' />
-                </targets>
-                <rules>
-                    <logger name='*' writeTo='f' />
-                </rules>
-            </nlog>");
-            try
-            {
-                var x = LogManager.Configuration;
-                //2nd call
-                var config = new XmlLoggingConfiguration(filename);
-            }
-            finally
-            {
-                File.Delete(filename);
+                </nlog>").LogFactory;
+                Assert.NotNull(logFactory.Configuration);
             }
         }
 
@@ -377,6 +351,33 @@ namespace NLog.UnitTests
             {
                 Thread.Sleep(5000);
             }
+        }
+
+        [Fact]
+        public void PurgeObsoleteLoggersTest()
+        {
+            var factory = new LogFactory();
+            var logger = GetWeakReferenceToTemporaryLogger(factory);
+            Assert.NotNull(logger);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            factory.ReconfigExistingLoggers(true);
+            var loggerKeysCount = factory.ResetLoggerCache();
+            Assert.Equal(0, loggerKeysCount);
+
+            logger = GetWeakReferenceToTemporaryLogger(factory);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            factory.ReconfigExistingLoggers();
+            factory.ReconfigExistingLoggers(false);
+            loggerKeysCount = factory.ResetLoggerCache();
+            Assert.Equal(1, loggerKeysCount);
+        }
+
+        static WeakReference GetWeakReferenceToTemporaryLogger(LogFactory factory)
+        {
+            string uniqueLoggerName = Guid.NewGuid().ToString();
+            return new WeakReference(factory.GetLogger(uniqueLoggerName));
         }
     }
 }

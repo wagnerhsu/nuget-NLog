@@ -56,6 +56,9 @@ namespace NLog.Targets
     /// <summary>
     /// Writes log messages to one or more files.
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/nlog/nlog/wiki/File-target">See NLog Wiki</a>
+    /// </remarks>
     /// <seealso href="https://github.com/nlog/nlog/wiki/File-target">Documentation on NLog Wiki</seealso>
     [Target("File")]
     public class FileTarget : TargetWithLayoutHeaderAndFooter, ICreateFileParameters
@@ -65,12 +68,6 @@ namespace NLog.Targets
         /// </summary>
         /// <remarks>Clean up period is defined in days.</remarks>
         private const int InitializedFilesCleanupPeriod = 2;
-
-        /// <summary>
-        /// The maximum number of initialized files before clean up procedures are initiated,
-        /// to keep the number of initialized files to a minimum. Chose 25 to cater for monthly rolling of log-files.
-        /// </summary>
-        private const int InitializedFilesCounterMax = 25;
 
         /// <summary>
         /// This value disables file archiving based on the size. 
@@ -137,9 +134,8 @@ namespace NLog.Targets
         private string _previousLogFileName;
 
         private bool _concurrentWrites;
-        private bool _keepFileOpen;
         private bool _cleanupFileName;
-        private FilePathKind _fileNameKind;
+        private FilePathKind _fileNameKind = FilePathKind.Unknown;
         private FilePathKind _archiveFileKind;
 
         /// <summary>
@@ -158,28 +154,11 @@ namespace NLog.Targets
             _maxArchiveFiles = 0;
             _maxArchiveDays = 0;
 
-            ConcurrentWriteAttemptDelay = 1;
             ArchiveEvery = FileArchivePeriod.None;
             ArchiveAboveSize = ArchiveAboveSizeDisabled;
-            ArchiveOldFileOnStartupAboveSize = 0;
-            ConcurrentWriteAttempts = 10;
-            ConcurrentWrites = false;
-            Encoding = Encoding.UTF8;
-            BufferSize = 32768;
-            AutoFlush = true;
-            FileAttributes = Win32FileAttributes.Normal;
-            LineEnding = LineEndingMode.Default;
-            EnableFileDelete = true;
-            OpenFileCacheTimeout = -1;
-            OpenFileCacheSize = 5;
-            CreateDirs = true;
-            ForceManaged = false;
-            ArchiveDateFormat = string.Empty;
+            _cleanupFileName = true;
 
             _fileAppenderCache = fileAppenderCache;
-            CleanupFileName = true;
-
-            WriteFooterOnArchivingOnly = false;
         }
 
 #if !NET35 && !NET40
@@ -215,7 +194,7 @@ namespace NLog.Targets
         /// All <c>Debug</c> messages will go to <c>Debug.log</c>, all <c>Info</c> messages will go to <c>Info.log</c> and so on.
         /// You can combine as many of the layout renderers as you want to produce an arbitrary log file name.
         /// </example>
-        /// <docgen category='Output Options' order='1' />
+        /// <docgen category='General Options' order='2' />
         [RequiredParameter]
         public Layout FileName
         {
@@ -232,7 +211,7 @@ namespace NLog.Targets
 
         private FilePathLayout CreateFileNameLayout(Layout value)
         {
-            if (value == null)
+            if (value is null)
                 return null;
 
             return new FilePathLayout(value, CleanupFileName, FileNameKind);
@@ -242,8 +221,7 @@ namespace NLog.Targets
         /// Cleanup invalid values in a filename, e.g. slashes in a filename. If set to <c>true</c>, this can impact the performance of massive writes. 
         /// If set to <c>false</c>, nothing gets written when the filename is wrong.
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(true)]
+        /// <docgen category='Output Options' order='100' />
         public bool CleanupFileName
         {
             get => _cleanupFileName;
@@ -262,8 +240,7 @@ namespace NLog.Targets
         /// <summary>
         /// Is the  <see cref="FileName"/> an absolute or relative path?
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(FilePathKind.Unknown)]
+        /// <docgen category='Output Options' order='100' />
         public FilePathKind FileNameKind
         {
             get => _fileNameKind;
@@ -273,6 +250,7 @@ namespace NLog.Targets
                 {
                     _fileNameKind = value;
                     _fullFileName = CreateFileNameLayout(FileName);
+                    _fullArchiveFileName = CreateFileNameLayout(ArchiveFileName);
                     ResetFileAppenders("FileNameKind Changed");
                 }
             }
@@ -285,10 +263,8 @@ namespace NLog.Targets
         /// Setting this to false may improve performance a bit, but you'll receive an error
         /// when attempting to write to a directory that's not present.
         /// </remarks>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(true)]
-        [Advanced]
-        public bool CreateDirs { get; set; }
+        /// <docgen category='Output Options' order='50' />
+        public bool CreateDirs { get; set; } = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether to delete old log file on startup.
@@ -296,26 +272,23 @@ namespace NLog.Targets
         /// <remarks>
         /// This option works only when the "FileName" parameter denotes a single file.
         /// </remarks>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Output Options' order='50' />
         public bool DeleteOldFileOnStartup { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to replace file contents on each write instead of appending log message at the end.
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(false)]
-        [Advanced]
+        /// <docgen category='Output Options' order='100' />
         public bool ReplaceFileContentsOnEachWrite { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to keep log file open instead of opening and closing it on each logging event.
         /// </summary>
         /// <remarks>
-        /// Setting this property to <c>True</c> helps improve performance.
+        /// KeepFileOpen = true gives the best performance, and ensure the file-lock is not lost to other applications.<br/>
+        /// KeepFileOpen = false gives the best compability, but slow performance and lead to file-locking issues with other applications.
         /// </remarks>
         /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(false)]
         public bool KeepFileOpen
         {
             get => _keepFileOpen;
@@ -328,40 +301,49 @@ namespace NLog.Targets
                 }
             }
         }
+        private bool _keepFileOpen = true;
 
         /// <summary>
         /// Gets or sets a value indicating whether to enable log file(s) to be deleted.
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(true)]
-        public bool EnableFileDelete { get; set; }
+        /// <docgen category='Output Options' order='50' />
+        public bool EnableFileDelete { get; set; } = true;
 
         /// <summary>
         /// Gets or sets the file attributes (Windows only).
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [Advanced]
-        public Win32FileAttributes FileAttributes { get; set; }
+        /// <docgen category='Output Options' order='100' />
+        public Win32FileAttributes FileAttributes
+        {
+            get => _fileAttributes;
+            set
+            {
+                if (value != Win32FileAttributes.Normal && PlatformDetector.IsWin32)
+                {
+                    ForceManaged = false;
+                }
+                _fileAttributes = value;
+            }
+        }
+        Win32FileAttributes _fileAttributes = Win32FileAttributes.Normal;
 
         bool ICreateFileParameters.IsArchivingEnabled => IsArchivingEnabled;
 
-        int ICreateFileParameters.FileOpenRetryCount => (!KeepFileOpen || ConcurrentWrites) ? ConcurrentWriteAttempts : 0;
+        int ICreateFileParameters.FileOpenRetryCount => ConcurrentWrites ? ConcurrentWriteAttempts : (KeepFileOpen ? 0 : (_concurrentWriteAttempts ?? 2));
 
-        int ICreateFileParameters.FileOpenRetryDelay => (!KeepFileOpen || ConcurrentWrites) ? ConcurrentWriteAttemptDelay : 1;
+        int ICreateFileParameters.FileOpenRetryDelay => ConcurrentWriteAttemptDelay;
 
         /// <summary>
         /// Gets or sets the line ending mode.
         /// </summary>
-        /// <docgen category='Layout Options' order='10' />
-        [Advanced]
-        public LineEndingMode LineEnding { get; set; }
+        /// <docgen category='Output Options' order='100' />
+        public LineEndingMode LineEnding { get; set; } = LineEndingMode.Default;
 
         /// <summary>
         /// Gets or sets a value indicating whether to automatically flush the file buffers after each log message.
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(true)]
-        public bool AutoFlush { get; set; }
+        /// <docgen category='Performance Tuning Options' order='50' />
+        public bool AutoFlush { get; set; } = true;
 
         /// <summary>
         /// Gets or sets the number of files to be kept open. Setting this to a higher value may improve performance
@@ -376,46 +358,47 @@ namespace NLog.Targets
         /// be keeping a large number of files open which consumes system resources.
         /// </remarks>
         /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(5)]
-        [Advanced]
-        public int OpenFileCacheSize { get; set; }
+        public int OpenFileCacheSize { get; set; } = 5;
 
         /// <summary>
-        /// Gets or sets the maximum number of seconds that files are kept open. If this number is negative the files are 
-        /// not automatically closed after a period of inactivity.
+        /// Gets or sets the maximum number of seconds that files are kept open. Zero or negative means disabled.
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(-1)]
-        [Advanced]
+        /// <docgen category='Performance Tuning Options' order='50' />
         public int OpenFileCacheTimeout { get; set; }
 
         /// <summary>
-        /// Gets or sets the maximum number of seconds before open files are flushed. If this number is negative or zero
-        /// the files are not flushed by timer.
+        /// Gets or sets the maximum number of seconds before open files are flushed. Zero or negative means disabled.
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
+        /// <docgen category='Performance Tuning Options' order='50' />
         public int OpenFileFlushTimeout { get; set; }
 
         /// <summary>
         /// Gets or sets the log file buffer size in bytes.
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(32768)]
-        public int BufferSize { get; set; }
+        /// <docgen category='Performance Tuning Options' order='50' />
+        public int BufferSize { get; set; } = 32768;
 
         /// <summary>
         /// Gets or sets the file encoding.
         /// </summary>
-        /// <docgen category='Layout Options' order='10' />
-        public Encoding Encoding { get; set; }
+        /// <docgen category='Output Options' order='10' />
+        public Encoding Encoding
+        {
+            get => _encoding;
+            set
+            {
+                _encoding = value;
+                if (!_writeBom.HasValue && InitialValueBom(value))
+                    _writeBom = true;
+            }
+        }
+        private Encoding _encoding = Encoding.UTF8;
 
         /// <summary>
         /// Gets or sets whether or not this target should just discard all data that its asked to write.
         /// Mostly used for when testing NLog Stack except final write
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(false)]
-        [Advanced]
+        /// <docgen category='Performance Tuning Options' order='100' />
         public bool DiscardAll { get; set; }
 
         /// <summary>
@@ -426,7 +409,6 @@ namespace NLog.Targets
         /// that lets it keep the files open for writing.
         /// </remarks>
         /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(false)]
         public bool ConcurrentWrites
         {
             get => _concurrentWrites;
@@ -446,32 +428,29 @@ namespace NLog.Targets
         /// <remarks>
         /// This effectively prevents files from being kept open.
         /// </remarks>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Performance Tuning Options' order='50' />
         public bool NetworkWrites { get; set; }
-
-        private bool? _writeBom;
 
         /// <summary>
         /// Gets or sets a value indicating whether to write BOM (byte order mark) in created files.
         ///
         /// Defaults to true for UTF-16 and UTF-32
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
+        /// <docgen category='Output Options' order='50' />
         public bool WriteBom
         {
-            get => _writeBom ?? InitialValueBom(Encoding);
+            get => _writeBom ?? false;
             set => _writeBom = value;
         }
+        private bool? _writeBom;
 
         /// <summary>
         /// Gets or sets the number of times the write is appended on the file before NLog
         /// discards the log message.
         /// </summary>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(10)]
-        [Advanced]
-        public int ConcurrentWriteAttempts { get; set; }
+        /// <docgen category='Performance Tuning Options' order='100' />
+        public int ConcurrentWriteAttempts { get => _concurrentWriteAttempts ?? 10; set => _concurrentWriteAttempts = value; }
+        private int? _concurrentWriteAttempts;
 
         /// <summary>
         /// Gets or sets the delay in milliseconds to wait before attempting to write to the file again.
@@ -490,10 +469,8 @@ namespace NLog.Targets
         /// ...<p/>
         /// and so on.
         /// </example>
-        /// <docgen category='Performance Tuning Options' order='10' />
-        [DefaultValue(1)]
-        [Advanced]
-        public int ConcurrentWriteAttemptDelay { get; set; }
+        /// <docgen category='Performance Tuning Options' order='100' />
+        public int ConcurrentWriteAttemptDelay { get; set; } = 1;
 
         /// <summary>
         /// Gets or sets a value indicating whether to archive old log file on startup.
@@ -502,14 +479,22 @@ namespace NLog.Targets
         /// This option works only when the "FileName" parameter denotes a single file.
         /// After archiving the old file, the current log file will be empty.
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Archival Options' order='50' />
         public bool ArchiveOldFileOnStartup
         {
             get => _archiveOldFileOnStartup ?? false;
             set => _archiveOldFileOnStartup = value;
         }
         private bool? _archiveOldFileOnStartup;
+
+        /// <summary>
+        /// Gets or sets whether to write the Header on initial creation of file appender, even if the file is not empty.
+        /// Default value is <see langword="false"/>, which means only write header when initial file is empty (Ex. ensures valid CSV files)
+        /// </summary>
+        /// <remarks>
+        /// Alternative use <see cref="ArchiveOldFileOnStartup"/> to ensure each application session gets individual log-file.
+        /// </remarks>
+        public bool WriteHeaderWhenInitialFileNotEmpty { get; set; }
 
         /// <summary>
         /// Gets or sets a value of the file size threshold to archive old log file on startup.
@@ -519,8 +504,7 @@ namespace NLog.Targets
         /// Default value is 0 which means that the file is archived as soon as archival on
         /// startup is enabled.
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(0)]
+        /// <docgen category='Archival Options' order='50' />
         public long ArchiveOldFileOnStartupAboveSize { get; set; }
 
         /// <summary>
@@ -529,8 +513,7 @@ namespace NLog.Targets
         /// <remarks>
         /// This option works only when the "ArchiveNumbering" parameter is set either to Date or DateAndSequence.
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue("")]
+        /// <docgen category='Archival Options' order='50' />
         public string ArchiveDateFormat
         {
             get => _archiveDateFormat;
@@ -543,7 +526,7 @@ namespace NLog.Targets
                 }
             }
         }
-        private string _archiveDateFormat;
+        private string _archiveDateFormat = string.Empty;
 
         /// <summary>
         /// Gets or sets the size in bytes above which log files will be automatically archived.
@@ -552,7 +535,7 @@ namespace NLog.Targets
         /// Notice when combined with <see cref="ArchiveNumberingMode.Date"/> then it will attempt to append to any existing
         /// archive file if grown above size multiple times. New archive file will be created when using <see cref="ArchiveNumberingMode.DateAndSequence"/>
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public long ArchiveAboveSize
         {
             get => _archiveAboveSize;
@@ -579,7 +562,7 @@ namespace NLog.Targets
         /// if the current <c>hour</c> changes from 10 to 11, the first write that will occur
         /// on or after 11:00 will trigger the archiving.
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public FileArchivePeriod ArchiveEvery
         {
             get => _archiveEvery;
@@ -596,7 +579,7 @@ namespace NLog.Targets
         /// <summary>
         /// Is the  <see cref="ArchiveFileName"/> an absolute or relative path?
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public FilePathKind ArchiveFileKind
         {
             get => _archiveFileKind;
@@ -620,14 +603,12 @@ namespace NLog.Targets
         /// the archiving strategy. The number of hash characters used determines
         /// the number of numerical digits to be used for numbering files.
         /// </remarks>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public Layout ArchiveFileName
         {
             get
             {
-                if (_fullArchiveFileName == null) return null;
-
-                return _fullArchiveFileName.GetLayout();
+                return _fullArchiveFileName?.GetLayout();
             }
             set
             {
@@ -639,8 +620,7 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the maximum number of archive files that should be kept.
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(0)]
+        /// <docgen category='Archival Options' order='50' />
         public int MaxArchiveFiles
         {
             get => _maxArchiveFiles;
@@ -657,8 +637,7 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the maximum days of archive files that should be kept.
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(0)]
+        /// <docgen category='Archival Options' order='50' />
         public int MaxArchiveDays
         {
             get => _maxArchiveDays;
@@ -675,7 +654,7 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or sets the way file archives are numbered. 
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public ArchiveNumberingMode ArchiveNumbering
         {
             get => _archiveNumbering;
@@ -696,14 +675,13 @@ namespace NLog.Targets
         /// on platforms other than .Net4.5.
         /// Defaults to ZipArchiveFileCompressor on .Net4.5 and to null otherwise.
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
+        /// <docgen category='Archival Options' order='50' />
         public static IFileCompressor FileCompressor { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to compress archive files into the zip archive format.
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Archival Options' order='50' />
         public bool EnableArchiveFileCompression
         {
             get => _enableArchiveFileCompression && FileCompressor != null;
@@ -720,24 +698,21 @@ namespace NLog.Targets
         /// <summary>
         /// Gets or set a value indicating whether a managed file stream is forced, instead of using the native implementation.
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(false)]
-        public bool ForceManaged { get; set; }
+        /// <docgen category='Output Options' order='100' />
+        public bool ForceManaged { get; set; } = true;
 
 #if SupportsMutex
         /// <summary>
         /// Gets or sets a value indicating whether file creation calls should be synchronized by a system global mutex.
         /// </summary>
-        /// <docgen category='Output Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Output Options' order='100' />
         public bool ForceMutexConcurrentWrites { get; set; }
 #endif
 
         /// <summary>
         /// Gets or sets a value indicating whether the footer should be written only when the file is archived.
         /// </summary>
-        /// <docgen category='Archival Options' order='10' />
-        [DefaultValue(false)]
+        /// <docgen category='Archival Options' order='50' />
         public bool WriteFooterOnArchivingOnly { get; set; }
 
         /// <summary>
@@ -752,32 +727,29 @@ namespace NLog.Targets
         /// </summary>
         private void RefreshArchiveFilePatternToWatch(string fileName, LogEventInfo logEvent)
         {
-            if (_fileAppenderCache != null)
-            {
-                _fileAppenderCache.CheckCloseAppenders -= AutoCloseAppendersAfterArchive;
+            _fileAppenderCache.CheckCloseAppenders -= AutoCloseAppendersAfterArchive;
 
-                bool mustWatchArchiving = IsArchivingEnabled && KeepFileOpen && ConcurrentWrites;
-                bool mustWatchActiveFile = KeepFileOpen && EnableFileDelete && !NetworkWrites && !ReplaceFileContentsOnEachWrite && !EnableFileDeleteSimpleMonitor;
-                if (mustWatchArchiving || mustWatchActiveFile)
-                {
-                    _fileAppenderCache.CheckCloseAppenders += AutoCloseAppendersAfterArchive;   // Activates FileSystemWatcher
-                }
+            bool mustWatchArchiving = IsArchivingEnabled && KeepFileOpen && ConcurrentWrites;
+            bool mustWatchActiveFile = EnableFileDelete && ((KeepFileOpen && ConcurrentWrites) || (IsSimpleKeepFileOpen && !EnableFileDeleteSimpleMonitor));
+            if (mustWatchArchiving || mustWatchActiveFile)
+            {
+                _fileAppenderCache.CheckCloseAppenders += AutoCloseAppendersAfterArchive;   // Activates FileSystemWatcher
+            }
 
 #if !NETSTANDARD1_3
-                if (mustWatchArchiving)
-                {
-                    string archiveFilePattern = GetArchiveFileNamePattern(fileName, logEvent);
-                    var fileArchiveStyle = !string.IsNullOrEmpty(archiveFilePattern) ? GetFileArchiveHelper(archiveFilePattern) : null;
-                    string fileNameMask = fileArchiveStyle != null ? _fileArchiveHelper.GenerateFileNameMask(archiveFilePattern) : string.Empty;
-                    string directoryMask = !string.IsNullOrEmpty(fileNameMask) ? Path.Combine(Path.GetDirectoryName(archiveFilePattern), fileNameMask) : string.Empty;
-                    _fileAppenderCache.ArchiveFilePatternToWatch = directoryMask;
-                }
-                else
-                {
-                    _fileAppenderCache.ArchiveFilePatternToWatch = null;
-                }
-#endif
+            if (mustWatchArchiving)
+            {
+                string archiveFilePattern = GetArchiveFileNamePattern(fileName, logEvent);
+                var fileArchiveStyle = !string.IsNullOrEmpty(archiveFilePattern) ? GetFileArchiveHelper(archiveFilePattern) : null;
+                string fileNameMask = fileArchiveStyle != null ? _fileArchiveHelper.GenerateFileNameMask(archiveFilePattern) : string.Empty;
+                string directoryMask = !string.IsNullOrEmpty(fileNameMask) ? Path.Combine(Path.GetDirectoryName(archiveFilePattern), fileNameMask) : string.Empty;
+                _fileAppenderCache.ArchiveFilePatternToWatch = directoryMask;
             }
+            else
+            {
+                _fileAppenderCache.ArchiveFilePatternToWatch = null;
+            }
+#endif
         }
 
         /// <summary>
@@ -789,7 +761,17 @@ namespace NLog.Targets
         /// </remarks>
         public void CleanupInitializedFiles()
         {
-            CleanupInitializedFiles(TimeSource.Current.Time.AddDays(-InitializedFilesCleanupPeriod));
+            try
+            {
+                CleanupInitializedFiles(TimeSource.Current.Time.AddDays(-InitializedFilesCleanupPeriod));
+            }
+            catch (Exception exception)
+            {
+                if (exception.MustBeRethrownImmediately())
+                    throw;
+
+                InternalLogger.Error(exception, "{0}: Exception in CleanupInitializedFiles", this);
+            }
         }
 
         /// <summary>
@@ -802,10 +784,7 @@ namespace NLog.Targets
         /// </remarks>
         public void CleanupInitializedFiles(DateTime cleanupThreshold)
         {
-            if (InternalLogger.IsTraceEnabled)
-            {
-                InternalLogger.Trace("{0}: Cleanup Initialized Files with cleanupThreshold {1}", this, cleanupThreshold);
-            }
+            InternalLogger.Trace("{0}: CleanupInitializedFiles with cleanupThreshold {1}", this, cleanupThreshold);
 
             List<string> filesToFinalize = null;
 
@@ -814,7 +793,7 @@ namespace NLog.Targets
             {
                 if (file.Value < cleanupThreshold)
                 {
-                    if (filesToFinalize == null)
+                    if (filesToFinalize is null)
                     {
                         filesToFinalize = new List<string>();
                     }
@@ -831,7 +810,7 @@ namespace NLog.Targets
                 }
             }
 
-            InternalLogger.Trace("{0}: CleanupInitializedFiles Done", this);
+            InternalLogger.Trace("{0}: CleanupInitializedFiles Completed and finalized {0} files", this, filesToFinalize?.Count ?? 0);
         }
 
         /// <summary>
@@ -921,7 +900,11 @@ namespace NLog.Targets
 
         private bool IsSimpleKeepFileOpen => KeepFileOpen && !ConcurrentWrites && !NetworkWrites && !ReplaceFileContentsOnEachWrite;
 
-        private bool EnableFileDeleteSimpleMonitor => EnableFileDelete && !PlatformDetector.IsWin32 && IsSimpleKeepFileOpen;
+        private bool EnableFileDeleteSimpleMonitor => EnableFileDelete && IsSimpleKeepFileOpen
+#if !NETSTANDARD
+            && !PlatformDetector.IsWin32
+#endif
+            ;
 
         bool ICreateFileParameters.EnableFileDeleteSimpleMonitor => EnableFileDeleteSimpleMonitor;
 
@@ -1025,10 +1008,11 @@ namespace NLog.Targets
         /// <returns></returns>
         internal string GetFullFileName(LogEventInfo logEvent)
         {
-            if (_fullFileName == null)
-            {
+            if (_fullFileName is null)
                 return null;
-            }
+
+            if (_fullFileName.IsFixedFilePath)
+                return _fullFileName.Render(logEvent);
 
             using (var targetBuilder = ReusableLayoutBuilder.Allocate())
             {
@@ -1050,7 +1034,7 @@ namespace NLog.Targets
         /// </remarks>
         protected override void Write(IList<AsyncLogEventInfo> logEvents)
         {
-            if (_getFullFileNameDelegate == null)
+            if (_getFullFileNameDelegate is null)
                 _getFullFileNameDelegate = c => GetFullFileName(c.LogEvent);
 
             var buckets = logEvents.BucketSort(_getFullFileNameDelegate);
@@ -1149,21 +1133,26 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="RenderFormattedMessage"/> with NLog v5.
         /// Formats the log event for write.
         /// </summary>
         /// <param name="logEvent">The log event to be formatted.</param>
         /// <returns>A string representation of the log event.</returns>
+        [Obsolete("No longer used and replaced by RenderFormattedMessage. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual string GetFormattedMessage(LogEventInfo logEvent)
         {
             return Layout.Render(logEvent);
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="RenderFormattedMessage"/> with NLog v5.
         /// Gets the bytes to be written to the file.
         /// </summary>
         /// <param name="logEvent">Log event.</param>
         /// <returns>Array of bytes that are ready to be written.</returns>
-        [Obsolete("No longer used and replaced by RenderFormattedMessageToStream. Marked obsolete on NLog 5.0")]
+        [Obsolete("No longer used and replaced by RenderFormattedMessage. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual byte[] GetBytesToWrite(LogEventInfo logEvent)
         {
             string text = GetFormattedMessage(logEvent);
@@ -1176,11 +1165,13 @@ namespace NLog.Targets
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="TransformStream"/> with NLog v5.
         /// Modifies the specified byte array before it gets sent to a file.
         /// </summary>
         /// <param name="value">The byte array.</param>
         /// <returns>The modified byte array. The function can do the modification in-place.</returns>
-        [Obsolete("No longer used and replaced by RenderFormattedMessageToStream. Marked obsolete on NLog 5.0")]
+        [Obsolete("No longer used and replaced by TransformStream. Marked obsolete on NLog 5.0")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         protected virtual byte[] TransformBytes(byte[] value)
         {
             return value;
@@ -1207,7 +1198,7 @@ namespace NLog.Targets
         /// <param name="target"><see cref="StringBuilder"/> for the result.</param>
         protected virtual void RenderFormattedMessage(LogEventInfo logEvent, StringBuilder target)
         {
-            Layout.RenderAppendBuilder(logEvent, target);
+            Layout.Render(logEvent, target);
         }
 
         private void TransformBuilderToStream(LogEventInfo logEvent, StringBuilder builder, char[] transformBuffer, MemoryStream workStream)
@@ -1262,17 +1253,14 @@ namespace NLog.Targets
             else if (EnableArchiveFileCompression)
             {
                 InternalLogger.Info("{0}: Archiving {1} to compressed {2}", this, fileName, archiveFileName);
-                if (FileCompressor is IArchiveFileCompressor archiveFileCompressor)
+                if (File.Exists(archiveFileName))
                 {
-                    string entryName = (ArchiveNumbering != ArchiveNumberingMode.Rolling) ? (Path.GetFileNameWithoutExtension(archiveFileName) + Path.GetExtension(fileName)) : Path.GetFileName(fileName);
-                    archiveFileCompressor.CompressFile(fileName, archiveFileName, entryName);
+                    InternalLogger.Warn("{0}: Failed archiving because compressed file already exists: {1}", this, archiveFileName);
                 }
                 else
                 {
-                    FileCompressor.CompressFile(fileName, archiveFileName);
+                    ArchiveFileCompress(fileName, archiveFileName);
                 }
-
-                DeleteAndWaitForFileDelete(fileName);
             }
             else
             {
@@ -1286,6 +1274,50 @@ namespace NLog.Targets
                     ArchiveFileMove(fileName, archiveFileName);
                 }
             }
+        }
+
+        private void ArchiveFileCompress(string fileName, string archiveFileName)
+        {
+            int fileCompressRetryCount = ConcurrentWrites ? ConcurrentWriteAttempts : 2;
+            for (int i = 1; i <= fileCompressRetryCount; ++i)
+            {
+                try
+                {
+                    if (FileCompressor is IArchiveFileCompressor archiveFileCompressor)
+                    {
+                        string entryName = (ArchiveNumbering != ArchiveNumberingMode.Rolling) ? (Path.GetFileNameWithoutExtension(archiveFileName) + Path.GetExtension(fileName)) : Path.GetFileName(fileName);
+                        archiveFileCompressor.CompressFile(fileName, archiveFileName, entryName);
+                    }
+                    else
+                    {
+                        FileCompressor.CompressFile(fileName, archiveFileName);
+                    }
+
+                    break;  // Success
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    throw;  // Skip retry when directory does not exist
+                }
+                catch (FileNotFoundException)
+                {
+                    throw;  // Skip retry when file does not exist
+                }
+                catch (IOException ex)
+                {
+                    if (i == fileCompressRetryCount)
+                        throw;
+
+                    if (File.Exists(archiveFileName))
+                        throw;
+
+                    int sleepTimeMs = i * 50;
+                    InternalLogger.Warn("{0}: Archiving Attempt #{1} to compress {2} to {3} failed - {4} {5}. Sleeping for {6}ms", this, i, fileName, archiveFileName, ex.GetType(), ex.Message, sleepTimeMs);
+                    AsyncHelpers.WaitForDelay(TimeSpan.FromMilliseconds(sleepTimeMs));
+                }
+            }
+
+            DeleteAndWaitForFileDelete(fileName);
         }
 
         private void ArchiveFileAppendExisting(string fileName, string archiveFileName)
@@ -1367,6 +1399,7 @@ namespace NLog.Targets
             try
             {
                 InternalLogger.Info("{0}: Deleting old archive file: '{1}'.", this, fileName);
+                CloseInvalidFileHandle(fileName);
                 File.Delete(fileName);
                 return true;
             }
@@ -1420,12 +1453,12 @@ namespace NLog.Targets
 
         /// <summary>
         /// Gets the correct formatting <see langword="String"/> to be used based on the value of <see
-        /// cref="P:ArchiveEvery"/> for converting <see langword="DateTime"/> values which will be inserting into file
+        /// cref="ArchiveEvery"/> for converting <see langword="DateTime"/> values which will be inserting into file
         /// names during archiving.
         /// 
         /// This value will be computed only when a empty value or <see langword="null"/> is passed into <paramref name="defaultFormat"/>
         /// </summary>
-        /// <param name="defaultFormat">Date format to used irrespectively of <see cref="P:ArchiveEvery"/> value.</param>
+        /// <param name="defaultFormat">Date format to used irrespectively of <see cref="ArchiveEvery"/> value.</param>
         /// <returns>Formatting <see langword="String"/> for dates.</returns>
         private string GetArchiveDateFormatString(string defaultFormat)
         {
@@ -1545,8 +1578,8 @@ namespace NLog.Targets
         /// Calculate the DateTime of the requested day of the week.
         /// </summary>
         /// <param name="previousLogEventTimestamp">The DateTime of the previous log event.</param>
-        /// <param name="dayOfWeek">The next occuring day of the week to return a DateTime for.</param>
-        /// <returns>The DateTime of the next occuring dayOfWeek.</returns>
+        /// <param name="dayOfWeek">The next occurring day of the week to return a DateTime for.</param>
+        /// <returns>The DateTime of the next occurring dayOfWeek.</returns>
         /// <remarks>For example: if previousLogEventTimestamp is Thursday 2017-03-02 and dayOfWeek is Sunday, this will return
         ///  Sunday 2017-03-05. If dayOfWeek is Thursday, this will return *next* Thursday 2017-03-09.</remarks>
         public static DateTime CalculateNextWeekday(DateTime previousLogEventTimestamp, DayOfWeek dayOfWeek)
@@ -1572,8 +1605,7 @@ namespace NLog.Targets
             var fileInfo = new FileInfo(fileName);
             if (!fileInfo.Exists)
             {
-                // Close possible stale file handles
-                _fileAppenderCache.InvalidateAppender(fileName)?.Dispose();
+                CloseInvalidFileHandle(fileName);   // Close possible stale file handles
                 return;
             }
 
@@ -1623,7 +1655,7 @@ namespace NLog.Targets
             }
 
             var archiveFileName = archiveDate.HasValue ? fileArchiveStyle.GenerateArchiveFileName(archiveFilePattern, archiveDate.Value, existingArchiveFiles) : null;
-            if (archiveFileName == null)
+            if (archiveFileName is null)
                 return null;
 
             if (!initializedNewFile)
@@ -1687,7 +1719,7 @@ namespace NLog.Targets
         /// <returns>A string with a pattern that will match the archive filenames</returns>
         private string GetArchiveFileNamePattern(string fileName, LogEventInfo eventInfo)
         {
-            if (_fullArchiveFileName == null)
+            if (_fullArchiveFileName is null)
             {
                 if (EnableArchiveFileCompression)
                     return Path.ChangeExtension(fileName, ".zip");
@@ -1768,7 +1800,8 @@ namespace NLog.Targets
                     // See: https://msdn.microsoft.com/en-us/library/system.threading.abandonedmutexexception.aspx
                 }
 #endif
-                ArchiveFileAfterCloseFileAppender(archiveFile, ev, upcomingWriteSize, previousLogEventTimestamp);
+
+                ArchiveFileAfterCloseFileAppender(archivedAppender, archiveFile, ev, upcomingWriteSize, previousLogEventTimestamp);
                 return true;
             }
             finally
@@ -1804,12 +1837,27 @@ namespace NLog.Targets
             return archivedAppender;
         }
 
-        private void ArchiveFileAfterCloseFileAppender(string archiveFile, LogEventInfo ev, int upcomingWriteSize, DateTime previousLogEventTimestamp)
+        private void ArchiveFileAfterCloseFileAppender(BaseFileAppender archivedAppender, string archiveFile, LogEventInfo ev, int upcomingWriteSize, DateTime previousLogEventTimestamp)
         {
             try
             {
+                DateTime fallbackFileCreationTimeSource = previousLogEventTimestamp;
+
+                if (archivedAppender != null && IsSimpleKeepFileOpen)
+                {
+                    var fileCreationTimeUtc = archivedAppender.GetFileCreationTimeUtc();
+                    if (fileCreationTimeUtc > DateTime.MinValue)
+                    {
+                        var fileCreationTimeSource = Time.TimeSource.Current.FromSystemTime(fileCreationTimeUtc.Value);
+                        if (fileCreationTimeSource < fallbackFileCreationTimeSource || fallbackFileCreationTimeSource == DateTime.MinValue)
+                        {
+                            fallbackFileCreationTimeSource = fileCreationTimeSource;
+                        }
+                    }
+                }
+
                 // Check again if archive is needed. We could have been raced by another process
-                var validatedArchiveFile = GetArchiveFileName(archiveFile, ev, upcomingWriteSize, previousLogEventTimestamp, false);
+                var validatedArchiveFile = GetArchiveFileName(archiveFile, ev, upcomingWriteSize, fallbackFileCreationTimeSource, false);
                 if (string.IsNullOrEmpty(validatedArchiveFile))
                 {
                     InternalLogger.Debug("{0}: Skip archiving '{1}' because no longer necessary", this, archiveFile);
@@ -1941,7 +1989,7 @@ namespace NLog.Targets
             if (!initializedNewFile && _initializedFiles.Remove(archiveFileName))
             {
                 // Register current filename needs re-initialization
-                InternalLogger.Debug("{0}: Invalidates appender for archive file '{1}' since it no longer exists", this, archiveFileName);
+                InternalLogger.Debug("{0}: Invalidate appender as archive file no longer exists: '{1}'", this, archiveFileName);
                 _fileAppenderCache.InvalidateAppender(archiveFileName)?.Dispose();
             }
 
@@ -2015,7 +2063,7 @@ namespace NLog.Targets
             if (!creationTimeSource.HasValue)
                 return null;
 
-            if (previousLogEventTimestamp != DateTime.MinValue && previousLogEventTimestamp < creationTimeSource)
+            if (previousLogEventTimestamp > DateTime.MinValue && previousLogEventTimestamp < creationTimeSource)
             {
                 if (TruncateArchiveTime(previousLogEventTimestamp, FileArchivePeriod.Minute) < TruncateArchiveTime(creationTimeSource.Value, FileArchivePeriod.Minute) && PlatformDetector.IsUnix)
                 {
@@ -2091,10 +2139,12 @@ namespace NLog.Targets
             }
             catch (Exception exception)
             {
+#if DEBUG
                 if (exception.MustBeRethrownImmediately())
                 {
                     throw;  // Throwing exceptions here will crash the entire application (.NET 2.0 behavior)
                 }
+#endif
 
                 InternalLogger.Warn(exception, "{0}: Exception in AutoCloseAppendersAfterArchive", this);
             }
@@ -2131,10 +2181,12 @@ namespace NLog.Targets
             }
             catch (Exception exception)
             {
+#if DEBUG
                 if (exception.MustBeRethrownImmediately())
                 {
                     throw;  // Throwing exceptions here will crash the entire application (.NET 2.0 behavior)
                 }
+#endif
 
                 InternalLogger.Warn(exception, "{0}: Exception in AutoClosingTimerCallback", this);
             }
@@ -2199,7 +2251,7 @@ namespace NLog.Targets
         }
 
         /// <summary>
-        /// Initialise a file to be used by the <see cref="FileTarget"/> instance. Based on the number of initialized
+        /// Initialize a file to be used by the <see cref="FileTarget"/> instance. Based on the number of initialized
         /// files and the values of various instance properties clean up and/or archiving processes can be invoked.
         /// </summary>
         /// <param name="fileName">File name to be written.</param>
@@ -2218,10 +2270,12 @@ namespace NLog.Targets
                 PrepareForNewFile(fileName, logEvent);
 
                 _initializedFilesCounter++;
-                if (_initializedFilesCounter >= InitializedFilesCounterMax)
+                if (_initializedFilesCounter > OpenFileCacheSize)
                 {
+                    // Attempt to write footer, before closing file appender
                     _initializedFilesCounter = 0;
                     CleanupInitializedFiles();
+                    _initializedFilesCounter = Math.Min(_initializedFiles.Count, OpenFileCacheSize / 2);
                 }
 
                 _initializedFiles[fileName] = now;
@@ -2256,6 +2310,18 @@ namespace NLog.Targets
             return logEventTimeStamp;
         }
 
+        private void CloseInvalidFileHandle(string fileName)
+        {
+            try
+            {
+                _fileAppenderCache.InvalidateAppender(fileName)?.Dispose();
+            }
+            finally
+            {
+                _initializedFiles.Remove(fileName); // Skip finalize non-existing file
+            }
+        }
+
         /// <summary>
         /// Writes the file footer and finalizes the file in <see cref="FileTarget"/> instance internal structures.
         /// </summary>
@@ -2263,12 +2329,16 @@ namespace NLog.Targets
         /// <param name="isArchiving">Indicates if the file is being finalized for archiving.</param>
         private void FinalizeFile(string fileName, bool isArchiving = false)
         {
-            InternalLogger.Trace("{0}: FinalizeFile '{1}, isArchiving: {2}'", this, fileName, isArchiving);
-            if ((isArchiving) || (!WriteFooterOnArchivingOnly))
-                WriteFooter(fileName);
-
-            _fileAppenderCache.InvalidateAppender(fileName)?.Dispose();
-            _initializedFiles.Remove(fileName);
+            try
+            {
+                InternalLogger.Trace("{0}: FinalizeFile '{1}, isArchiving: {2}'", this, fileName, isArchiving);
+                if ((isArchiving) || (!WriteFooterOnArchivingOnly))
+                    WriteFooter(fileName);
+            }
+            finally
+            {
+                CloseInvalidFileHandle(fileName);
+            }
         }
 
         /// <summary>
@@ -2319,7 +2389,7 @@ namespace NLog.Targets
         /// <param name="logEvent">Log event that the <see cref="FileTarget"/> instance is currently processing.</param>
         private void PrepareForNewFile(string fileName, LogEventInfo logEvent)
         {
-            InternalLogger.Debug("{0}: Preparing for new file '{1}'", this, fileName);
+            InternalLogger.Debug("{0}: Preparing for new file: '{1}'", this, fileName);
             RefreshArchiveFilePatternToWatch(fileName, logEvent);
 
             try
@@ -2418,11 +2488,11 @@ namespace NLog.Targets
             const int utf16Be = 1201;
             const int utf32 = 12000;
             const int urf32Be = 12001;
-
-            return encoding.CodePage == utf16
-                   || encoding.CodePage == utf16Be
-                   || encoding.CodePage == utf32
-                   || encoding.CodePage == urf32Be;
+            var codePage = encoding?.CodePage ?? 0;
+            return codePage == utf16
+                   || codePage == utf16Be
+                   || codePage == utf32
+                   || codePage == urf32Be;
         }
 
         /// <summary>
@@ -2432,28 +2502,27 @@ namespace NLog.Targets
         private void WriteHeaderAndBom(BaseFileAppender appender)
         {
             //performance: cheap check before checking file info 
-            if (Header == null && !WriteBom) return;
+            if (Header is null && !WriteBom) return;
 
             var length = appender.GetFileLength();
-            //  Write header and BOM only on empty files or if file info cannot be obtained.
-            if (length == null || length == 0)
+            // File is empty or file info cannot be obtained
+            var isNewOrEmptyFile = length is null || length == 0;
+            
+            if (isNewOrEmptyFile && WriteBom)
             {
-                if (WriteBom)
+                InternalLogger.Trace("{0}: Write byte order mark from encoding={1}", this, Encoding);
+                var preamble = Encoding.GetPreamble();
+                if (preamble.Length > 0)
+                    appender.Write(preamble, 0, preamble.Length);
+            }
+            
+            if (Header != null && (isNewOrEmptyFile || WriteHeaderWhenInitialFileNotEmpty))
+            {
+                InternalLogger.Trace("{0}: Write header", this);
+                ArraySegment<byte> headerBytes = GetLayoutBytes(Header);
+                if (headerBytes.Count > 0)
                 {
-                    InternalLogger.Trace("{0}: Write byte order mark from encoding={1}", this, Encoding);
-                    var preamble = Encoding.GetPreamble();
-                    if (preamble.Length > 0)
-                        appender.Write(preamble, 0, preamble.Length);
-                }
-
-                if (Header != null)
-                {
-                    InternalLogger.Trace("{0}: Write header", this);
-                    ArraySegment<byte> headerBytes = GetLayoutBytes(Header);
-                    if (headerBytes.Count > 0)
-                    {
-                        appender.Write(headerBytes.Array, headerBytes.Offset, headerBytes.Count);
-                    }
+                    appender.Write(headerBytes.Array, headerBytes.Offset, headerBytes.Count);
                 }
             }
         }
@@ -2467,7 +2536,7 @@ namespace NLog.Targets
         /// <remarks>Usually it is used to render the header and hooter of the files.</remarks>
         private ArraySegment<byte> GetLayoutBytes(Layout layout)
         {
-            if (layout == null)
+            if (layout is null)
             {
                 return default(ArraySegment<byte>);
             }
@@ -2476,7 +2545,7 @@ namespace NLog.Targets
             using (var targetBuffer = _reusableEncodingBuffer.Allocate())
             {
                 var nullEvent = LogEventInfo.CreateNullEvent();
-                layout.RenderAppendBuilder(nullEvent, targetBuilder.Result);
+                layout.Render(nullEvent, targetBuilder.Result);
                 targetBuilder.Result.Append(NewLineChars);
                 using (MemoryStream ms = new MemoryStream(targetBuilder.Result.Length))
                 {
