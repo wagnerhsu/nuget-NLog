@@ -43,7 +43,7 @@ namespace NLog.Internal
     /// <summary>
     /// A layout that represents a filePath. 
     /// </summary>
-    internal class FilePathLayout : IRenderable
+    internal sealed class FilePathLayout : IRenderable
     {
         /// <summary>
         /// Cached directory separator char array to avoid memory allocation on each method call.
@@ -146,7 +146,7 @@ namespace NLog.Internal
             }
             else
             {
-                if (!_layout.ThreadAgnostic || _layout.MutableUnsafe)
+                if (!_layout.ThreadAgnostic || _layout.ThreadAgnosticImmutable)
                 {
                     object cachedResult;
                     if (logEvent.TryGetCachedLayoutValue(_layout, out cachedResult))

@@ -84,7 +84,8 @@ namespace NLog.UnitTests
 
         protected static void AssertDebugLastMessage(string targetName, string msg)
         {
-            Assert.Equal(msg, GetDebugLastMessage(targetName));
+            var x = GetDebugLastMessage(targetName);
+            Assert.Equal(msg, x);
         }
 
         protected static void AssertDebugLastMessage(string targetName, string msg, LogFactory logFactory)
@@ -106,7 +107,8 @@ namespace NLog.UnitTests
 
         protected static string GetDebugLastMessage(string targetName, LogFactory logFactory)
         {
-            return GetDebugTarget(targetName, logFactory).LastMessage;
+            var x = GetDebugTarget(targetName, logFactory);
+            return x.LastMessage;
         }
 
         public static DebugTarget GetDebugTarget(string targetName)
@@ -123,7 +125,7 @@ namespace NLog.UnitTests
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             byte[] encodedBuf = encoding.GetBytes(contents);
 
@@ -142,7 +144,7 @@ namespace NLog.UnitTests
         protected static void AssertFileContentsEndsWith(string fileName, string contents, Encoding encoding)
         {
             if (!File.Exists(fileName))
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             string fileText = File.ReadAllText(fileName, encoding);
             Assert.True(fileText.Length >= contents.Length);
@@ -200,7 +202,7 @@ namespace NLog.UnitTests
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             byte[] encodedBuf = encoding.GetBytes(contents);
             using (var stream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -238,7 +240,7 @@ namespace NLog.UnitTests
         {
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             byte[] encodedBuf = encoding.GetBytes(contents);
 
@@ -283,11 +285,11 @@ namespace NLog.UnitTests
         protected static void AssertFileContains(string fileName, string contentToCheck, Encoding encoding)
         {
             if (contentToCheck.Contains(Environment.NewLine))
-                Assert.True(false, "Please use only single line string to check.");
+                Assert.Fail("Please use only single line string to check.");
 
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             using (TextReader fs = new StreamReader(fileName, encoding))
             {
@@ -299,17 +301,17 @@ namespace NLog.UnitTests
                 }
             }
 
-            Assert.True(false, "File doesn't contains '" + contentToCheck + "'");
+            Assert.Fail("File doesn't contains '" + contentToCheck + "'");
         }
 
         protected static void AssertFileNotContains(string fileName, string contentToCheck, Encoding encoding)
         {
             if (contentToCheck.Contains(Environment.NewLine))
-                Assert.True(false, "Please use only single line string to check.");
+                Assert.Fail("Please use only single line string to check.");
 
             FileInfo fi = new FileInfo(fileName);
             if (!fi.Exists)
-                Assert.True(false, "File '" + fileName + "' doesn't exist.");
+                Assert.Fail("File '" + fileName + "' doesn't exist.");
 
             using (TextReader fs = new StreamReader(fileName, encoding))
             {
@@ -317,7 +319,7 @@ namespace NLog.UnitTests
                 while ((line = fs.ReadLine()) != null)
                 {
                     if (line.Contains(contentToCheck))
-                        Assert.False(true, "File contains '" + contentToCheck + "'");
+                        Assert.Fail("File contains '" + contentToCheck + "'");
                 }
             }
         }
@@ -565,13 +567,7 @@ namespace NLog.UnitTests
                 if (ConsoleErrorWriter != null)
                     Console.SetError(oldConsoleErrorWriter);
 
-                if (!string.IsNullOrEmpty(InternalLogger.LogFile))
-                {
-                    if (File.Exists(InternalLogger.LogFile))
-                        File.Delete(InternalLogger.LogFile);
-                }
-
-                if (!string.IsNullOrEmpty(logFile) && logFile != InternalLogger.LogFile)
+                if (!string.IsNullOrEmpty(logFile))
                 {
                     if (File.Exists(logFile))
                         File.Delete(logFile);

@@ -43,10 +43,14 @@ namespace NLog.LayoutRenderers
     /// Render information of <see cref="Exception.Data" />
     /// for the exception passed to the logger call
     /// </summary>
+    /// <remarks>
+    /// <a href="https://github.com/NLog/NLog/wiki/ExceptionData-Layout-Renderer">See NLog Wiki</a>
+    /// </remarks>
+    /// <seealso href="https://github.com/NLog/NLog/wiki/ExceptionData-Layout-Renderer">Documentation on NLog Wiki</seealso>
     [LayoutRenderer("exceptiondata")]
     [LayoutRenderer("exception-data")]
     [ThreadAgnostic]
-    [MutableUnsafe]
+    [ThreadAgnosticImmutable]
     public class ExceptionDataLayoutRenderer : LayoutRenderer
     {
         /// <summary>

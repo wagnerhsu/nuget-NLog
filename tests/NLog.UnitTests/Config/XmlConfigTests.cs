@@ -54,9 +54,9 @@ namespace NLog.UnitTests.Config
                 Assert.False(config.AutoReload);
                 Assert.True(config.InitializeSucceeded);
                 Assert.Equal("", InternalLogger.LogFile);
-                Assert.True(InternalLogger.IncludeTimestamp);
                 Assert.False(InternalLogger.LogToConsole);
                 Assert.False(InternalLogger.LogToConsoleError);
+                Assert.True(InternalLogger.IncludeTimestamp);
                 Assert.Null(InternalLogger.LogWriter);
                 Assert.Equal(LogLevel.Off, InternalLogger.LogLevel);
             }
@@ -75,9 +75,9 @@ namespace NLog.UnitTests.Config
                     Assert.False(config.AutoReload);
                     Assert.True(config.InitializeSucceeded);
                     Assert.Equal("", InternalLogger.LogFile);
-                    Assert.False(InternalLogger.IncludeTimestamp);
                     Assert.True(InternalLogger.LogToConsole);
                     Assert.True(InternalLogger.LogToConsoleError);
+                    Assert.False(InternalLogger.IncludeTimestamp);
                     Assert.Null(InternalLogger.LogWriter);
                     Assert.Equal(LogLevel.Info, InternalLogger.LogLevel);
                 }
@@ -321,7 +321,7 @@ namespace NLog.UnitTests.Config
                 </targets>
             </nlog>");
 
-            Assert.Equal(1, c.LoggingRules.Count);
+            Assert.Single(c.LoggingRules);
             var rule = c.LoggingRules[0];
             Assert.Equal("*", rule.LoggerNamePattern);
             Assert.Equal(4, rule.Levels.Count);
@@ -329,10 +329,10 @@ namespace NLog.UnitTests.Config
             Assert.Contains(LogLevel.Warn, rule.Levels);
             Assert.Contains(LogLevel.Error, rule.Levels);
             Assert.Contains(LogLevel.Fatal, rule.Levels);
-            Assert.Equal(1, rule.Targets.Count);
+            Assert.Single(rule.Targets);
             Assert.Same(c.FindTargetByName("d1"), rule.Targets[0]);
             Assert.False(rule.Final);
-            Assert.Equal(0, rule.Filters.Count);
+            Assert.Empty(rule.Filters);
         }
 
         [Fact]

@@ -31,14 +31,17 @@
 // THE POSSIBILITY OF SUCH DAMAGE.
 // 
 
-using System;
-using JetBrains.Annotations;
-
 namespace NLog.Common
 {
+    using System;
+    using System.ComponentModel;
+    using JetBrains.Annotations;
+
     /// <summary>
     /// A message has been written to the internal logger
     /// </summary>
+    [Obsolete("Instead use InternalEventOccurred and InternalLogEventArgs. Marked obsolete with NLog v5.3")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class InternalLoggerMessageEventArgs : EventArgs
     {
         /// <summary>

@@ -34,11 +34,69 @@
 namespace NLog.Internal
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.Reflection;
 
-    internal class CallSiteInformation
+    internal sealed class CallSiteInformation
     {
+        private static readonly object lockObject = new object();
+        private static ICollection<Assembly> _hiddenAssemblies = ArrayHelper.Empty<Assembly>();
+        private static ICollection<Type> _hiddenTypes = ArrayHelper.Empty<Type>();
+
+        internal static bool IsHiddenAssembly(Assembly assembly)
+        {
+            return _hiddenAssemblies.Count != 0 && _hiddenAssemblies.Contains(assembly);
+        }
+
+        internal static bool IsHiddenClassType(Type type)
+        {
+            return _hiddenTypes.Count != 0 && _hiddenTypes.Contains(type);
+        }
+
+        /// <summary>
+        /// Adds the given assembly which will be skipped 
+        /// when NLog is trying to find the calling method on stack trace.
+        /// </summary>
+        /// <param name="assembly">The assembly to skip.</param>
+        public static void AddCallSiteHiddenAssembly(Assembly assembly)
+        {
+            if (_hiddenAssemblies.Contains(assembly) || assembly is null)
+                return;
+
+            lock (lockObject)
+            {
+                if (_hiddenAssemblies.Contains(assembly))
+                    return;
+
+                _hiddenAssemblies = new HashSet<Assembly>(_hiddenAssemblies)
+                {
+                    assembly
+                };
+            }
+
+            Common.InternalLogger.Trace("Assembly '{0}' will be hidden in callsite stacktrace", assembly.FullName);
+        }
+
+        public static void AddCallSiteHiddenClassType(Type classType)
+        {
+            if (_hiddenTypes.Contains(classType) || classType is null)
+                return;
+
+            lock (lockObject)
+            {
+                if (_hiddenTypes.Contains(classType))
+                    return;
+
+                _hiddenTypes = new HashSet<Type>(_hiddenTypes)
+                {
+                    classType
+                };
+            }
+
+            Common.InternalLogger.Trace("Type '{0}' will be hidden in callsite stacktrace", classType);
+        }
+
         /// <summary>
         /// Sets the stack trace for the event info.
         /// </summary>
@@ -79,8 +137,11 @@ namespace NLog.Internal
         }
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="LogEventInfo.CallerMemberName"/> or ${callsite} with NLog v5.3.
+        /// 
         /// Gets the stack frame of the method that did the logging.
         /// </summary>
+        [Obsolete("Instead use ${callsite} or CallerMemberName. Marked obsolete on NLog 5.3")]
         public StackFrame UserStackFrame => StackTrace?.GetFrame(UserStackFrameNumberLegacy ?? UserStackFrameNumber);
 
         /// <summary>
@@ -185,13 +246,14 @@ namespace NLog.Internal
             for (int i = 0; i < stackFrames.Length; ++i)
             {
                 var stackFrame = stackFrames[i];
-                if (SkipAssembly(stackFrame))
+                var stackMethod = StackTraceUsageUtils.GetStackMethod(stackFrame);
+                if (SkipStackFrameWhenHidden(stackMethod))
                     continue;
 
                 if (!firstUserStackFrame.HasValue)
                     firstUserStackFrame = i;
 
-                if (IsLoggerType(stackFrame, loggerType))
+                if (SkipStackFrameWhenLoggerType(stackMethod, loggerType))
                 {
                     firstStackFrameAfterLogger = null;
                     continue;
@@ -215,10 +277,10 @@ namespace NLog.Internal
             for (int i = firstUserStackFrame; i < stackFrames.Length; ++i)
             {
                 var stackFrame = stackFrames[i];
-                if (SkipAssembly(stackFrame))
-                    continue;
-
                 var stackMethod = StackTraceUsageUtils.GetStackMethod(stackFrame);
+                if (SkipStackFrameWhenHidden(stackMethod))
+                    continue;
+                
                 if (stackMethod?.Name == "MoveNext" && stackFrames.Length > i)
                 {
                     var nextStackFrame = stackFrames[i + 1];
@@ -238,26 +300,25 @@ namespace NLog.Internal
         }
 
         /// <summary>
-        /// Assembly to skip?
+        /// Skip StackFrame when from hidden Assembly / ClassType
         /// </summary>
-        /// <param name="frame">Find assembly via this frame. </param>
-        /// <returns><c>true</c>, we should skip.</returns>
-        private static bool SkipAssembly(StackFrame frame)
+        private static bool SkipStackFrameWhenHidden(MethodBase stackMethod)
         {
-            var assembly = StackTraceUsageUtils.LookupAssemblyFromStackFrame(frame);
-            return assembly is null || LogManager.IsHiddenAssembly(assembly);
+            var assembly = StackTraceUsageUtils.LookupAssemblyFromMethod(stackMethod);
+            if (assembly is null || IsHiddenAssembly(assembly))
+            {
+                return true;
+            }
+
+            return stackMethod is null || IsHiddenClassType(stackMethod.DeclaringType);
         }
 
         /// <summary>
-        /// Is this the type of the logger?
+        /// Skip StackFrame when type of the logger
         /// </summary>
-        /// <param name="frame">get type of this logger in this frame.</param>
-        /// <param name="loggerType">Type of the logger.</param>
-        /// <returns></returns>
-        private static bool IsLoggerType(StackFrame frame, Type loggerType)
+        private static bool SkipStackFrameWhenLoggerType(MethodBase stackMethod, Type loggerType)
         {
-            var method = StackTraceUsageUtils.GetStackMethod(frame);
-            Type declaringType = method?.DeclaringType;
+            Type declaringType = stackMethod?.DeclaringType;
             var isLoggerType = declaringType != null && (loggerType == declaringType || declaringType.IsSubclassOf(loggerType) || loggerType.IsAssignableFrom(declaringType));
             return isLoggerType;
         }

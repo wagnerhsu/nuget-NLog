@@ -217,8 +217,11 @@ namespace NLog
         public bool HasStackTrace => CallSiteInformation?.StackTrace != null;
 
         /// <summary>
+        /// Obsolete and replaced by <see cref="LogEventInfo.CallerMemberName"/> or ${callsite} with NLog v5.3.
+        /// 
         /// Gets the stack frame of the method that did the logging.
         /// </summary>
+        [Obsolete("Instead use ${callsite} or CallerMemberName. Marked obsolete on NLog 5.3")]
         public StackFrame UserStackFrame => CallSiteInformation?.UserStackFrame;
 
         /// <summary>
@@ -624,7 +627,7 @@ namespace NLog
             return Convert.GetTypeCode(value) != TypeCode.Object;
         }
 
-        internal bool IsLogEventMutableSafe()
+        internal bool IsLogEventThreadAgnosticImmutable()
         {
             if (Exception != null)
                 return false;

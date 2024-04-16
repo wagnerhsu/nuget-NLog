@@ -34,13 +34,18 @@
 namespace NLog.Config
 {
     using System;
+    using System.ComponentModel;
 
     /// <summary>
+    /// Obsolete and replaced by <see cref="ThreadAgnosticImmutableAttribute"/> with NLog v5.3.
+    /// 
     /// Marks the layout or layout renderer depends on mutable objects from the LogEvent
     /// 
     /// This can be <see cref="LogEventInfo.Properties"/> or <see cref="LogEventInfo.Exception"/>
     /// </summary>
+    [Obsolete("Marked obsolete on NLog 5.3, instead use ThreadAgnosticImmutableAttribute")]
     [AttributeUsage(AttributeTargets.Class)]
+    [EditorBrowsable(EditorBrowsableState.Never)]
     public sealed class MutableUnsafeAttribute : Attribute
     {
     }
